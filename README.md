@@ -178,9 +178,9 @@ show_features_0D(grads_last)
 ```
 
 ## To-do
- - [ ] Add outputs visualization code _(soon)_
  - [ ] Add weights visualization code _(soon)_
  - [ ] Add weights gradients examples _(soon)_
+ - [ ] Add activations visualization examples _(soon)_
  - [ ] Add advanced usage code examples
   
 
