@@ -65,7 +65,7 @@ def test_all():
     for config, model_name in zip(configs, model_names):
         reset_seeds(reset_graph_with_backend=K)
         model = make_model(**config)
-        train_model(model, iterations, batch_shape, units)
+        train_model(model, iterations)
 
         rnn_summary(model.layers[1])
         _test_outputs(model)
@@ -125,9 +125,11 @@ def test_misc():  # misc tests to improve coverage %
     units = 6
     batch_shape = (8, 100, 2*units)
 
-    model = make_model(LSTM, batch_shape, activation='relu', recurrent_dropout=0.3)
+    reset_seeds(reset_graph_with_backend=K)
+    model = make_model(GRU, batch_shape, activation='relu', recurrent_dropout=0.3)
 
     x, y = make_data(batch_shape, units)
+    model.train_on_batch(x, y)
     grads = get_layer_gradients(model, x, y, layer_idx=1)
     grads_4D = np.expand_dims(grads, -1)
     _grads = np.transpose(grads, (2, 1, 0))
@@ -151,21 +153,20 @@ def test_misc():  # misc tests to improve coverage %
     _pass_on_error(show_features_2D, grads_4D)
     _pass_on_error(show_features_2D, grads, channel_axis=1)
     _pass_on_error(get_layer_gradients, model, x, y, 1, mode='cactus')
-    _pass_on_error(get_layer_gradients, model, x, y, 1, 'lstm', model.layers[1])
+    _pass_on_error(get_layer_gradients, model, x, y, 1, 'gru', model.layers[1])
     _pass_on_error(_make_grads_fn, model, model.layers[1], mode='banana')
     _pass_on_error(get_layer, model)
     _pass_on_error(rnn_heatmap, model, layer_idx=1, input_data=x, labels=y,
                    mode='coffee')
     _pass_on_error(rnn_heatmap, model, layer_idx=1, mode='grads')
 
-    get_layer(model, layer_name='lstm')
+    get_layer(model, layer_name='gru')
     get_rnn_weights(model, layer_idx=1, concat_gates=True,  as_tensors=True)
     rnn_heatmap(model, layer_idx=1, input_data=x, labels=y, mode='weights')
     make_model(GRU, batch_shape, use_bias=False)
 
-    K.set_value(model.optimizer.lr, 10)
-    for _ in range(30):
-        model.train_on_batch(x, y)
+    K.set_value(model.optimizer.lr, 1e6)
+    train_model(model, iterations=30)
     rnn_histogram(model, layer_idx=1)  # test nan detection
     rnn_heatmap(model, layer_idx=1)
 
@@ -221,8 +222,11 @@ def make_data(batch_shape, units):
             np.random.uniform(-1, 1, (batch_shape[0], units)))
 
 
-def train_model(model, iterations, batch_shape, units):
+def train_model(model, iterations):
+    batch_shape = K.int_shape(model.input)
+    units = model.layers[2].units
     x, y = make_data(batch_shape, units)
+
     for i in range(iterations):
         model.train_on_batch(x, y)
         print(end='.')  # progbar
