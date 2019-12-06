@@ -11,7 +11,6 @@ else:
     import keras.backend as K
 
 warn_str = colored("WARNING: ", 'red')
-note_str = colored("NOTE: ", 'blue')
 
 
 def get_rnn_weights(model, layer_idx=None, layer_name=None, layer=None,
@@ -85,7 +84,9 @@ def _get_cell_weights(rnn_cell, as_tensors=True, concat_gates=False):
     if concat_gates:
         if as_tensors:
             return [getattr(rnn_cell, w_type) for w_type in kernel_types]
-        else:
+        try:
+            return rnn_cell.get_weights()
+        except:
             return K.batch_get_value(rnn_cell.weights)
 
     rnn_weights = []

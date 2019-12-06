@@ -33,8 +33,8 @@ def _process_rnn_args(model, layer_name, layer_idx, layer,
         if mode == 'grads' and (input_data is None or labels is None):
             raise Exception("must supply input_data and labels for mode=='grads'")
         if mode == 'weights' and (input_data is not None or labels is not None):
-            print(note_str + "input_data and labels will be ignored for "
-                  + "mode=='weights'")
+            print(note_str + "`input_data` and `labels will` be ignored for "
+                  + "`mode`=='weights'")
 
     _validate_args_(model, layer_idx, layer_name, layer, mode, input_data, labels)
 
