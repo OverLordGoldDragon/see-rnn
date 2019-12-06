@@ -153,10 +153,10 @@ def test_misc():  # misc tests to improve coverage %
         os.environ['TF_KERAS'] = flag
         reload(inspect_gen)
         reload(inspect_rnn)
-        from see_rnn.inspect_rnn import get_layer_gradients as grg
+        from see_rnn.inspect_gen import get_layer_gradients as glg
         from see_rnn.inspect_rnn import rnn_summary as rs
 
-        _pass_on_error(grg, model, x, y, 1)
+        _pass_on_error(glg, model, x, y, 1)
         rs(model.layers[1])
 
 

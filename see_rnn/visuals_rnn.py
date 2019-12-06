@@ -29,12 +29,15 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
         show_xy_ticks: int/bool iter. Slot 0 -> x, Slot 1 -> y.
               Ex: [1, 1] -> show both x- and y-ticks (and their labels).
                   [0, 0] -> hide both.
-        equate_axes: int: 0, 1, 2. 
+        equate_axes: int: 0, 1, 2. 0 --> auto-managed axes. 1 --> kernel &
+                     recurrent subplots' x- & y-axes lims set to common value.
+                     2 --> 1, but lims shared for forward & backward plots.
+                     Bias plot lims never affected.
         bins: int. Pyplot `hist` kwarg: number of histogram bins per subplot.
     """
 
-    scale_width   = kwargs.get('scale_width',   1)
-    scale_height  = kwargs.get('scale_height',  1)
+    scale_width   = kwargs.get('scale_width',  1)
+    scale_height  = kwargs.get('scale_height', 1)
     show_borders  = kwargs.get('show_borders', False)
     show_xy_ticks = kwargs.get('show_xy_ticks',  [True, True])
     equate_axes   = kwargs.get('equate_axes', 1)
@@ -157,9 +160,48 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
 
 def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
                 input_data=None, labels=None, mode='weights', 
-                cmap='bwr', norm=None, gate_sep_width=.5, 
-                show_colorbar=False, show_bias=True, 
-                scale_width=1, scale_height=1):
+                cmap='bwr', norm=None, **kwargs):
+    """Plots histogram grid of RNN weights/gradients by kernel, gate (if gated),
+       and direction (if bidirectional). Also detects NaNs and shows on plots.
+       
+    Arguments:
+        model: keras.Model/tf.keras.Model.
+        layer_idx: int. Index of layer to fetch, via model.layers[layer_idx].
+        layer_name: str. Substring of name of layer to be fetched. Returns
+               earliest match if multiple found.
+        layer: keras.Layer/tf.keras.Layer. Layer whose gradients to return.
+               Overrides `layer_idx` and `layer_name`
+        input_data: np.ndarray & supported formats(1). Data w.r.t. which loss is
+               to be computed for the gradient. Only for mode=='grads'.
+        labels: np.ndarray & supported formats. Labels w.r.t. which loss is
+               to be computed for the gradient. Only for mode=='grads'
+        mode: str. One of: 'weights', 'grads'. If former, plots layer weights -
+              else, plots layer weights grads w.r.t. `input_data` & `labels`.
+        norm: float iter. Normalizes colors to range between norm==(vmin, vmax),
+              according to `cmap`. Ex: `cmap`='bwr' ('blue white red') -> all
+              values <=vmin and >=vmax will be shown as most intense blue and
+              red, and those exactly in-between are shown as white.
+        cmap: str. Pyplot cmap (colormap) kwarg for the heatmap.
+
+    kwargs:
+        scale_width:   float. Scale width  of resulting plot by a factor.
+        scale_height:  float. Scale height of resulting plot by a factor.
+        show_borders:  bool.  If True, shows boxes around plots.
+        show_colorbar: bool. If True, shows one colorbar next to plot(s).
+        equate_axes: int: 0, 1, 2. 0 --> auto-managed axes. 1 --> kernel &
+                     recurrent subplots' x- & y-axes lims set to common value.
+                     2 --> 1, but lims shared for forward & backward plots.
+                     Bias plot lims never affected.
+        bins: int. Pyplot `hist` kwarg: number of histogram bins per subplot.
+    """
+
+    scale_width    = kwargs.get('scale_width',  1)
+    scale_height   = kwargs.get('scale_height', 1)
+    show_borders   = kwargs.get('show_borders', True)
+    show_colorbar  = kwargs.get('show_colorbar', True)
+    show_bias      = kwargs.get('show_bias', True)
+    gate_sep_width = kwargs.get('gate_sep_width', 1)
+
     def _unpack_rnn_info(rnn_info):
         d = rnn_info
         return (d['rnn_type'], d['gate_names'], d['num_gates'], 
@@ -183,32 +225,38 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
 
     (vmin, vmax) = norm if norm else _make_common_norm(data)
     gate_names = '(%s)' % ', '.join(gate_names)
-    
+      
     for direction_idx, direction_name in enumerate(direction_names):
-        plt.figure(figsize=(14*scale_width, 5*scale_height))
+        fig = plt.figure(figsize=(14*scale_width, 5*scale_height))
+        axes = []
         if direction_name != []:
             plt.suptitle(direction_name + ' LAYER', weight='bold', y=.98)
             
         for type_idx, kernel_type in enumerate(['KERNEL', 'RECURRENT']):
-            plt.subplot(1, 2, type_idx+1)
+            ax = plt.subplot(1, 2, type_idx+1)
+            axes.append(ax)
             w_idx = type_idx + direction_idx*(2 + uses_bias)
             
             # Plot heatmap, gate separators (IF), colorbar (IF)
-            plt.imshow(data[w_idx], cmap=cmap, interpolation='nearest', 
-                       aspect='auto', vmin=vmin, vmax=vmax)
+            img = ax.imshow(data[w_idx], cmap=cmap, interpolation='nearest', 
+                            aspect='auto', vmin=vmin, vmax=vmax)
             if gate_sep_width != 0:
                 lw = gate_sep_width
-                [plt.axvline(rnn_dim * gate_idx - .5, linewidth=lw, color='k') 
+                [ax.axvline(rnn_dim * gate_idx - .5, linewidth=lw, color='k') 
                  for gate_idx in range(1, num_gates)]
-            if show_colorbar and type_idx==1:
-                plt.colorbar()
                 
             # Styling
-            plt.title(kernel_type, fontsize=14, weight='bold')
-            plt.xlabel(gate_names, fontsize=12, weight='bold')
+            ax.set_title(kernel_type, fontsize=14, weight='bold')
+            ax.set_xlabel(gate_names, fontsize=12, weight='bold')
             y_label = ['Channel units', 'Hidden units'][type_idx]
-            plt.ylabel(y_label, fontsize=12, weight='bold')
-            plt.gcf().set_size_inches(14*scale_width, 5*scale_height)
+            ax.set_ylabel(y_label, fontsize=12, weight='bold')
+            
+            fig.set_size_inches(14*scale_width, 5*scale_height)
+            if not show_borders:
+                ax.set_frame_on(False)
+
+        if show_colorbar:
+            fig.colorbar(img, ax=axes)
     
         if uses_bias and show_bias: # does not equate axes
             plt.figure(figsize=(14*scale_width, 1*scale_height))
