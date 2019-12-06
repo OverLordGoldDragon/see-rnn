@@ -15,7 +15,7 @@ else:
     import keras.backend as K
 
 
-def get_layer_outputs(model, input_data, layer_name=None, layer_idx=None, 
+def get_layer_outputs(model, input_data, layer_name=None, layer_idx=None,
                       layer=None, learning_phase=0):
     _validate_args(model, layer_idx, layer_name, layer)
     layer = get_layer(model, layer_idx, layer_name)
@@ -46,7 +46,7 @@ def get_layer_gradients(model, input_data, labels, layer_idx=None,
                to model.fit(), etc., weighting individual sample losses.
         learning_phase: int/bool. If 1, uses model in train model - else,
                in inference mode.
-    
+
     (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
          input data formats
     (2): not necessarily activations. If an Activation layer is used, returns

@@ -16,7 +16,7 @@ def _validate_args(model, layer_idx, layer_name, layer):
                         "`layer_idx`, `layer_name`")
 
 
-def _process_rnn_args(model, layer_name, layer_idx, layer, 
+def _process_rnn_args(model, layer_name, layer_idx, layer,
                       input_data, labels, mode):
     from .inspect_gen import get_layer, get_layer_gradients
     from .inspect_rnn import get_rnn_weights
@@ -47,17 +47,17 @@ def _process_rnn_args(model, layer_name, layer_idx, layer,
         uses_bias = True
     else:
         uses_bias  = layer.layer.use_bias if is_bidir else layer.use_bias
-        
+
     if mode=='weights':
         data = get_rnn_weights(model, layer_idx, layer_name,
                                as_tensors=False, concat_gates=True)
     else:
-        data = get_layer_gradients(model, input_data, labels, 
+        data = get_layer_gradients(model, input_data, labels,
                                    layer=layer, mode='weights')
 
     rnn_info = dict(rnn_type=rnn_type, gate_names=gate_names,
-                    num_gates=num_gates, is_bidir=is_bidir, 
-                    rnn_dim=rnn_dim, uses_bias=uses_bias, 
+                    num_gates=num_gates, is_bidir=is_bidir,
+                    rnn_dim=rnn_dim, uses_bias=uses_bias,
                     direction_names=direction_names)
     return data, rnn_info
 
@@ -68,7 +68,7 @@ def _validate_rnn_type(rnn_layer, return_value=False):
     else:
         rnn_type = type(rnn_layer).__name__
 
-    supported_rnns = ['LSTM', 'GRU', 'CuDNNLSTM', 'CuDNNGRU', 
+    supported_rnns = ['LSTM', 'GRU', 'CuDNNLSTM', 'CuDNNGRU',
                       'SimpleRNN', 'IndRNN']
     if rnn_type not in supported_rnns:
         raise Exception("unsupported RNN type `%s` - must be one of: %s" % (
@@ -78,10 +78,10 @@ def _validate_rnn_type(rnn_layer, return_value=False):
 
 
 def _rnn_gate_names(rnn_type):
-    return {'LSTM':      ['INPUT', 'FORGET','CELL','OUTPUT'],
-            'GRU':       ['UPDATE','RESET', 'NEW'],
-            'CuDNNLSTM': ['INPUT', 'FORGET','CELL','OUTPUT'],
-            'CuDNNGRU':  ['UPDATE','RESET', 'NEW'],
+    return {'LSTM':      ['INPUT',  'FORGET', 'CELL', 'OUTPUT'],
+            'GRU':       ['UPDATE', 'RESET',  'NEW'],
+            'CuDNNLSTM': ['INPUT',  'FORGET', 'CELL', 'OUTPUT'],
+            'CuDNNGRU':  ['UPDATE', 'RESET',  'NEW'],
             'SimpleRNN': [''],
             'IndRNN':    [''],
             }[rnn_type]

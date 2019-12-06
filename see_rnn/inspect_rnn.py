@@ -27,10 +27,10 @@ def get_rnn_weights(model, layer_idx=None, layer_name=None, layer=None,
         forward_cell  = l.forward_layer  if IS_CUDNN else l.forward_layer.cell
         backward_cell = l.backward_layer if IS_CUDNN else l.backward_layer.cell
 
-        forward_cell_weights  = _get_cell_weights(forward_cell,  as_tensors, 
+        forward_cell_weights  = _get_cell_weights(forward_cell,  as_tensors,
                                                   concat_gates)
-        backward_cell_weights = _get_cell_weights(backward_cell, as_tensors, 
-                                                  concat_gates) 
+        backward_cell_weights = _get_cell_weights(backward_cell, as_tensors,
+                                                  concat_gates)
         return forward_cell_weights + backward_cell_weights
     else:
         cell = layer if IS_CUDNN else layer.cell
@@ -85,7 +85,7 @@ def _get_cell_weights(rnn_cell, as_tensors=True, concat_gates=False):
 
 def rnn_summary(layer):
     """Prints passed RNN layer's weights, and if applicable, gates information
-    NOTE: will not print gates information for tf.keras imports as they 
+    NOTE: will not print gates information for tf.keras imports as they
     lack pertinent attributes.
     """
 

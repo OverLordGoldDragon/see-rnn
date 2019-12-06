@@ -167,7 +167,7 @@ def show_features_1D(data, n_rows=None, label_channels=True,
         n_colors = len(data) if len(data.shape)==3 else 1
         color = [None] * n_colors
 
-    fig, axes = plt.subplots(n_rows, n_cols, sharex=equate_axes, 
+    fig, axes = plt.subplots(n_rows, n_cols, sharex=equate_axes,
                              sharey=equate_axes, dpi=dpi)
     axes = np.asarray(axes)
 
