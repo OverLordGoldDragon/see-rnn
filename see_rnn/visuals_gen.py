@@ -3,8 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 
 
-def show_features_0D(data, marker='o', cmap='bwr', color=None,
-                     show_y_zero=True, **kwargs):
+def show_features_0D(data, marker='o', cmap='bwr', color=None, **kwargs):
     """Plots 0D aligned scatterplots in a standalone graph or subplot grid.
 
     iter == list/tuple (both work)
@@ -20,7 +19,6 @@ def show_features_0D(data, marker='o', cmap='bwr', color=None,
               draws all curves in one color. Overrides `cmap`. If None,
               automatically colors along equally spaced `cmap` gradient intervals.
               Ex: ['red', 'blue']; [[0., .8, 1.], [.2, .5, 0.]] (RGB)
-        show_y_zero: bool. If True, draws y=0.
 
     kwargs:
         scale_width:   float. Scale width  of resulting plot by a factor.
@@ -30,16 +28,18 @@ def show_features_0D(data, marker='o', cmap='bwr', color=None,
               If str in ('grads', 'activations'), shows supertitle tailored to
               `data` dim (2D/3D). If other str, shows `show_title` as supertitle.
               If False, no title is shown.
+        show_y_zero: bool. If True, draws y=0 in each plot.
         title_fontsize: int. Title fontsize.
         channel_axis: int. `data` axis holding channels/features. -1 = last axis.
-        markersize: int/int iter. Pyplot kwarg `s` specifying marker size(s).
-        markerwidth: int. Pyplot kwarg `linewidth` specifying marker thickness.
+        markersize:   int/int iter. Pyplot kwarg `s` specifying marker size(s).
+        markerwidth:  int. Pyplot kwarg `linewidth` specifying marker thickness.
     """
 
     scale_width    = kwargs.get('scale_width',  1)
     scale_height   = kwargs.get('scale_height', 1)
     show_borders   = kwargs.get('show_borders', False)
     show_title     = kwargs.get('show_title',   True)
+    show_y_zero    = kwargs.get('show_y_zero',  True)
     title_fontsize = kwargs.get('title_fontsize', 14)
     channel_axis   = kwargs.get('channel_axis', -1)
     markersize     = kwargs.get('markersize',  15)

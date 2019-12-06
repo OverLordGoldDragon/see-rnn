@@ -4,8 +4,9 @@ import numpy as np
 from .utils import _validate_args
 
 TF_KERAS = os.environ.get("TF_KERAS", '0') == '1'
-note_str = colored("NOTE: ", 'blue')
 warn_str = colored("WARNING: ", 'red')
+note_str = colored("NOTE: ", 'blue')
+
 
 if TF_KERAS:
     import tensorflow.keras.backend as K
@@ -17,6 +18,23 @@ else:
 
 def get_layer_outputs(model, input_data, layer_name=None, layer_idx=None,
                       layer=None, learning_phase=0):
+    """Retrieves layer outputs given input data and layer info.
+
+    Arguments:
+        model: keras.Model/tf.keras.Model.
+        input_data: np.ndarray & supported formats(1). Data w.r.t. which loss is
+               to be computed for the gradient. Only for mode=='grads'.
+        labels: np.ndarray & supported formats. Labels w.r.t. which loss is
+               to be computed for the gradient. Only for mode=='grads'
+        layer_idx: int. Index of layer to fetch, via model.layers[layer_idx].
+        layer_name: str. Substring of name of layer to be fetched. Returns
+               earliest match if multiple found.
+        layer: keras.Layer/tf.keras.Layer. Layer whose gradients to return.
+               Overrides `layer_idx` and `layer_name`
+    (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
+         input data formats
+    """
+
     _validate_args(model, layer_idx, layer_name, layer)
     layer = get_layer(model, layer_idx, layer_name)
     layers_fn = K.function([model.input, K.learning_phase()], [layer.output])

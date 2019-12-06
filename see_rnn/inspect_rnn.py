@@ -11,11 +11,26 @@ else:
     import keras.backend as K
 
 warn_str = colored("WARNING: ", 'red')
-note_str = colored("NOTEL ", 'blue')
+note_str = colored("NOTE: ", 'blue')
 
 
 def get_rnn_weights(model, layer_idx=None, layer_name=None, layer=None,
                     as_tensors=False, concat_gates=False):
+    """Retrievers RNN layer weights.
+
+    Arguments:
+        model: keras.Model/tf.keras.Model.
+        layer_idx: int. Index of layer to fetch, via model.layers[layer_idx].
+        layer_name: str. Substring of name of layer to be fetched. Returns
+               earliest match if multiple found.
+        layer: keras.Layer/tf.keras.Layer. Layer whose gradients to return.
+               Overrides `layer_idx` and `layer_name`.
+        as_tensors: If True, returns weight tensors instead of array values.
+               NOTE: in Eager, both are returned.
+        concat_gates: If True, returns kernel weights are signle concatenated
+               matrices, instead of individual per-gate weight lists.
+    """
+
     _validate_args(model, layer_idx, layer_name, layer)
     if layer is None:
         layer = get_layer(model, layer_idx, layer_name)
@@ -38,6 +53,11 @@ def get_rnn_weights(model, layer_idx=None, layer_name=None, layer=None,
 
 
 def _get_cell_weights(rnn_cell, as_tensors=True, concat_gates=False):
+    """Retrieves RNN layer weights from their cell(s).
+    NOTE: if CuDNNLSTM or CuDNNGRU cell, `rnn_cell` must be the layer instead,
+          where non-CuDNN cell attributes are stored.
+    """
+
     def _get_cell_info(rnn_cell):
         rnn_type = type(rnn_cell).__name__.replace('Cell', '')
 

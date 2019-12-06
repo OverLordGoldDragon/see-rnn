@@ -18,6 +18,10 @@ def _validate_args(model, layer_idx, layer_name, layer):
 
 def _process_rnn_args(model, layer_name, layer_idx, layer,
                       input_data, labels, mode):
+    """Helper method to validate `input_data` & `labels` dims, layer info args,
+       `mode` arg, and fetch various pertinent RNN attributes.
+    """
+
     from .inspect_gen import get_layer, get_layer_gradients
     from .inspect_rnn import get_rnn_weights
 

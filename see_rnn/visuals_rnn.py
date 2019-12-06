@@ -21,6 +21,8 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
                to be computed for the gradient. Only for mode=='grads'
         mode: str. One of: 'weights', 'grads'. If former, plots layer weights -
               else, plots layer weights grads w.r.t. `input_data` & `labels`.
+    (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
+         input data formats
 
     kwargs:
         scale_width:   float. Scale width  of resulting plot by a factor.
@@ -160,7 +162,7 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
 
 def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
                 input_data=None, labels=None, mode='weights',
-                cmap='bwr', norm=None, **kwargs):
+                cmap='bwr', norm=None, normalize=False, **kwargs):
     """Plots histogram grid of RNN weights/gradients by kernel, gate (if gated),
        and direction (if bidirectional). Also detects NaNs and shows on plots.
 
@@ -177,13 +179,18 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
                to be computed for the gradient. Only for mode=='grads'.
         mode: str. One of: 'weights', 'grads'. If former, plots layer weights -
               else, plots layer weights grads w.r.t. `input_data` & `labels`.
-        cmap: str. Pyplot cmap (colormap) kwarg for the heatmap.
+        cmap: str. Pyplot cmap (colormap) kwarg for the heatmap. If None,
+              uses 'bone' cmap (greyscale), suited for >=0 value heatmaps.
         norm: float iter / str ('auto') / None. Normalizes colors to range
               between norm==(vmin, vmax), according to `cmap`. Ex: `cmap`='bwr'
               ('blue white red') -> all values <=vmin and >=vmax will be shown as
               most intense  blue and red, and those exactly in-between are shown
-              as white. If 'auto', will normalize across all non-bias plots 
+              as white. If 'auto', will normalize across all non-bias plots
               (per kernels, gates, and directions).
+        normalize: bool. If True, scales all values to lie between 0 & 1. Works
+              well with a greyscale `cmap` (e.g. None).
+    (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
+         input data formats
 
     kwargs:
         scale_width:   float. Scale width  of resulting plot by a factor.
@@ -197,7 +204,7 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
 
     scale_width    = kwargs.get('scale_width',  1)
     scale_height   = kwargs.get('scale_height', 1)
-    show_borders   = kwargs.get('show_borders', True)
+    show_borders   = kwargs.get('show_borders',  True)
     show_colorbar  = kwargs.get('show_colorbar', True)
     show_bias      = kwargs.get('show_bias', True)
     gate_sep_width = kwargs.get('gate_sep_width', 1)
@@ -220,8 +227,9 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
 
     if cmap is None:
         cmap = plt.cm.bone
-        data -= np.min(data)  # TODO: rid? include as kwarg option?
-        data /= np.max(data)  # normalize
+    if normalize:
+        data -= np.min(data)
+        data /= np.max(data)
 
     (vmin, vmax) = norm if norm else _make_common_norm(data)
     gate_names = '(%s)' % ', '.join(gate_names)
@@ -263,7 +271,6 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
             plt.subplot(num_gates+1, 2, (2*num_gates + 1, 2*num_gates + 2))
             weights_viz = np.atleast_2d(data[2 + direction_idx*(2 + uses_bias)])
 
-            # Plot heatmap, gate separators (IF), colorbar (IF)
             plt.imshow(weights_viz, cmap=cmap, interpolation='nearest',
                        aspect='auto', vmin=vmin, vmax=vmax)
             if gate_sep_width != 0:
