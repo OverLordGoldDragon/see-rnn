@@ -66,7 +66,7 @@ def _get_cell_weights(rnn_cell, as_tensors=True, concat_gates=False):
         if as_tensors:
             return [getattr(rnn_cell, w_type) for w_type in kernel_types]
         else:
-            return rnn_cell.get_weights()
+            return K.batch_get_value(rnn_cell.weights)
 
     rnn_weights = []
     for w_type in kernel_types:

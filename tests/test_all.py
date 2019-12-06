@@ -158,6 +158,7 @@ def test_misc():  # misc tests to improve coverage %
 
         _pass_on_error(glg, model, x, y, 1)
         rs(model.layers[1])
+    assert True
 
 
 def make_model(rnn_layer, batch_shape, units=6, bidirectional=False):
@@ -167,6 +168,7 @@ def make_model(rnn_layer, batch_shape, units=6, bidirectional=False):
     else:
         x = rnn_layer(units, return_sequences=True)(ipt)
     out = rnn_layer(units, return_sequences=False)(x)
+
     model = Model(ipt, out)
     model.compile('adam', 'mse')
     return model

@@ -178,10 +178,12 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
         mode: str. One of: 'weights', 'grads'. If former, plots layer weights -
               else, plots layer weights grads w.r.t. `input_data` & `labels`.
         cmap: str. Pyplot cmap (colormap) kwarg for the heatmap.
-        norm: float iter. Normalizes colors to range between norm==(vmin, vmax),
-              according to `cmap`. Ex: `cmap`='bwr' ('blue white red') -> all
-              values <=vmin and >=vmax will be shown as most intense blue and
-              red, and those exactly in-between are shown as white.
+        norm: float iter / str ('auto') / None. Normalizes colors to range
+              between norm==(vmin, vmax), according to `cmap`. Ex: `cmap`='bwr'
+              ('blue white red') -> all values <=vmin and >=vmax will be shown as
+              most intense  blue and red, and those exactly in-between are shown
+              as white. If 'auto', will normalize across all non-bias plots 
+              (per kernels, gates, and directions).
 
     kwargs:
         scale_width:   float. Scale width  of resulting plot by a factor.
@@ -191,7 +193,6 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
         show_bias:     bool. If True, includes plot for bias (if layer uses bias)
         gate_sep_width: float. Pyplot kwarg for `linewidth` in marking gate
               separations in gated RNNs (LSTM, GRU) w/ vertical lines.
-        bins: int. Pyplot `hist` kwarg: number of histogram bins per subplot.
     """
 
     scale_width    = kwargs.get('scale_width',  1)

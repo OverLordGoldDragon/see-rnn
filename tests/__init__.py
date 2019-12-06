@@ -19,5 +19,3 @@ else:
     from keras.models import Model
     if USING_GPU:
         from keras.layers import CuDNNLSTM, CuDNNGRU
-
-from . import test_all
