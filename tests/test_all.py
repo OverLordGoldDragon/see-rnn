@@ -7,8 +7,9 @@ from termcolor import cprint, colored
 from . import K
 from . import Input, LSTM, GRU, SimpleRNN, Bidirectional
 from . import Model
-from see_rnn import get_rnn_gradients, show_features_0D
+from see_rnn import get_layer_gradients, show_features_0D
 from see_rnn import show_features_1D, show_features_2D, rnn_summary
+from see_rnn import rnn_heatmap, rnn_histogram
 
 
 USING_GPU = bool(tf.config.experimental.list_physical_devices('GPU') != [])
@@ -18,8 +19,8 @@ if USING_GPU:
     print("TF uses GPU")
 
 print("TF version: %s" % tf.__version__)
-TF_KERAS = bool(os.environ.get("TF_KERAS", 'False') == 'True')
-TF_EAGER = bool(os.environ.get("TF_EAGER", 'False') == 'True')
+TF_KERAS = bool(os.environ.get("TF_KERAS", '0') == '1')
+TF_EAGER = bool(os.environ.get("TF_EAGER", '0') == '1')
 TF_2 = (tf.__version__[0] == '2')
 
 warn_str = colored("WARNING: ", 'red')
@@ -66,7 +67,9 @@ def test_all():
         train_model(model, iterations, batch_shape, units)
 
         rnn_summary(model.layers[1])
-        _test_activation_gradients(model, batch_shape, units)
+        _test_activations_gradients(model)
+        _test_weights_gradients(model)
+        _test_weights(model)
 
         tests_ran += 1
         cprint("\n<< %s TESTED >>\n" % model_name, 'green')
@@ -74,11 +77,11 @@ def test_all():
     cprint("\n<< ALL MODELS TESTED >>\n", 'green')
 
 
-def _test_activation_gradients(model, batch_shape, units):
-    x, y = make_data(batch_shape, units)
+def _test_activations_gradients(model):
+    x, y = make_data(K.int_shape(model.input), model.layers[2].units)
     name = model.layers[1].name
-    grads_all  = get_rnn_gradients(model, x, y, layer_name=name, mode='activations')
-    grads_last = get_rnn_gradients(model, x, y, layer_idx=2,     mode='activations')
+    grads_all  = get_layer_gradients(model, x, y, layer_name=name, mode='activations')
+    grads_last = get_layer_gradients(model, x, y, layer_idx=2,     mode='activations')
 
     kwargs1 = dict(n_rows=None, show_xy_ticks=[0, 0], show_borders=True,
                    max_timesteps=50, show_title='grads')
@@ -94,6 +97,21 @@ def _test_activation_gradients(model, batch_shape, units):
     print('\n')  # improve separation
 
 
+def _test_weights_gradients(model):
+    x, y = make_data(K.int_shape(model.input), model.layers[2].units)
+    name = model.layers[1].name
+    kws = dict(input_data=x, labels=y, mode='grads')
+
+    rnn_histogram(model, layer_name=name, bins=100, **kws)
+    rnn_heatmap(model,   layer_name=name,           **kws)
+
+
+def _test_weights(model):
+    name = model.layers[1].name
+    rnn_histogram(model, layer_name=name, mode='weights', bins=100)
+    rnn_heatmap(model,   layer_name=name, mode='weights')
+
+
 def test_misc():  # misc tests to improve coverage %
     units = 6
     batch_shape = (8, 100, 2*units)
@@ -101,14 +119,14 @@ def test_misc():  # misc tests to improve coverage %
     model = make_model(GRU, batch_shape)
 
     x, y = make_data(batch_shape, units)
-    grads = get_rnn_gradients(model, x, y, layer_idx=1)
+    grads = get_layer_gradients(model, x, y, layer_idx=1)
     grads_4D = np.expand_dims(grads, -1)
     _grads = np.transpose(grads, (2, 1, 0))
 
     show_features_2D(_grads, n_rows=1.5, channel_axis=0)
     show_features_2D(_grads[:, :, 0],    channel_axis=0)
 
-    from see_rnn.inspect_gen import _make_grads_fn, _get_layer
+    from see_rnn.inspect_gen import _make_grads_fn, get_layer
 
     def _pass_on_error(func, *args, **kwargs):
         try:
@@ -121,12 +139,12 @@ def test_misc():  # misc tests to improve coverage %
     _pass_on_error(show_features_1D, grads_4D)
     _pass_on_error(show_features_2D, grads_4D)
     _pass_on_error(show_features_2D, grads, channel_axis=1)
-    _pass_on_error(get_rnn_gradients, model, x, y, 1, mode='cactus')
-    _pass_on_error(get_rnn_gradients, model, x, y, 1, 'gru', model.layers[1])
+    _pass_on_error(get_layer_gradients, model, x, y, 1, mode='cactus')
+    _pass_on_error(get_layer_gradients, model, x, y, 1, 'gru', model.layers[1])
     _pass_on_error(_make_grads_fn, model, model.layers[1], mode='banana')
-    _pass_on_error(_get_layer, model)
+    _pass_on_error(get_layer, model)
 
-    _get_layer(model, layer_name='gru')
+    get_layer(model, layer_name='gru')
 
     from importlib import reload
 
@@ -135,7 +153,7 @@ def test_misc():  # misc tests to improve coverage %
         os.environ['TF_KERAS'] = flag
         reload(inspect_gen)
         reload(inspect_rnn)
-        from see_rnn.inspect_rnn import get_rnn_gradients as grg
+        from see_rnn.inspect_rnn import get_layer_gradients as grg
         from see_rnn.inspect_rnn import rnn_summary as rs
 
         _pass_on_error(grg, model, x, y, 1)

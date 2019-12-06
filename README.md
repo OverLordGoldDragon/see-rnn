@@ -26,8 +26,8 @@ RNN weights, gradients, &amp; activations visualization in Keras &amp; TensorFlo
 
 ```python
 # for all examples
-grads = get_rnn_gradients(model, x, y, layer_idx=1)  # return_sequences=True
-grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
+grads = get_layer_gradients(model, x, y, layer_idx=1)  # return_sequences=True
+grads = get_layer_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 # all examples use timesteps=100
 ```
 
@@ -139,7 +139,7 @@ import numpy as np
 from keras.layers import Input, LSTM
 from keras.models import Model
 from keras.optimizers import Adam
-from see_rnn import get_rnn_gradients, show_features_1D, show_features_2D
+from see_rnn import get_layer_gradients, show_features_1D, show_features_2D
 from see_rnn import show_features_0D
 
 def make_model(rnn_layer, batch_shape, units):
@@ -169,8 +169,8 @@ model = make_model(LSTM, batch_shape, units)
 train_model(model, 300, batch_shape)
 
 x, y  = make_data(batch_shape)
-grads_all  = get_rnn_gradients(model, x, y, layer_idx=1)  # return_sequences=True
-grads_last = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
+grads_all  = get_layer_gradients(model, x, y, layer_idx=1)  # return_sequences=True
+grads_last = get_layer_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 show_features_1D(grads_all, n_rows=2, show_xy_ticks=[1,1])
 show_features_2D(grads_all, n_rows=8, show_xy_ticks=[1,1], norm=(-.01, .01))

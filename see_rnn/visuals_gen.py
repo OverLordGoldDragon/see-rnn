@@ -86,7 +86,6 @@ def show_features_0D(data, marker='o', cmap='bwr', color=None,
 def show_features_1D(data, n_rows=None, label_channels=True,
                      equate_axes=True, max_timesteps=None, **kwargs):
     """Plots 1D curves in a standalone graph or subplot grid.
-
     Arguments:
         data: np.ndarray, 2D/3D. Data to plot.
               2D -> standalone graph; 3D -> subplot grid.
@@ -96,9 +95,7 @@ def show_features_1D(data, n_rows=None, label_channels=True,
         equate_axes:    bool. If True, subplots will share x- and y-axes limits.
         max_timesteps:  int/None. Max number of timesteps to show per plot.
               If None, keeps original.
-
     iter == list/tuple (both work)
-
     kwargs:
         scale_width:   float. Scale width  of resulting plot by a factor.
         scale_height:  float. Scale height of resulting plot by a factor.
@@ -127,6 +124,7 @@ def show_features_1D(data, n_rows=None, label_channels=True,
     show_borders    = kwargs.get('show_borders', True)
     show_xy_ticks   = kwargs.get('show_xy_ticks',  [True, True])
     show_title      = kwargs.get('show_title',   True)
+    show_y_zero     = kwargs.get('show_y_zero', False)  # TODO: docstr
     title_fontsize  = kwargs.get('title_fontsize', 14)
     channel_axis    = kwargs.get('channel_axis',  -1)
     dpi             = kwargs.get('dpi', 76)
@@ -169,7 +167,8 @@ def show_features_1D(data, n_rows=None, label_channels=True,
         n_colors = len(data) if len(data.shape)==3 else 1
         color = [None] * n_colors
 
-    fig, axes = plt.subplots(n_rows, n_cols, sharey=equate_axes, dpi=dpi)
+    fig, axes = plt.subplots(n_rows, n_cols, sharex=equate_axes, 
+                             sharey=equate_axes, dpi=dpi)
     axes = np.asarray(axes)
 
     if show_title:
@@ -178,6 +177,8 @@ def show_features_1D(data, n_rows=None, label_channels=True,
     fig.set_size_inches(12*scale_width, 8*scale_height)
 
     for ax_idx, ax in enumerate(axes.flat):
+        if show_y_zero:
+            ax.axhline(0, color='red')
         feature_outputs = _get_feature_outputs(data, ax_idx)
         for idx, feature_output in enumerate(feature_outputs):
             ax.plot(feature_output, color=color[idx])
@@ -194,14 +195,6 @@ def show_features_1D(data, n_rows=None, label_channels=True,
         if not show_borders:
             ax.set_frame_on(False)
 
-    if equate_axes:
-        y_new = []
-        for row_axis in axes:
-            y_new += [np.max(np.abs([col_axis.get_ylim() for
-                                     col_axis in row_axis]))]
-        y_new = np.max(y_new)
-        for row_axis in axes:
-            [col_axis.set_ylim(-y_new, y_new) for col_axis in row_axis]
     plt.show()
 
 

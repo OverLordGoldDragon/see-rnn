@@ -1,78 +1,92 @@
 import os
-import numpy as np
-from .inspect_gen import _get_layer, _make_grads_fn
 from termcolor import colored
 
-TF_KERAS = os.environ.get("TF_KERAS", 'False') == 'True'
+from .inspect_gen import get_layer
+from .utils import _validate_args, _validate_rnn_type
+
+TF_KERAS = os.environ.get("TF_KERAS", '0') == '1'
+if TF_KERAS:
+    import tensorflow.keras.backend as K
+else:
+    import keras.backend as K
+
 warn_str = colored("WARNING: ", 'red')
 note_str = colored("NOTEL ", 'blue')
 
 
-def get_rnn_gradients(model, input_data, labels, layer_idx=None,
-                      layer_name=None, layer=None, mode='activations',
-                      sample_weights=None, learning_phase=1):
-    """Retrieves RNN layer gradients w.r.t. activations or weights.
-    NOTE: gradients will be clipped if `clipvalue` or `clipnorm` were set.
-
-    Arguments:
-        model: keras.Model/tf.keras.Model.
-        input_data: np.ndarray & supported formats(1). Data w.r.t. which loss is
-               to be computed for the gradient.
-        labels: np.ndarray & supported formats. Labels w.r.t. which loss is
-               to be computed for the gradient.
-        layer_idx: int. Index of layer to fetch, via model.layers[layer_idx].
-        layer_name: str. Substring of name of layer to be fetched. Returns
-               earliest match if multiple found.
-        layer: keras.Layer/tf.keras.Layer. Layer whose gradients to return.
-               Overrides `layer_idx` and `layer_name`.
-        mode: str. One of: 'activations', 'weights'. If former, returns grads
-               w.r.t. layer outputs(2) - else, w.r.t. layer trainable weights.
-        sample_weights: np.ndarray & supported formats. `sample_weight` kwarg
-               to model.fit(), etc., weighting individual sample losses.
-        learning_phase: int/bool. If 1, uses model in train model - else,
-               in inference mode.
-
-    (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
-         input data formats
-    (2): not necessarily activations. If an Activation layer is used, returns
-         the gradients of the target layer's PRE-activations instead. To then
-         get grads w.r.t. activations, specify the Activation layer.
-    """
-
-    def _validate_args(model, layer_idx, layer_name, layer, mode):
-        find_layer = layer_idx is not None or layer_name is not None
-        if find_layer and layer is not None:
-            print(warn_str + "`layer` will override `layer_idx` & `layer_name`")
-
-        no_info  = layer_idx is None and layer_name is None
-        too_much_info = layer_idx is not None and layer_name is not None
-        if find_layer and (no_info or too_much_info):
-            raise Exception("must supply one (and only one) of "
-                            "`layer_idx`, `layer_name`")
-
-        if mode not in ['activations', 'weights']:
-            raise Exception("`mode` must be one of: 'activations', 'weights'")
-
-    _validate_args(model, layer_idx, layer_name, layer, mode)
+def get_rnn_weights(model, layer_idx=None, layer_name=None, layer=None,
+                    as_tensors=False, concat_gates=False):
+    _validate_args(model, layer_idx, layer_name, layer)
     if layer is None:
-        layer = _get_layer(model, layer_idx, layer_name)
+        layer = get_layer(model, layer_idx, layer_name)
+    rnn_type = _validate_rnn_type(layer, return_value=True)
+    IS_CUDNN = 'CuDNN' in rnn_type
 
-    grads_fn = _make_grads_fn(model, layer, mode)
-    if TF_KERAS:
-        grads = grads_fn([input_data, labels])
+    if hasattr(layer, 'backward_layer'):
+        l = layer
+        forward_cell  = l.forward_layer  if IS_CUDNN else l.forward_layer.cell
+        backward_cell = l.backward_layer if IS_CUDNN else l.backward_layer.cell
+
+        forward_cell_weights  = _get_cell_weights(forward_cell,  as_tensors, 
+                                                  concat_gates)
+        backward_cell_weights = _get_cell_weights(backward_cell, as_tensors, 
+                                                  concat_gates) 
+        return forward_cell_weights + backward_cell_weights
     else:
-        sample_weights = sample_weights or np.ones(len(input_data))
-        grads = grads_fn([input_data, sample_weights, labels, 1])
+        cell = layer if IS_CUDNN else layer.cell
+        return _get_cell_weights(cell, as_tensors, concat_gates)
 
-    while type(grads) == list:
-        grads = grads[0]
-    return grads
+
+def _get_cell_weights(rnn_cell, as_tensors=True, concat_gates=False):
+    def _get_cell_info(rnn_cell):
+        rnn_type = type(rnn_cell).__name__.replace('Cell', '')
+
+        if rnn_type in ['SimpleRNN', 'IndRNN']:
+            gate_names = ['']
+        elif rnn_type in ['LSTM', 'CuDNNLSTM']:
+            gate_names = ['i', 'f', 'c', 'o']
+        elif rnn_type in ['GRU',  'CuDNNGRU']:
+            gate_names = ['z', 'r', 'h']
+
+        if (getattr(rnn_cell, 'bias', None) is not None) or ('CuDNN' in rnn_type):
+            kernel_types = ['kernel', 'recurrent_kernel', 'bias']
+        else:
+            kernel_types = ['kernel', 'recurrent_kernel']
+
+        return rnn_type, gate_names, kernel_types
+
+    rnn_type, gate_names, kernel_types = _get_cell_info(rnn_cell)
+
+    if TF_KERAS and not concat_gates:
+        print("WARNING: getting weights per-gate not supported for tf.keras "
+              + "implementations; fetching per concat_gates==True instead")
+        concat_gates = True
+
+    if concat_gates:
+        if as_tensors:
+            return [getattr(rnn_cell, w_type) for w_type in kernel_types]
+        else:
+            return rnn_cell.get_weights()
+
+    rnn_weights = []
+    for w_type in kernel_types:
+        rnn_weights.append([])
+        for g_name in gate_names:
+            rnn_weights[-1].append(getattr(rnn_cell, w_type + '_' + g_name))
+    if as_tensors:
+        return rnn_weights
+    else:
+        for weight_idx in range(len(rnn_weights)):
+            for gate_idx in range(len(rnn_weights[weight_idx])):
+                rnn_weights[weight_idx][gate_idx] = K.eval(
+                    rnn_weights[weight_idx][gate_idx])
+        return rnn_weights
 
 
 def rnn_summary(layer):
     """Prints passed RNN layer's weights, and if applicable, gates information
-    NOTE: will not print gates information for tf.keras imports or CuDNN
-          implementations, as they lack pertinent attributes.
+    NOTE: will not print gates information for tf.keras imports as they 
+    lack pertinent attributes.
     """
 
     if hasattr(layer, 'backward_layer'):
@@ -96,7 +110,7 @@ def rnn_summary(layer):
             if weight_matrix is not None:
                 print(weight_matrix.name, "-- shape=%s" % weight_matrix.shape)
 
-            if not IS_CUDNN and not TF_KERAS:
+            if not TF_KERAS:
                 [print(key, "-- shape=%s" % val.shape) for key, val in
                     rnn_cell.__dict__.items() if (key_attr + '_' in key)
                     and (len(key) == len(key_attr) + 2)]
