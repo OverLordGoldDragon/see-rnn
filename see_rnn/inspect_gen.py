@@ -42,9 +42,9 @@ def get_layer_outputs(model, input_data, layer_name=None, layer_idx=None,
 
 
 def get_layer_gradients(model, input_data, labels, layer_idx=None,
-                        layer_name=None, layer=None, mode='activations',
+                        layer_name=None, layer=None, mode='outputs',
                         sample_weights=None, learning_phase=0):
-    """Retrieves layer gradients w.r.t. activations or weights.
+    """Retrieves layer gradients w.r.t. outputs or weights.
     NOTE: gradients will be clipped if `clipvalue` or `clipnorm` were set.
 
     Arguments:
@@ -58,7 +58,7 @@ def get_layer_gradients(model, input_data, labels, layer_idx=None,
                earliest match if multiple found.
         layer: keras.Layer/tf.keras.Layer. Layer whose gradients to return.
                Overrides `layer_idx` and `layer_name`.
-        mode: str. One of: 'activations', 'weights'. If former, returns grads
+        mode: str. One of: 'outputs', 'weights'. If former, returns grads
                w.r.t. layer outputs(2) - else, w.r.t. layer trainable weights.
         sample_weights: np.ndarray & supported formats. `sample_weight` kwarg
                to model.fit(), etc., weighting individual sample losses.
@@ -67,15 +67,15 @@ def get_layer_gradients(model, input_data, labels, layer_idx=None,
 
     (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
          input data formats
-    (2): not necessarily activations. If an Activation layer is used, returns
-         the gradients of the target layer's PRE-activations instead. To then
-         get grads w.r.t. activations, specify the Activation layer.
+    (2): "Outputs" are not necessarily activations. If an Activation layer is used,
+         returns the gradients of the target layer's PRE-activations instead. To
+         then get grads w.r.t. activations, specify the Activation layer.
     """
 
     def _validate_args_(model, layer_idx, layer_name, layer, mode):
         _validate_args(model, layer_idx, layer_name, layer)
-        if mode not in ['activations', 'weights']:
-            raise Exception("`mode` must be one of: 'activations', 'weights'")
+        if mode not in ['outputs', 'weights']:
+            raise Exception("`mode` must be one of: 'outputs', 'weights'")
 
     _validate_args_(model, layer_idx, layer_name, layer, mode)
     if layer is None:
@@ -112,15 +112,15 @@ def get_layer(model, layer_idx=None, layer_name=None):
     return layer[0]
 
 
-def _make_grads_fn(model, layer, mode='activations'):
-    """Returns gradient computation function w.r.t. layer activations or weights.
+def _make_grads_fn(model, layer, mode='outputs'):
+    """Returns gradient computation function w.r.t. layer outputs or weights.
     NOTE: gradients will be clipped if `clipnorm` or `clipvalue` were set.
     """
 
-    if mode not in ['activations', 'weights']:
-        raise Exception("`mode` must be one of: 'activations', 'weights'")
+    if mode not in ['outputs', 'weights']:
+        raise Exception("`mode` must be one of: 'outputs', 'weights'")
 
-    params = layer.output if mode=='activations' else layer.trainable_weights
+    params = layer.output if mode=='outputs' else layer.trainable_weights
     grads = model.optimizer.get_gradients(model.total_loss, params)
 
     if TF_KERAS:
@@ -129,3 +129,16 @@ def _make_grads_fn(model, layer, mode='activations'):
         inputs = [model.inputs[0], model.sample_weights[0],
                   model._feed_targets[0], K.learning_phase()]
     return K.function(inputs=inputs, outputs=grads)
+
+
+def _detect_nans(data):
+    data = np.array(data).flatten()
+    perc_nans = 100 * np.sum(np.isnan(data)) / len(data)
+    if perc_nans == 0:
+        return None
+    if perc_nans < 0.1:
+        num_nans = (perc_nans / 100) * len(data)  # show as quantity
+        txt = str(int(num_nans)) + '\nNaNs'
+    else:
+        txt = "%.1f" % perc_nans + "% \nNaNs"  # show as percent
+    return txt

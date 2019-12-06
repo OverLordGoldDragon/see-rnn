@@ -1,6 +1,8 @@
+from termcolor import colored
 import matplotlib.pyplot as plt
 import numpy as np
 from .utils import _process_rnn_args
+from .inspect_gen import _detect_nans
 
 
 def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
@@ -44,17 +46,6 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
     show_xy_ticks = kwargs.get('show_xy_ticks',  [True, True])
     equate_axes   = kwargs.get('equate_axes', 1)
     bins          = kwargs.get('bins', 150)
-
-    def _detect_nans(weight_data):
-        perc_nans = 100 * np.sum(np.isnan(weight_data)) / len(weight_data)
-        if perc_nans == 0:
-            return None
-        if perc_nans < 0.1:
-            num_nans = (perc_nans / 100) * len(weight_data)  # show as quantity
-            txt = str(int(num_nans)) + '\nNaNs'
-        else:
-            txt = "%.1f" % perc_nans + "% \nNaNs"  # show as percent
-        return txt
 
     def _get_axes_extrema(axes):
         axes = np.array(axes)
@@ -105,28 +96,29 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
         for type_idx, kernel_type in enumerate(kernel_types):
             for gate_idx in range(num_gates):
                 ax = subplot_axes[gate_idx][type_idx]
-                weight_idx = type_idx + direction_idx*(2 + uses_bias)
-                weight_data = data[weight_idx]
+                matrix_idx = type_idx + direction_idx*(2 + uses_bias)
+                matrix_data = data[matrix_idx]
 
                 if rnn_type in gated_types:
                     start = gate_idx * rnn_dim
                     end   = start + rnn_dim
-                    weight_data = weight_data[:, start:end]
-                weight_data = weight_data.flatten()
+                    matrix_data = matrix_data[:, start:end]
+                matrix_data = matrix_data.flatten()
 
-                ax.hist(weight_data, bins=bins)
+                nan_txt = _detect_nans(matrix_data)
+                if nan_txt is not None:  # NaNs detected
+                    matrix_data[np.isnan(matrix_data)] = 0  # set NaNs to zero
+                ax.hist(matrix_data, bins=bins)
 
+                if nan_txt is not None:
+                    ax.annotate(nan_txt, fontsize=12, weight='bold', color='red',
+                                xy=(0.05, 0.63), xycoords='axes fraction')
                 if gate_idx == 0:
                     title = kernel_type + ' GATES' * (rnn_type in gated_types)
                     ax.set_title(title, weight='bold')
                 if rnn_type in gated_types:
                     ax.annotate(gate_names[gate_idx], fontsize=12, weight='bold',
                                 xy=(0.90, 0.93), xycoords='axes fraction')
-
-                nan_txt = _detect_nans(weight_data)
-                if nan_txt is not None:
-                    ax.annotate(nan_txt, fontsize=12, weight='bold', color='red',
-                                xy=(0.05, 0.63), xycoords='axes fraction')
 
                 if not show_borders:
                     ax.set_frame_on(False)
@@ -141,7 +133,17 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
         if uses_bias:  # does not equate axes
             plt.figure(figsize=(11*scale_width, 4.5*scale_height))
             plt.subplot(num_gates+1, 2, (2*num_gates+1, 2*num_gates+2))
-            plt.hist(data[2 + direction_idx*3].flatten(), bins=bins)
+
+            matrix_data = data[2 + direction_idx*3].flatten()
+            nan_txt = _detect_nans(matrix_data)
+            if nan_txt is not None:  # NaNs detected
+                matrix_data[np.isnan(matrix_data)] = 0  # set NaNs to zero
+
+            plt.hist(matrix_data, bins=bins)
+
+            if nan_txt is not None:
+                plt.annotate(nan_txt, fontsize=12, weight='bold', color='red',
+                             xy=(0.05, 0.63), xycoords='axes fraction')
             plt.box(on=None)
             plt.annotate('BIAS', fontsize=12, weight='bold',
                          xy=(0.90, 0.93), xycoords='axes fraction')
@@ -209,16 +211,35 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
     show_bias      = kwargs.get('show_bias', True)
     gate_sep_width = kwargs.get('gate_sep_width', 1)
 
-    def _unpack_rnn_info(rnn_info):
-        d = rnn_info
-        return (d['rnn_type'], d['gate_names'], d['num_gates'],
-                d['rnn_dim'],  d['is_bidir'],   d['uses_bias'],
-                d['direction_names'])
+    def _print_nans(nan_txt, matrix_data, kernel_type, gate_names, rnn_dim):
+        if gate_names[0] == '':
+            print(kernel_type, end=":")
+            nan_txt = nan_txt.replace('\n', '')
+            print(colored(nan_txt, 'red'))
+        else:
+            print('\n' + kernel_type + ":")
+            num_gates = len(gate_names)
+            gates_data = []
+            for gate_idx in range(num_gates):
+                start, end = rnn_dim*gate_idx, rnn_dim*(gate_idx + 1)
+                gates_data.append(matrix_data[..., start:end])
+
+            for gate_name, gate_data in zip(gate_names, gates_data):
+                nan_txt = _detect_nans(gate_data)
+                if nan_txt is not None:
+                    nan_txt = nan_txt.replace('\n', '')
+                    print(gate_name + ':', colored(nan_txt, 'red'))
 
     def _make_common_norm(data):
         idxs = [0, 1] + [3, 4]*(len(data) == 6) + [2, 3]*(len(data) == 4)
         return (min([np.min(data[idx]) for idx in idxs]),
                 max([np.max(data[idx]) for idx in idxs]))
+
+    def _unpack_rnn_info(rnn_info):
+        d = rnn_info
+        return (d['rnn_type'], d['gate_names'], d['num_gates'],
+                d['rnn_dim'],  d['is_bidir'],   d['uses_bias'],
+                d['direction_names'])
 
     data, rnn_info = _process_rnn_args(model, layer_name, layer_idx, layer,
                                        input_data, labels, mode)
@@ -228,11 +249,15 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
     if cmap is None:
         cmap = plt.cm.bone
     if normalize:
-        data -= np.min(data)
-        data /= np.max(data)
+        for idx in range(len(data)):
+            data[idx] -= np.min(data[idx])
+            if np.max(data[idx]) == 0:
+                data[idx] = -data[idx]
+            else:
+                data[idx] /= np.max(data[idx])
 
     (vmin, vmax) = norm if norm else _make_common_norm(data)
-    gate_names = '(%s)' % ', '.join(gate_names)
+    _gate_names = '(%s)' % ', '.join(gate_names)
 
     for direction_idx, direction_name in enumerate(direction_names):
         fig = plt.figure(figsize=(14*scale_width, 5*scale_height))
@@ -244,9 +269,13 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
             ax = plt.subplot(1, 2, type_idx+1)
             axes.append(ax)
             w_idx = type_idx + direction_idx*(2 + uses_bias)
+            matrix_data = data[w_idx]
 
-            # Plot heatmap, gate separators (IF), colorbar (IF)
-            img = ax.imshow(data[w_idx], cmap=cmap, interpolation='nearest',
+            nan_txt = _detect_nans(matrix_data)
+            if nan_txt is not None:
+                _print_nans(nan_txt, matrix_data, kernel_type, gate_names, rnn_dim)
+
+            img = ax.imshow(matrix_data, cmap=cmap, interpolation='nearest',
                             aspect='auto', vmin=vmin, vmax=vmax)
             if gate_sep_width != 0:
                 lw = gate_sep_width
@@ -255,7 +284,7 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
 
             # Styling
             ax.set_title(kernel_type, fontsize=14, weight='bold')
-            ax.set_xlabel(gate_names, fontsize=12, weight='bold')
+            ax.set_xlabel(_gate_names, fontsize=12, weight='bold')
             y_label = ['Channel units', 'Hidden units'][type_idx]
             ax.set_ylabel(y_label, fontsize=12, weight='bold')
 

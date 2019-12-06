@@ -78,7 +78,7 @@ def _get_cell_weights(rnn_cell, as_tensors=True, concat_gates=False):
     rnn_type, gate_names, kernel_types = _get_cell_info(rnn_cell)
 
     if TF_KERAS and not concat_gates:
-        print("WARNING: getting weights per-gate not supported for tf.keras "
+        print(warn_str + "getting weights per-gate not supported for tf.keras "
               + "implementations; fetching per concat_gates==True instead")
         concat_gates = True
 

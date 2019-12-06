@@ -25,7 +25,7 @@ def show_features_0D(data, marker='o', cmap='bwr', color=None, **kwargs):
         scale_height:  float. Scale height of resulting plot by a factor.
         show_borders:  bool.  If True, shows boxes around plot(s).
         show_title:    bool/str. If True, shows generic supertitle.
-              If str in ('grads', 'activations'), shows supertitle tailored to
+              If str in ('grads', 'outputs'), shows supertitle tailored to
               `data` dim (2D/3D). If other str, shows `show_title` as supertitle.
               If False, no title is shown.
         show_y_zero: bool. If True, draws y=0 in each plot.
@@ -38,7 +38,7 @@ def show_features_0D(data, marker='o', cmap='bwr', color=None, **kwargs):
     scale_width    = kwargs.get('scale_width',  1)
     scale_height   = kwargs.get('scale_height', 1)
     show_borders   = kwargs.get('show_borders', False)
-    show_title     = kwargs.get('show_title',   True)
+    show_title     = kwargs.get('show_title',   'outputs')
     show_y_zero    = kwargs.get('show_y_zero',  True)
     title_fontsize = kwargs.get('title_fontsize', 14)
     channel_axis   = kwargs.get('channel_axis', -1)
@@ -49,8 +49,8 @@ def show_features_0D(data, marker='o', cmap='bwr', color=None, **kwargs):
         feature = "Context-feature"
         context = "Context-units"
 
-        if show_title in ['grads', 'activations']:
-            feature = "Gradients" if show_title=='grads' else "Activations"
+        if show_title in ['grads', 'outputs']:
+            feature = "Gradients" if show_title=='grads' else "Outputs"
             context = "Timesteps"
         return "(%s vs. %s) vs. Channels" % (feature, context)
 
@@ -102,10 +102,11 @@ def show_features_1D(data, n_rows=None, label_channels=True,
         show_borders:  bool.  If True, shows boxes around plot(s).
               Ex: [1, 1] -> show both x- and y-ticks (and their labels).
                   [0, 0] -> hide both.
-        show_title:    bool/str. If True, shows generic supertitle.
-              If str in ('grads', 'activations'), shows supertitle tailored to
+        show_title: bool/str. If True, shows generic supertitle.
+              If str in ('grads', 'outputs'), shows supertitle tailored to
               `data` dim (2D/3D). If other str, shows `show_title` as supertitle.
               If False, no title is shown.
+        show_y_zero: bool. If True, draw y=0 for each plot.
         title_fontsize: int. Title fontsize.
         show_xy_ticks: int/bool iter. Slot 0 -> x, Slot 1 -> y.
         channel_axis: int. `data` axis holding channels/features. -1 = last axis.
@@ -123,8 +124,8 @@ def show_features_1D(data, n_rows=None, label_channels=True,
     scale_height    = kwargs.get('scale_height',  1)
     show_borders    = kwargs.get('show_borders', True)
     show_xy_ticks   = kwargs.get('show_xy_ticks',  [True, True])
-    show_title      = kwargs.get('show_title',   True)
-    show_y_zero     = kwargs.get('show_y_zero', False)  # TODO: docstr
+    show_title      = kwargs.get('show_title', 'outputs')
+    show_y_zero     = kwargs.get('show_y_zero', False)
     title_fontsize  = kwargs.get('title_fontsize', 14)
     channel_axis    = kwargs.get('channel_axis',  -1)
     dpi             = kwargs.get('dpi', 76)
@@ -136,8 +137,8 @@ def show_features_1D(data, n_rows=None, label_channels=True,
         feature = "Context-feature"
         context = "Context-units"
 
-        if show_title in ['grads', 'activations']:
-            feature = "Gradients" if show_title=='grads' else "Activations"
+        if show_title in ['grads', 'outputs']:
+            feature = "Gradients" if show_title=='grads' else "Outputs"
             context = "Timesteps"
 
         if len(data.shape)==3:
@@ -230,7 +231,7 @@ def show_features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=Fals
                   [0, 0] -> hide both.
         show_colorbar: bool. If True, shows one colorbar next to plot(s).
         show_title:    bool/str. If True, shows generic supertitle.
-              If str in ('grads', 'activations'), shows supertitle tailored to
+              If str in ('grads', 'outputs'), shows supertitle tailored to
               `data` dim (2D/3D). If other str, shows `show_title` as supertitle.
               If False, no title is shown.
         title_fontsize: int. Title fontsize.
@@ -243,7 +244,7 @@ def show_features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=Fals
     show_borders   = kwargs.get('show_borders', True)
     show_xy_ticks  = kwargs.get('show_xy_ticks',  [True, True])
     show_colorbar  = kwargs.get('show_colorbar', False)
-    show_title     = kwargs.get('show_title',    True)
+    show_title     = kwargs.get('show_title',    'outputs')
     title_fontsize = kwargs.get('title_fontsize', 14)
     channel_axis   = kwargs.get('channel_axis', -1)
     dpi            = kwargs.get('dpi', 76)
@@ -254,8 +255,8 @@ def show_features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=Fals
         context_order = "(%s vs. Channels)" % context
         extra_dim = ""
 
-        if show_title in ['grads', 'activations']:
-            feature = "Gradients" if show_title=='grads' else "Activations"
+        if show_title in ['grads', 'outputs']:
+            feature = "Gradients" if show_title=='grads' else "Outputs"
             context = "Timesteps"
         if timesteps_xaxis:
             context_order = "(Channels vs. %s)" % context
