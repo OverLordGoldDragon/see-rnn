@@ -139,6 +139,7 @@ def test_misc():  # misc tests to improve coverage %
     show_features_2D(_grads[:, :, 0],    channel_axis=0)
     rnn_histogram(model, layer_idx=1, show_xy_ticks=[0, 0], equate_axes=2)
     rnn_heatmap(model, layer_idx=1, cmap=None, normalize=True, show_borders=False)
+    rnn_heatmap(model, layer_idx=1, cmap=None, absolute_value=True)
 
     def _pass_on_error(func, *args, **kwargs):
         try:

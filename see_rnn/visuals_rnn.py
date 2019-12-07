@@ -164,7 +164,8 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
 
 def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
                 input_data=None, labels=None, mode='weights',
-                cmap='bwr', norm=None, normalize=False, **kwargs):
+                cmap='bwr', norm=None, normalize=False,
+                absolute_value=False, **kwargs):
     """Plots histogram grid of RNN weights/gradients by kernel, gate (if gated),
        and direction (if bidirectional). Also detects NaNs and shows on plots.
 
@@ -190,7 +191,11 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
               as white. If 'auto', will normalize across all non-bias plots
               (per kernels, gates, and directions).
         normalize: bool. If True, scales all values to lie between 0 & 1. Works
-              well with a greyscale `cmap` (e.g. None).
+              well with a greyscale `cmap` (e.g. None). Applied after
+              `absolute_value`.
+        absolute_value: bool. If True, takes absolute value of all data before
+              plotting. Works well with a greyscale `cmap` (e.g. None). Applied
+              before `normalize`.
     (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
          input data formats
 
@@ -248,6 +253,8 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
 
     if cmap is None:
         cmap = plt.cm.bone
+    if absolute_value:
+        data = np.abs(data)
     if normalize:
         for idx in range(len(data)):
             data[idx] -= np.min(data[idx])
