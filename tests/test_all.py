@@ -175,7 +175,11 @@ def test_misc():  # misc tests to improve coverage %
     rnn_histogram(model, layer_idx=1)
     rnn_heatmap(model, layer_idx=1)
 
+    del model
+    reset_seeds(reset_graph_with_backend=K)
     _model = make_model(SimpleRNN, batch_shape, use_bias=False)
+    train_model(_model, iterations=1)  # TF2-Keras-Graph bug workaround
+
     K.set_value(_model.optimizer.lr, 1e50)  # SimpleRNNs seem ridiculously robust
     train_model(_model, iterations=20)
     rnn_heatmap(_model, layer_idx=1)
@@ -195,10 +199,6 @@ def test_misc():  # misc tests to improve coverage %
         from see_rnn.inspect_rnn import rnn_summary as rs
         from see_rnn.utils import _validate_rnn_type as _vrt
 
-        _pass_on_error(glg, model, x, y, 1)
-        rs(model.layers[1])
-
-        del model
         reset_seeds(reset_graph_with_backend=K)
         if TF_KERAS:
             from tensorflow.keras.layers import Input, Bidirectional
@@ -215,6 +215,10 @@ def test_misc():  # misc tests to improve coverage %
         new_imports = dict(Input=Input, Bidirectional=Bidirectional,
                            Model=Model)
         model = make_model(_GRU, batch_shape, new_imports=new_imports)
+
+        _pass_on_error(glg, model, x, y, 1)
+        rs(model.layers[1])
+
         from see_rnn.inspect_rnn import get_rnn_weights as grw
         grw(model, layer_idx=1, concat_gates=False, as_tensors=True)
         grw(model, layer_idx=1, concat_gates=False, as_tensors=False)
@@ -224,6 +228,7 @@ def test_misc():  # misc tests to improve coverage %
 
         _model = _make_nonrnn_model()
         _pass_on_error(_vrt, _model.layers[1])
+        del model, _model
 
     assert True
 
