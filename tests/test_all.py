@@ -198,6 +198,8 @@ def test_misc():  # misc tests to improve coverage %
             from keras.layers import Input, Bidirectional
             from keras.layers import GRU as _GRU
             from keras.models import Model
+            import keras.backend as _K
+            reset_seeds(reset_graph_with_backend=_K)
             new_imports = dict(Input=Input, Bidirectional=Bidirectional,
                                Model=Model)
 

@@ -90,9 +90,7 @@ def _get_cell_weights(rnn_cell, as_tensors=True, concat_gates=False):
         except:
             return K.batch_get_value(rnn_cell.weights)
 
-    if 'GRU' in rnn_type and rnn_cell.implementation == 2:
-        print(note_str + "GRU implementation 2 has two bias weights; will only "
-              + "retrieve `input_bias`, which is gated")
+    if 'GRU' in rnn_type:
         kernel_types = ['kernel', 'recurrent_kernel', 'input_bias']
     rnn_weights = []
     for w_type in kernel_types:
@@ -132,13 +130,17 @@ def rnn_summary(layer):
             elif idx == 1:
                 print("// BACKWARD LAYER")
 
-        for key_attr in ['kernel', 'recurrent_kernel', 'bias']:
-            weight_matrix = getattr(rnn_cell, key_attr, None)
+        kernel_types = ['kernel', 'recurrent_kernel', 'bias']
+        if type(layer).__name__ == 'GRU':
+            kernel_types += ['input_bias']
+
+        for kernel_type in kernel_types:
+            weight_matrix = getattr(rnn_cell, kernel_type, None)
             if weight_matrix is not None:
                 print(weight_matrix.name, "-- shape=%s" % weight_matrix.shape)
 
             if not TF_KERAS:
                 [print(key, "-- shape=%s" % val.shape) for key, val in
-                    rnn_cell.__dict__.items() if (key_attr + '_' in key)
-                    and (len(key) == len(key_attr) + 2)]
+                    rnn_cell.__dict__.items() if (kernel_type + '_' in key)
+                    and (len(key) == len(kernel_type) + 2)]
                 print()
