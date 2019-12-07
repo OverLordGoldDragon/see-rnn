@@ -176,10 +176,10 @@ def test_misc():  # misc tests to improve coverage %
     rnn_heatmap(model, layer_idx=1)
 
     _model = make_model(SimpleRNN, batch_shape, use_bias=False)
+    rnn_heatmap(_model, layer_idx=1)
+    K.set_value(_model.optimizer.lr, 1e12)
+    train_model(_model, iterations=10)
     rnn_histogram(_model, layer_idx=1)
-    K.set_value(model.optimizer.lr, 1e12)
-    train_model(model, iterations=10)
-    rnn_histogram(model, layer_idx=1)
     del _model
 
     from importlib import reload
@@ -218,6 +218,9 @@ def test_misc():  # misc tests to improve coverage %
         from see_rnn.inspect_rnn import get_rnn_weights as grw
         grw(model, layer_idx=1, concat_gates=False, as_tensors=True)
         grw(model, layer_idx=1, concat_gates=False, as_tensors=False)
+        _test_outputs(model)
+        setattr(model.layers[2], 'get_weights', None)
+        get_rnn_weights(model, layer_idx=2, concat_gates=True, as_tensors=False)
 
         _model = _make_nonrnn_model()
         _pass_on_error(_vrt, _model.layers[1])
