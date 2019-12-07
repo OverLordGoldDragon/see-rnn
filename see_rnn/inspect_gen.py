@@ -37,7 +37,10 @@ def get_layer_outputs(model, input_data, layer_name=None, layer_idx=None,
 
     _validate_args(model, layer_idx, layer_name, layer)
     layer = get_layer(model, layer_idx, layer_name)
-    layers_fn = K.function([model.input, K.learning_phase()], [layer.output])
+    if TF_KERAS:
+        layers_fn = K.function([model.input], [layer.output])
+    else:
+        layers_fn = K.function([model.input, K.learning_phase()], [layer.output])
     return layers_fn([input_data, learning_phase])[0]
 
 

@@ -165,7 +165,7 @@ def test_misc():  # misc tests to improve coverage %
     rnn_heatmap(model, layer_idx=1, input_data=x, labels=y, mode='weights')
     make_model(GRU, batch_shape, use_bias=False)
 
-    K.set_value(model.optimizer.lr, 1e6)
+    K.set_value(model.optimizer.lr, 1e8)
     train_model(model, iterations=30)
     rnn_histogram(model, layer_idx=1)  # test nan detection
     rnn_heatmap(model, layer_idx=1)
