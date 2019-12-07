@@ -176,6 +176,8 @@ def test_misc():  # misc tests to improve coverage %
     rnn_heatmap(model, layer_idx=1)
 
     _model = make_model(SimpleRNN, batch_shape, use_bias=False)
+    K.set_value(_model.optimizer.lr, 1e50)  # SimpleRNNs seem ridiculously robust
+    train_model(_model, iterations=20)
     rnn_heatmap(_model, layer_idx=1)
     get_rnn_weights(_model, layer_idx=1)
     del _model
@@ -217,7 +219,7 @@ def test_misc():  # misc tests to improve coverage %
         grw(model, layer_idx=1, concat_gates=False, as_tensors=True)
         grw(model, layer_idx=1, concat_gates=False, as_tensors=False)
         _test_outputs(model)
-        setattr(model.layers[2], 'get_weights', None)
+        setattr(model.layers[2].cell, 'get_weights', None)
         get_rnn_weights(model, layer_idx=2, concat_gates=True, as_tensors=False)
 
         _model = _make_nonrnn_model()
