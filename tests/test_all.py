@@ -146,7 +146,7 @@ def test_misc():  # misc tests to improve coverage %
         except:
             pass
 
-    from see_rnn.inspect_gen import _make_grads_fn, get_layer
+    from see_rnn.inspect_gen import get_layer, _make_grads_fn, _detect_nans
 
     _pass_on_error(show_features_0D, grads)
     _pass_on_error(show_features_0D, grads_4D)
@@ -157,6 +157,7 @@ def test_misc():  # misc tests to improve coverage %
     _pass_on_error(get_layer_gradients, model, x, y, 1, 'gru', model.layers[1])
     _pass_on_error(_make_grads_fn, model, model.layers[1], mode='banana')
     _pass_on_error(get_layer, model)
+    _pass_on_error(get_layer, model, layer_name='capsule')
     _pass_on_error(rnn_heatmap, model, layer_idx=1, input_data=x, labels=y,
                    mode='coffee')
     _pass_on_error(rnn_heatmap, model, layer_idx=1, mode='grads')
@@ -164,14 +165,18 @@ def test_misc():  # misc tests to improve coverage %
     get_layer(model, layer_name='gru')
     get_rnn_weights(model, layer_idx=1, concat_gates=True,  as_tensors=True)
     rnn_heatmap(model, layer_idx=1, input_data=x, labels=y, mode='weights')
-    make_model(GRU, batch_shape, use_bias=False)
 
     # test NaN detection
+    nan_txt = _detect_nans(np.array([1]*9999 + [np.nan])).replace('\n', ' ')
+    print(nan_txt)  # case: print as quantity
+
     K.set_value(model.optimizer.lr, 1e12)
     train_model(model, iterations=10)
     rnn_histogram(model, layer_idx=1)
     rnn_heatmap(model, layer_idx=1)
-    _model = make_model(SimpleRNN, batch_shape)
+
+    _model = make_model(SimpleRNN, batch_shape, use_bias=False)
+    rnn_histogram(_model, layer_idx=1)
     K.set_value(model.optimizer.lr, 1e12)
     train_model(model, iterations=10)
     rnn_histogram(model, layer_idx=1)
@@ -192,21 +197,27 @@ def test_misc():  # misc tests to improve coverage %
 
         _pass_on_error(glg, model, x, y, 1)
         rs(model.layers[1])
-        if not TF_KERAS:
-            del model
-            reset_seeds(reset_graph_with_backend=K)
+
+        del model
+        reset_seeds(reset_graph_with_backend=K)
+        if TF_KERAS:
+            from tensorflow.keras.layers import Input, Bidirectional
+            from tensorflow.keras.layers import GRU as _GRU
+            from tensorflow.keras.models import Model
+            import tensorflow.keras.backend as _K
+        else:
             from keras.layers import Input, Bidirectional
             from keras.layers import GRU as _GRU
             from keras.models import Model
             import keras.backend as _K
-            reset_seeds(reset_graph_with_backend=_K)
-            new_imports = dict(Input=Input, Bidirectional=Bidirectional,
-                               Model=Model)
 
-            model = make_model(_GRU, batch_shape, new_imports=new_imports)
-            from see_rnn.inspect_rnn import get_rnn_weights as grw
-            grw(model, layer_idx=1, concat_gates=False, as_tensors=True)
-            grw(model, layer_idx=1, concat_gates=False, as_tensors=False)
+        reset_seeds(reset_graph_with_backend=_K)
+        new_imports = dict(Input=Input, Bidirectional=Bidirectional,
+                           Model=Model)
+        model = make_model(_GRU, batch_shape, new_imports=new_imports)
+        from see_rnn.inspect_rnn import get_rnn_weights as grw
+        grw(model, layer_idx=1, concat_gates=False, as_tensors=True)
+        grw(model, layer_idx=1, concat_gates=False, as_tensors=False)
 
         _model = _make_nonrnn_model()
         _pass_on_error(_vrt, _model.layers[1])
@@ -226,7 +237,7 @@ def make_model(rnn_layer, batch_shape, units=6, bidirectional=False, use_bias=Tr
 
     kw = {}
     if not use_bias:
-        kw['use_bias'] = False  # for CuDNN case
+        kw['use_bias'] = False  # for CuDNN or misc case
     if activation == 'relu':
         kw['activation'] = 'relu'  # for nan detection
         kw['recurrent_dropout'] = recurrent_dropout
