@@ -177,9 +177,7 @@ def test_misc():  # misc tests to improve coverage %
 
     _model = make_model(SimpleRNN, batch_shape, use_bias=False)
     rnn_heatmap(_model, layer_idx=1)
-    K.set_value(_model.optimizer.lr, 1e12)
-    train_model(_model, iterations=10)
-    rnn_histogram(_model, layer_idx=1)
+    get_rnn_weights(_model, layer_idx=1)
     del _model
 
     from importlib import reload
