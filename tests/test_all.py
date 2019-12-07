@@ -13,6 +13,7 @@ from see_rnn import rnn_summary
 from see_rnn import rnn_heatmap, rnn_histogram
 
 
+IMPORTS = dict(K=K, Input=Input, GRU=GRU, Bidirectional=Bidirectional, Model=Model)
 USING_GPU = bool(tf.config.experimental.list_physical_devices('GPU') != [])
 
 if USING_GPU:
@@ -82,7 +83,7 @@ def test_all():
 def _test_outputs(model):
     x, _ = make_data(K.int_shape(model.input), model.layers[2].units)
     outs = get_layer_outputs(model, x, layer_idx=1)
-    show_features_1D(outs[0])
+    show_features_1D(outs[0], show_y_zero=True)
     show_features_2D(outs)
 
 
@@ -165,17 +166,23 @@ def test_misc():  # misc tests to improve coverage %
     rnn_heatmap(model, layer_idx=1, input_data=x, labels=y, mode='weights')
     make_model(GRU, batch_shape, use_bias=False)
 
-    K.set_value(model.optimizer.lr, 1e8)
-    train_model(model, iterations=30)
-    rnn_histogram(model, layer_idx=1)  # test nan detection
+    # test NaN detection
+    K.set_value(model.optimizer.lr, 1e12)
+    train_model(model, iterations=10)
+    rnn_histogram(model, layer_idx=1)
     rnn_heatmap(model, layer_idx=1)
+    _model = make_model(SimpleRNN, batch_shape)
+    K.set_value(model.optimizer.lr, 1e12)
+    train_model(model, iterations=10)
+    rnn_histogram(model, layer_idx=1)
+    del _model
 
     from importlib import reload
 
     from see_rnn import inspect_gen, inspect_rnn, utils
-    for flag in ['0', '1']:
+    for flag in ['1', '0']:
         os.environ["TF_KERAS"] = flag
-        TF_KERAS = os.environ.get("TF_KERAS", '0') == '1'
+        TF_KERAS = os.environ["TF_KERAS"] == '1'
         reload(inspect_gen)
         reload(inspect_rnn)
         reload(utils)
@@ -185,7 +192,16 @@ def test_misc():  # misc tests to improve coverage %
 
         _pass_on_error(glg, model, x, y, 1)
         rs(model.layers[1])
-        if TF_KERAS:
+        if not TF_KERAS:
+            del model
+            reset_seeds(reset_graph_with_backend=K)
+            from keras.layers import Input, Bidirectional
+            from keras.layers import GRU as _GRU
+            from keras.models import Model
+            new_imports = dict(Input=Input, Bidirectional=Bidirectional,
+                               Model=Model)
+
+            model = make_model(_GRU, batch_shape, new_imports=new_imports)
             from see_rnn.inspect_rnn import get_rnn_weights as grw
             grw(model, layer_idx=1, concat_gates=False, as_tensors=True)
             grw(model, layer_idx=1, concat_gates=False, as_tensors=False)
@@ -196,8 +212,16 @@ def test_misc():  # misc tests to improve coverage %
     assert True
 
 
-def make_model(rnn_layer, batch_shape, units=6, bidirectional=False,
-               use_bias=True, activation='tanh', recurrent_dropout=0):
+def make_model(rnn_layer, batch_shape, units=6, bidirectional=False, use_bias=True,
+               activation='tanh', recurrent_dropout=0, new_imports={}):
+    Input         = IMPORTS['Input']
+    Bidirectional = IMPORTS['Bidirectional']
+    Model         = IMPORTS['Model']
+    if new_imports != {}:
+        Input         = new_imports['Input']
+        Bidirectional = new_imports['Bidirectional']
+        Model         = new_imports['Model']
+
     kw = {}
     if not use_bias:
         kw['use_bias'] = False  # for CuDNN case

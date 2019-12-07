@@ -11,6 +11,7 @@ else:
     import keras.backend as K
 
 warn_str = colored("WARNING: ", 'red')
+note_str = colored("NOTE: ", 'blue')
 
 
 def get_rnn_weights(model, layer_idx=None, layer_name=None, layer=None,
@@ -67,7 +68,7 @@ def _get_cell_weights(rnn_cell, as_tensors=True, concat_gates=False):
         elif rnn_type in ['GRU',  'CuDNNGRU']:
             gate_names = ['z', 'r', 'h']
 
-        if (getattr(rnn_cell, 'bias', None) is not None) or ('CuDNN' in rnn_type):
+        if ('CuDNN' in rnn_type) or rnn_cell.use_bias:
             kernel_types = ['kernel', 'recurrent_kernel', 'bias']
         else:
             kernel_types = ['kernel', 'recurrent_kernel']
@@ -89,11 +90,16 @@ def _get_cell_weights(rnn_cell, as_tensors=True, concat_gates=False):
         except:
             return K.batch_get_value(rnn_cell.weights)
 
+    if 'GRU' in rnn_type and rnn_cell.implementation == 2:
+        print(note_str + "GRU implementation 2 has two bias weights; will only "
+              + "retrieve `input_bias`, which is gated")
+        kernel_types = ['kernel', 'recurrent_kernel', 'input_bias']
     rnn_weights = []
     for w_type in kernel_types:
         rnn_weights.append([])
         for g_name in gate_names:
             rnn_weights[-1].append(getattr(rnn_cell, w_type + '_' + g_name))
+
     if as_tensors:
         return rnn_weights
     else:
