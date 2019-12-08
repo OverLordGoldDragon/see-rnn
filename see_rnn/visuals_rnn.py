@@ -6,7 +6,8 @@ from .inspect_gen import _detect_nans
 
 
 def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
-                  input_data=None, labels=None, mode='weights', **kwargs):
+                  input_data=None, labels=None, mode='weights', equate_axes=1,
+                  **kwargs):
     """Plots histogram grid of RNN weights/gradients by kernel, gate (if gated),
        and direction (if bidirectional). Also detects NaNs and shows on plots.
 
@@ -23,6 +24,10 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
                to be computed for the gradient. Only for mode=='grads'
         mode: str. One of: 'weights', 'grads'. If former, plots layer weights -
               else, plots layer weights grads w.r.t. `input_data` & `labels`.
+        equate_axes: int: 0, 1, 2. 0 --> auto-managed axes. 1 --> kernel &
+                     recurrent subplots' x- & y-axes lims set to common value.
+                     2 --> 1, but lims shared for forward & backward plots.
+                     Bias plot lims never affected.
     (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
          input data formats
 
@@ -33,10 +38,6 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
         show_xy_ticks: int/bool iter. Slot 0 -> x, Slot 1 -> y.
               Ex: [1, 1] -> show both x- and y-ticks (and their labels).
                   [0, 0] -> hide both.
-        equate_axes: int: 0, 1, 2. 0 --> auto-managed axes. 1 --> kernel &
-                     recurrent subplots' x- & y-axes lims set to common value.
-                     2 --> 1, but lims shared for forward & backward plots.
-                     Bias plot lims never affected.
         bins: int. Pyplot `hist` kwarg: number of histogram bins per subplot.
     """
 
@@ -44,12 +45,11 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
     scale_height  = kwargs.get('scale_height', 1)
     show_borders  = kwargs.get('show_borders', False)
     show_xy_ticks = kwargs.get('show_xy_ticks',  [True, True])
-    equate_axes   = kwargs.get('equate_axes', 1)
     bins          = kwargs.get('bins', 150)
 
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('scale_width', 'scale_height', 'show_borders',
-                          'show_xy_ticks', 'equate_axes', 'bins')
+                          'show_xy_ticks', 'bins')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
