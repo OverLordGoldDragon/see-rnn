@@ -47,6 +47,26 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
     equate_axes   = kwargs.get('equate_axes', 1)
     bins          = kwargs.get('bins', 150)
 
+    def _pretty_hist(data, bins, ax=None):  # hist w/ looping gradient coloring
+        if ax is None:
+            N, bins, patches = plt.hist(data, bins=bins, density=True)
+        else:
+            N, bins, patches = ax.hist(data, bins=bins, density=True)
+
+        if len(data) < 1000:
+            return  # fewer bins look better monochrome
+
+        bm = bins.max()
+        bins_norm = bins / bm
+
+        n_loops = 8  # number of gradient loops
+        alpha = 0.94  # graph opacity
+        for bin_norm, patch in zip(bins_norm, patches):
+            grad = np.sin(np.pi * n_loops * bin_norm) / 15 + .04
+            color = (0.121569 + grad*1.2, 0.466667 + grad, 0.705882 + grad,
+                     alpha)  # [.121569, .466667, ...] == matplotlib default blue
+            patch.set_facecolor(color)
+
     def _get_axes_extrema(axes):
         axes = np.array(axes)
         is_bidir = len(axes.shape)==3 and axes.shape[0]!=1
@@ -108,7 +128,7 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
                 nan_txt = _detect_nans(matrix_data)
                 if nan_txt is not None:  # NaNs detected
                     matrix_data[np.isnan(matrix_data)] = 0  # set NaNs to zero
-                ax.hist(matrix_data, bins=bins)
+                _pretty_hist(matrix_data, bins=bins, ax=ax)
 
                 if nan_txt is not None:
                     ax.annotate(nan_txt, fontsize=12, weight='bold', color='red',
@@ -139,7 +159,7 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
             if nan_txt is not None:  # NaNs detected
                 matrix_data[np.isnan(matrix_data)] = 0  # set NaNs to zero
 
-            plt.hist(matrix_data, bins=bins)
+            _pretty_hist(matrix_data, bins)
 
             if nan_txt is not None:
                 plt.annotate(nan_txt, fontsize=12, weight='bold', color='red',
@@ -264,7 +284,7 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
                 data[idx] /= np.max(data[idx])
 
     (vmin, vmax) = norm if norm else _make_common_norm(data)
-    _gate_names = '(%s)' % ', '.join(gate_names)
+    gate_names_str = '(%s)' % ', '.join(gate_names) if gate_names[0]!='' else ''
 
     for direction_idx, direction_name in enumerate(direction_names):
         fig = plt.figure(figsize=(14*scale_width, 5*scale_height))
@@ -291,7 +311,7 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
 
             # Styling
             ax.set_title(kernel_type, fontsize=14, weight='bold')
-            ax.set_xlabel(_gate_names, fontsize=12, weight='bold')
+            ax.set_xlabel(gate_names_str, fontsize=12, weight='bold')
             y_label = ['Channel units', 'Hidden units'][type_idx]
             ax.set_ylabel(y_label, fontsize=12, weight='bold')
 

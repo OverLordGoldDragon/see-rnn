@@ -264,8 +264,9 @@ def show_features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=Fals
             extra_dim = ") vs. Samples"
             context_order = "(" + context_order
 
-        return "{} vs. {}{} -- norm=({}, {})".format(context_order, feature,
-                                                     extra_dim, vmin, vmax)
+        norm_txt = "(%s, %s)" % (vmin, vmax) if (vmin is not None) else "auto"
+        return "{} vs. {}{} -- norm={}".format(context_order, feature,
+                                               extra_dim, norm_txt)
 
     def _process_data(data, max_timesteps, reflect_half,
                       timesteps_xaxis, channel_axis):
