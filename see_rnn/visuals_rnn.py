@@ -53,7 +53,7 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
-        
+
     def _pretty_hist(data, bins, ax=None):  # hist w/ looping gradient coloring
         if ax is None:
             N, bins, patches = plt.hist(data, bins=bins, density=True)
@@ -192,9 +192,8 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
 
 
 def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
-                input_data=None, labels=None, mode='weights',
-                cmap='bwr', norm=None, normalize=False,
-                absolute_value=False, **kwargs):
+                input_data=None, labels=None, mode='weights', cmap='bwr',
+                norm=None, **kwargs):
     """Plots histogram grid of RNN weights/gradients by kernel, gate (if gated),
        and direction (if bidirectional). Also detects NaNs and shows on plots.
 
@@ -221,12 +220,6 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
               If 'auto', will normalize across all non-bias plots (per kernels,
               gates, and directions), zero-centered.
               If None, Pyplot handles norm.
-        normalize: bool. If True, scales all values to lie between 0 & 1. Works
-              well with a greyscale `cmap` (e.g. None). Applied after
-              `absolute_value`.
-        absolute_value: bool. If True, takes absolute value of all data before
-              plotting. Works well with a greyscale `cmap` (e.g. None). Applied
-              before `normalize`.
     (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
          input data formats
 
@@ -238,6 +231,12 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
         show_bias:     bool. If True, includes plot for bias (if layer uses bias)
         gate_sep_width: float. Pyplot kwarg for `linewidth` in marking gate
               separations in gated RNNs (LSTM, GRU) w/ vertical lines.
+        normalize: bool. If True, scales all values to lie between 0 & 1. Works
+              well with a greyscale `cmap` (e.g. None). Applied after
+              `absolute_value`.
+        absolute_value: bool. If True, takes absolute value of all data before
+              plotting. Works well with a greyscale `cmap` (e.g. None). Applied
+              before `normalize`.
     """
 
     scale_width    = kwargs.get('scale_width',  1)
@@ -246,10 +245,13 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
     show_colorbar  = kwargs.get('show_colorbar', True)
     show_bias      = kwargs.get('show_bias', True)
     gate_sep_width = kwargs.get('gate_sep_width', 1)
+    normalize      = kwargs.get('normalize', False)
+    absolute_value = kwargs.get('absolute_value', False)
 
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('scale_width', 'scale_height', 'show_borders',
-                          'show_colorbar', 'show_bias', 'gate_sep_width')
+                          'show_colorbar', 'show_bias', 'gate_sep_width',
+                          'normalize', 'absolute_value')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
