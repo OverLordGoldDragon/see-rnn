@@ -193,7 +193,7 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
 
 def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
                 input_data=None, labels=None, mode='weights', cmap='bwr',
-                norm=None, **kwargs):
+                norm='auto', **kwargs):
     """Plots histogram grid of RNN weights/gradients by kernel, gate (if gated),
        and direction (if bidirectional). Also detects NaNs and shows on plots.
 
