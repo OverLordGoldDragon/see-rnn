@@ -1,4 +1,5 @@
 from termcolor import colored
+import numpy as np
 
 note_str = colored("NOTE: ", 'blue')
 warn_str = colored("WARNING: ", 'red')
@@ -16,8 +17,8 @@ def _validate_args(model, layer_idx, layer_name, layer):
                         "`layer_idx`, `layer_name`")
 
 
-def _process_rnn_args(model, layer_name, layer_idx, layer,
-                      input_data, labels, mode):
+def _process_rnn_args(model, layer_idx, layer_name, layer, input_data, labels,
+                      mode, norm=None):
     """Helper method to validate `input_data` & `labels` dims, layer info args,
        `mode` arg, and fetch various pertinent RNN attributes.
     """
@@ -25,8 +26,8 @@ def _process_rnn_args(model, layer_name, layer_idx, layer,
     from .inspect_gen import get_layer, get_layer_gradients
     from .inspect_rnn import get_rnn_weights
 
-    def _validate_args_(model, layer_idx, layer_name, layer, mode,
-                        input_data, labels):
+    def _validate_args_(model, layer_idx, layer_name, layer, input_data, labels,
+                        mode, norm):
         _validate_args(model, layer_idx, layer_name, layer)
         if mode not in ['weights', 'grads']:
             raise Exception("`mode` must be one of: 'weights', 'grads'")
@@ -36,7 +37,15 @@ def _process_rnn_args(model, layer_name, layer_idx, layer,
             print(note_str + "`input_data` and `labels will` be ignored for "
                   + "`mode`=='weights'")
 
-    _validate_args_(model, layer_idx, layer_name, layer, mode, input_data, labels)
+        is_iter = (isinstance(norm, list) or isinstance(norm, tuple) or
+                   isinstance(norm, np.ndarray))
+        is_iter_len2 = is_iter and len(norm)==2
+        if (norm is not None) and (norm != 'auto') and not is_iter_len2:
+            raise Exception("`norm` must be None, 'auto' or iterable ( "
+                            + "list, tuple, np.ndarray) of length 2")
+
+    _validate_args_(model, layer_idx, layer_name, layer, input_data, labels,
+                    mode, norm)
 
     if layer is None:
         layer = get_layer(model, layer_idx, layer_name)

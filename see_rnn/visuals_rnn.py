@@ -96,7 +96,7 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
                 d['rnn_dim'],  d['is_bidir'],   d['uses_bias'],
                 d['direction_names'])
 
-    data, rnn_info = _process_rnn_args(model, layer_name, layer_idx, layer,
+    data, rnn_info = _process_rnn_args(model, layer_idx, layer_name, layer,
                                        input_data, labels, mode)
     (rnn_type, gate_names, num_gates, rnn_dim,
      is_bidir, uses_bias, direction_names) = _unpack_rnn_info(rnn_info)
@@ -204,12 +204,14 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
               else, plots layer weights grads w.r.t. `input_data` & `labels`.
         cmap: str. Pyplot cmap (colormap) kwarg for the heatmap. If None,
               uses 'bone' cmap (greyscale), suited for >=0 value heatmaps.
-        norm: float iter / str ('auto') / None. Normalizes colors to range
-              between norm==(vmin, vmax), according to `cmap`. Ex: `cmap`='bwr'
-              ('blue white red') -> all values <=vmin and >=vmax will be shown as
-              most intense  blue and red, and those exactly in-between are shown
-              as white. If 'auto', will normalize across all non-bias plots
-              (per kernels, gates, and directions).
+        norm: float list/tuple; str ('auto'); None. Normalizes colors to range
+              between norm==(vmin, vmax), according to `cmap`.
+                  Ex: `cmap`='bwr'('blue white red') -> all values <=vmin and
+                  >=vmax will be shown as most intense  blue and red, and those
+                  exactly in-between are shown as white.
+              If 'auto', will normalize across all non-bias plots (per kernels,
+              gates, and directions), zero-centered.
+              If None, Pyplot handles norm.
         normalize: bool. If True, scales all values to lie between 0 & 1. Works
               well with a greyscale `cmap` (e.g. None). Applied after
               `absolute_value`.
@@ -256,9 +258,8 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
                     print(gate_name + ':', colored(nan_txt, 'red'))
 
     def _make_common_norm(data):
-        idxs = [0, 1] + [3, 4]*(len(data) == 6) + [2, 3]*(len(data) == 4)
-        return (min([np.min(data[idx]) for idx in idxs]),
-                max([np.max(data[idx]) for idx in idxs]))
+        idxs = [0, 1] + [2, 3]*(len(data) == 4) + [3, 4]*(len(data) == 6)
+        return np.max([np.max(np.abs(data[idx])) for idx in idxs])
 
     def _unpack_rnn_info(rnn_info):
         d = rnn_info
@@ -266,8 +267,8 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
                 d['rnn_dim'],  d['is_bidir'],   d['uses_bias'],
                 d['direction_names'])
 
-    data, rnn_info = _process_rnn_args(model, layer_name, layer_idx, layer,
-                                       input_data, labels, mode)
+    data, rnn_info = _process_rnn_args(model, layer_idx, layer_name, layer,
+                                       input_data, labels, mode, norm)
     (rnn_type, gate_names, num_gates, rnn_dim,
      is_bidir, uses_bias, direction_names) = _unpack_rnn_info(rnn_info)
 
@@ -283,7 +284,14 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
             else:
                 data[idx] /= np.max(data[idx])
 
-    (vmin, vmax) = norm if norm else _make_common_norm(data)
+    if norm=='auto':
+        vmax = _make_common_norm(data)
+        vmin = -vmax
+    elif norm is None:
+        vmin, vmax = None, None
+    else:
+        vmin, vmax = norm
+
     gate_names_str = '(%s)' % ', '.join(gate_names) if gate_names[0]!='' else ''
 
     for direction_idx, direction_name in enumerate(direction_names):

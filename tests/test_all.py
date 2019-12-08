@@ -140,6 +140,7 @@ def test_misc():  # misc tests to improve coverage %
     rnn_histogram(model, layer_idx=1, show_xy_ticks=[0, 0], equate_axes=2)
     rnn_heatmap(model, layer_idx=1, cmap=None, normalize=True, show_borders=False)
     rnn_heatmap(model, layer_idx=1, cmap=None, absolute_value=True)
+    rnn_heatmap(model, layer_idx=1, norm='auto')
 
     def _pass_on_error(func, *args, **kwargs):
         try:
@@ -161,6 +162,7 @@ def test_misc():  # misc tests to improve coverage %
     _pass_on_error(get_layer, model, layer_name='capsule')
     _pass_on_error(rnn_heatmap, model, layer_idx=1, input_data=x, labels=y,
                    mode='coffee')
+    _pass_on_error(rnn_heatmap, model, layer_idx=1, norm=(0, 1, 2))
     _pass_on_error(rnn_heatmap, model, layer_idx=1, mode='grads')
 
     get_layer(model, layer_name='gru')
@@ -178,9 +180,10 @@ def test_misc():  # misc tests to improve coverage %
 
     del model
     reset_seeds(reset_graph_with_backend=K)
-    _model = make_model(SimpleRNN, batch_shape, use_bias=False)
-    train_model(_model, iterations=1)  # TF2-Keras-Graph bug workaround
 
+    _model = make_model(SimpleRNN, batch_shape, units=128, use_bias=False)
+    train_model(_model, iterations=1)  # TF2-Keras-Graph bug workaround
+    rnn_histogram(_model, layer_idx=1)  # test _pretty_hist
     K.set_value(_model.optimizer.lr, 1e50)  # SimpleRNNs seem ridiculously robust
     train_model(_model, iterations=20)
     rnn_heatmap(_model, layer_idx=1)
