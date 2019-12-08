@@ -227,6 +227,7 @@ def test_misc():  # misc tests to improve coverage %
                            Model=Model)
         model = make_model(_GRU, batch_shape, new_imports=new_imports)
 
+        glg(model, x, y, layer_idx=1)
         _pass_on_error(glg, model, x, y, 1)
         rs(model.layers[1])
 
