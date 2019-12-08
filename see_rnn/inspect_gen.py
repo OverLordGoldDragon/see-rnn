@@ -35,8 +35,8 @@ def get_layer_outputs(model, input_data, layer_name=None, layer_idx=None,
          input data formats
     """
 
-    _validate_args(model, layer_idx, layer_name, layer)
-    layer = get_layer(model, layer_idx, layer_name)
+    _validate_args(layer_name, layer_idx, layer)
+    layer = get_layer(model, layer_name, layer_idx)
     if TF_KERAS:
         layers_fn = K.function([model.input], [layer.output])
     else:
@@ -44,8 +44,8 @@ def get_layer_outputs(model, input_data, layer_name=None, layer_idx=None,
     return layers_fn([input_data, learning_phase])[0]
 
 
-def get_layer_gradients(model, input_data, labels, layer_idx=None,
-                        layer_name=None, layer=None, mode='outputs',
+def get_layer_gradients(model, input_data, labels, layer_name=None,
+                        layer_idx=None, layer=None, mode='outputs',
                         sample_weights=None, learning_phase=0):
     """Retrieves layer gradients w.r.t. outputs or weights.
     NOTE: gradients will be clipped if `clipvalue` or `clipnorm` were set.
@@ -75,14 +75,14 @@ def get_layer_gradients(model, input_data, labels, layer_idx=None,
          then get grads w.r.t. activations, specify the Activation layer.
     """
 
-    def _validate_args_(model, layer_idx, layer_name, layer, mode):
-        _validate_args(model, layer_idx, layer_name, layer)
+    def _validate_args_(layer_name, layer_idx, layer, mode):
+        _validate_args(layer_name, layer_idx, layer)
         if mode not in ['outputs', 'weights']:
             raise Exception("`mode` must be one of: 'outputs', 'weights'")
 
-    _validate_args_(model, layer_idx, layer_name, layer, mode)
+    _validate_args_(layer_name, layer_idx, layer, mode)
     if layer is None:
-        layer = get_layer(model, layer_idx, layer_name)
+        layer = get_layer(model, layer_name, layer_idx)
 
     grads_fn = _make_grads_fn(model, layer, mode)
     if TF_KERAS:
@@ -96,12 +96,12 @@ def get_layer_gradients(model, input_data, labels, layer_idx=None,
     return grads
 
 
-def get_layer(model, layer_idx=None, layer_name=None):
+def get_layer(model, layer_name=None, layer_idx=None):
     """Returns layer by index or name.
     If multiple matches are found, returns earliest.
     """
 
-    _validate_args(model, layer_idx, layer_name, layer=None)
+    _validate_args(layer_name, layer_idx, layer=None)
     if layer_idx is not None:
         return model.layers[layer_idx]
 

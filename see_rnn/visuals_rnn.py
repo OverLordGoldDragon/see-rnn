@@ -47,6 +47,13 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
     equate_axes   = kwargs.get('equate_axes', 1)
     bins          = kwargs.get('bins', 150)
 
+    def _catch_unknown_kwargs(kwargs):
+        allowed_kwargs = ('scale_width', 'scale_height', 'show_borders',
+                          'show_xy_ticks', 'equate_axes', 'bins')
+        for kwarg in kwargs:
+            if kwarg not in allowed_kwargs:
+                raise Exception("unknown kwarg `%s`" % kwarg)
+        
     def _pretty_hist(data, bins, ax=None):  # hist w/ looping gradient coloring
         if ax is None:
             N, bins, patches = plt.hist(data, bins=bins, density=True)
@@ -96,11 +103,12 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
                 d['rnn_dim'],  d['is_bidir'],   d['uses_bias'],
                 d['direction_names'])
 
-    data, rnn_info = _process_rnn_args(model, layer_idx, layer_name, layer,
+    _catch_unknown_kwargs(kwargs)
+    data, rnn_info = _process_rnn_args(model, layer_name, layer_idx, layer,
                                        input_data, labels, mode)
     (rnn_type, gate_names, num_gates, rnn_dim,
      is_bidir, uses_bias, direction_names) = _unpack_rnn_info(rnn_info)
-    gated_types  = ['LSTM', 'GRU']
+    gated_types  = ['LSTM', 'GRU', 'CuDNNLSTM', 'CuDNNGRU']
     kernel_types = ['KERNEL', 'RECURRENT']
 
     axes = []
@@ -111,7 +119,8 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
             subplot_axes = np.expand_dims(subplot_axes, 0)
         axes.append(subplot_axes)
         if direction_name != []:
-            plt.suptitle(direction_name + ' LAYER', weight='bold', y=1.05)
+            plt.suptitle(direction_name + ' LAYER', weight='bold', y=1.05,
+                         fontsize=13)
 
         for type_idx, kernel_type in enumerate(kernel_types):
             for gate_idx in range(num_gates):
@@ -238,6 +247,13 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
     show_bias      = kwargs.get('show_bias', True)
     gate_sep_width = kwargs.get('gate_sep_width', 1)
 
+    def _catch_unknown_kwargs(kwargs):
+        allowed_kwargs = ('scale_width', 'scale_height', 'show_borders',
+                          'show_colorbar', 'show_bias', 'gate_sep_width')
+        for kwarg in kwargs:
+            if kwarg not in allowed_kwargs:
+                raise Exception("unknown kwarg `%s`" % kwarg)
+
     def _print_nans(nan_txt, matrix_data, kernel_type, gate_names, rnn_dim):
         if gate_names[0] == '':
             print(kernel_type, end=":")
@@ -267,7 +283,8 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
                 d['rnn_dim'],  d['is_bidir'],   d['uses_bias'],
                 d['direction_names'])
 
-    data, rnn_info = _process_rnn_args(model, layer_idx, layer_name, layer,
+    _catch_unknown_kwargs(kwargs)
+    data, rnn_info = _process_rnn_args(model, layer_name, layer_idx, layer,
                                        input_data, labels, mode, norm)
     (rnn_type, gate_names, num_gates, rnn_dim,
      is_bidir, uses_bias, direction_names) = _unpack_rnn_info(rnn_info)
@@ -298,7 +315,8 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
         fig = plt.figure(figsize=(14*scale_width, 5*scale_height))
         axes = []
         if direction_name != []:
-            plt.suptitle(direction_name + ' LAYER', weight='bold', y=.98)
+            plt.suptitle(direction_name + ' LAYER', weight='bold', y=.98,
+                         fontsize=13)
 
         for type_idx, kernel_type in enumerate(['KERNEL', 'RECURRENT']):
             ax = plt.subplot(1, 2, type_idx+1)

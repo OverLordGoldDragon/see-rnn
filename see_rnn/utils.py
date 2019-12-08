@@ -5,19 +5,20 @@ note_str = colored("NOTE: ", 'blue')
 warn_str = colored("WARNING: ", 'red')
 
 
-def _validate_args(model, layer_idx, layer_name, layer):
+def _validate_args(layer_name, layer_idx, layer):
     find_layer = layer_idx is not None or layer_name is not None
     if find_layer and layer is not None:
         print(warn_str + "`layer` will override `layer_idx` & `layer_name`")
 
-    no_info  = layer_idx is None and layer_name is None
-    too_much_info = layer_idx is not None and layer_name is not None
-    if find_layer and (no_info or too_much_info):
-        raise Exception("must supply one (and only one) of "
-                        "`layer_idx`, `layer_name`")
+    if layer is None:
+        no_info  = layer_idx is None and layer_name is None
+        too_much_info = layer_idx is not None and layer_name is not None
+        if no_info or too_much_info:
+            raise Exception("must supply one (and only one) of "
+                            "`layer_idx`, `layer_name`")
 
 
-def _process_rnn_args(model, layer_idx, layer_name, layer, input_data, labels,
+def _process_rnn_args(model, layer_name, layer_idx, layer, input_data, labels,
                       mode, norm=None):
     """Helper method to validate `input_data` & `labels` dims, layer info args,
        `mode` arg, and fetch various pertinent RNN attributes.
@@ -26,9 +27,9 @@ def _process_rnn_args(model, layer_idx, layer_name, layer, input_data, labels,
     from .inspect_gen import get_layer, get_layer_gradients
     from .inspect_rnn import get_rnn_weights
 
-    def _validate_args_(model, layer_idx, layer_name, layer, input_data, labels,
+    def _validate_args_(layer_name, layer_idx, layer, input_data, labels,
                         mode, norm):
-        _validate_args(model, layer_idx, layer_name, layer)
+        _validate_args(layer_name, layer_idx, layer)
         if mode not in ['weights', 'grads']:
             raise Exception("`mode` must be one of: 'weights', 'grads'")
         if mode == 'grads' and (input_data is None or labels is None):
@@ -44,11 +45,11 @@ def _process_rnn_args(model, layer_idx, layer_name, layer, input_data, labels,
             raise Exception("`norm` must be None, 'auto' or iterable ( "
                             + "list, tuple, np.ndarray) of length 2")
 
-    _validate_args_(model, layer_idx, layer_name, layer, input_data, labels,
-                    mode, norm)
+    _validate_args_(layer_name, layer_idx, layer,
+                    input_data, labels, mode, norm)
 
     if layer is None:
-        layer = get_layer(model, layer_idx, layer_name)
+        layer = get_layer(model, layer_name, layer_idx)
     rnn_type = _validate_rnn_type(layer, return_value=True)
 
     gate_names = _rnn_gate_names(rnn_type)
@@ -62,7 +63,7 @@ def _process_rnn_args(model, layer_idx, layer_name, layer, input_data, labels,
         uses_bias  = layer.layer.use_bias if is_bidir else layer.use_bias
 
     if mode=='weights':
-        data = get_rnn_weights(model, layer_idx, layer_name,
+        data = get_rnn_weights(model, layer_name, layer_idx,
                                as_tensors=False, concat_gates=True)
     else:
         data = get_layer_gradients(model, input_data, labels,

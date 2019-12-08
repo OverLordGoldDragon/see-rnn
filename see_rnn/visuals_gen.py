@@ -45,6 +45,14 @@ def show_features_0D(data, marker='o', cmap='bwr', color=None, **kwargs):
     markersize     = kwargs.get('markersize',  15)
     markerwidth    = kwargs.get('markerwidth', 2)
 
+    def _catch_unknown_kwargs(kwargs):
+        allowed_kwargs = ('scale_width', 'scale_height', 'show_borders',
+                          'show_title', 'show_y_zero', 'title_fontsize',
+                          'channel_axis', 'markersize', 'markerwidth')
+        for kwarg in kwargs:
+            if kwarg not in allowed_kwargs:
+                raise Exception("unknown kwarg `%s`" % kwarg)
+
     def _get_title(data, show_title):
         feature = "Context-feature"
         context = "Context-units"
@@ -53,6 +61,8 @@ def show_features_0D(data, marker='o', cmap='bwr', color=None, **kwargs):
             feature = "Gradients" if show_title=='grads' else "Outputs"
             context = "Timesteps"
         return "(%s vs. %s) vs. Channels" % (feature, context)
+
+    _catch_unknown_kwargs(kwargs)
 
     if len(data.shape)!=2 and len(data.shape)!=3:
         raise Exception("`data` must be 2D or 3D")
@@ -133,6 +143,15 @@ def show_features_1D(data, n_rows=None, label_channels=True,
     annotation_xy   = kwargs.get('annotation_xy', (.03, .9))
     annotation_size = kwargs.get('annotation_size', 16)
 
+    def _catch_unknown_kwargs(kwargs):
+        allowed_kwargs = ('scale_width', 'scale_height', 'show_borders',
+                          'show_xy_ticks', 'show_title', 'show_y_zero',
+                          'title_fontsize', 'channel_axis', 'dpi',
+                          'color', 'annotation_xy', 'annotation_size')
+        for kwarg in kwargs:
+            if kwarg not in allowed_kwargs:
+                raise Exception("unknown kwarg `%s`" % kwarg)
+
     def _get_title(data, show_title):
         feature = "Context-feature"
         context = "Context-units"
@@ -154,6 +173,8 @@ def show_features_1D(data, n_rows=None, label_channels=True,
             return feature_outputs
         else:
             return [data[:, subplot_idx-1][:max_timesteps]]
+
+    _catch_unknown_kwargs(kwargs)
 
     if len(data.shape)!=2 and len(data.shape)!=3:
         raise Exception("`data` must be 2D or 3D")
@@ -249,6 +270,14 @@ def show_features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=Fals
     channel_axis   = kwargs.get('channel_axis', -1)
     dpi            = kwargs.get('dpi', 76)
 
+    def _catch_unknown_kwargs(kwargs):
+        allowed_kwargs = ('scale_width', 'scale_height', 'show_borders',
+                          'show_xy_ticks', 'show_colorbar', 'show_title',
+                          'title_fontsize', 'channel_axis', 'dpi')
+        for kwarg in kwargs:
+            if kwarg not in allowed_kwargs:
+                raise Exception("unknown kwarg `%s`" % kwarg)
+
     def _get_title(data, show_title, timesteps_xaxis, vmin, vmax):
         feature = "Context-feature"
         context = "Context-units"
@@ -282,6 +311,8 @@ def show_features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=Fals
                 data = np.expand_dims(data, 0)
             data = np.transpose(data, (0, 2, 1))
         return data
+
+    _catch_unknown_kwargs(kwargs)
 
     if len(data.shape)!=2 and len(data.shape)!=3:
         raise Exception("`data` must be 2D or 3D")

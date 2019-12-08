@@ -14,7 +14,7 @@ warn_str = colored("WARNING: ", 'red')
 note_str = colored("NOTE: ", 'blue')
 
 
-def get_rnn_weights(model, layer_idx=None, layer_name=None, layer=None,
+def get_rnn_weights(model, layer_name=None, layer_idx=None, layer=None,
                     as_tensors=False, concat_gates=False):
     """Retrievers RNN layer weights.
 
@@ -31,9 +31,9 @@ def get_rnn_weights(model, layer_idx=None, layer_name=None, layer=None,
                matrices, instead of individual per-gate weight lists.
     """
 
-    _validate_args(model, layer_idx, layer_name, layer)
+    _validate_args(layer_name, layer_idx, layer)
     if layer is None:
-        layer = get_layer(model, layer_idx, layer_name)
+        layer = get_layer(model, layer_name, layer_idx)
     rnn_type = _validate_rnn_type(layer, return_value=True)
     IS_CUDNN = 'CuDNN' in rnn_type
 

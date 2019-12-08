@@ -141,7 +141,7 @@ def test_misc():  # misc tests to improve coverage %
     rnn_heatmap(model, layer_idx=1, cmap=None, normalize=True, show_borders=False)
     rnn_heatmap(model, layer_idx=1, cmap=None, absolute_value=True)
     rnn_heatmap(model, layer_idx=1, norm='auto')
-    rnn_heatmap(model, layer_idx=1, norm=(-.004,.004))
+    rnn_heatmap(model, layer_idx=1, norm=(-.004, .004))
 
     def _pass_on_error(func, *args, **kwargs):
         try:
@@ -156,8 +156,9 @@ def test_misc():  # misc tests to improve coverage %
     _pass_on_error(show_features_1D, grads_4D)
     _pass_on_error(show_features_2D, grads_4D)
     _pass_on_error(show_features_2D, grads, channel_axis=1)
-    _pass_on_error(get_layer_gradients, model, x, y, 1, mode='cactus')
-    _pass_on_error(get_layer_gradients, model, x, y, 1, 'gru', model.layers[1])
+    _pass_on_error(get_layer_gradients, model, x, y, layer_idx=1, mode='cactus')
+    _pass_on_error(get_layer_gradients, model, x, y, layer_idx=1,
+                   layer_name='gru', layer=model.layers[1])
     _pass_on_error(_make_grads_fn, model, model.layers[1], mode='banana')
     _pass_on_error(get_layer, model)
     _pass_on_error(get_layer, model, layer_name='capsule')
@@ -165,6 +166,11 @@ def test_misc():  # misc tests to improve coverage %
                    mode='coffee')
     _pass_on_error(rnn_heatmap, model, layer_idx=1, norm=(0, 1, 2))
     _pass_on_error(rnn_heatmap, model, layer_idx=1, mode='grads')
+    _pass_on_error(rnn_histogram, model, layer_idx=1, norm=None)
+    _pass_on_error(rnn_heatmap, model, layer_index=9001)
+    _pass_on_error(show_features_0D, grads, cake='lie')
+    _pass_on_error(show_features_1D, grads, pup='not just any')
+    _pass_on_error(show_features_2D, grads, true=False)
 
     get_layer(model, layer_name='gru')
     get_rnn_weights(model, layer_idx=1, concat_gates=True,  as_tensors=True)
