@@ -141,6 +141,7 @@ def test_misc():  # misc tests to improve coverage %
     rnn_heatmap(model, layer_idx=1, cmap=None, normalize=True, show_borders=False)
     rnn_heatmap(model, layer_idx=1, cmap=None, absolute_value=True)
     rnn_heatmap(model, layer_idx=1, norm='auto')
+    rnn_heatmap(model, layer_idx=1, norm=(-.004,.004))
 
     def _pass_on_error(func, *args, **kwargs):
         try:
