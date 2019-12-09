@@ -218,7 +218,8 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
                   >=vmax will be shown as most intense  blue and red, and those
                   exactly in-between are shown as white.
               If 'auto', will normalize across all non-bias plots (per kernels,
-              gates, and directions), zero-centered.
+              gates, and directions), zero-centered; however, if `absolute_value`
+              is also True, sets vmin==vmax==None instead.
               If None, Pyplot handles norm.
     (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
          input data formats
@@ -304,9 +305,12 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
                 data[idx] /= np.max(data[idx])
 
     if norm=='auto':
-        vmax = _make_common_norm(data)
-        vmin = -vmax
-    elif norm is None:
+        if absolute_value:
+            norm = None
+        else:
+            vmax = _make_common_norm(data)
+            vmin = -vmax
+    if norm is None:
         vmin, vmax = None, None
     else:
         vmin, vmax = norm
