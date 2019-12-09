@@ -306,11 +306,11 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
 
     if norm=='auto':
         if absolute_value:
-            norm = None
+            vmin, vmax = None, None
         else:
             vmax = _make_common_norm(data)
             vmin = -vmax
-    if norm is None:
+    elif norm is None:
         vmin, vmax = None, None
     else:
         vmin, vmax = norm
