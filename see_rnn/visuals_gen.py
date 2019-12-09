@@ -28,11 +28,13 @@ def show_features_0D(data, marker='o', cmap='bwr', color=None, **kwargs):
               If str in ('grads', 'outputs'), shows supertitle tailored to
               `data` dim (2D/3D). If other str, shows `show_title` as supertitle.
               If False, no title is shown.
-        show_y_zero: bool. If True, draws y=0 in each plot.
+        show_y_zero: bool. If True, draws y=0.
         title_fontsize: int. Title fontsize.
         channel_axis: int. `data` axis holding channels/features. -1 = last axis.
         markersize:   int/int iter. Pyplot kwarg `s` specifying marker size(s).
         markerwidth:  int. Pyplot kwarg `linewidth` specifying marker thickness.
+        ylims: str ('auto'); float list/tuple. Plot y-limits; if 'auto',
+               sets both lims to max of abs(`data`) (such that y=0 is centered).
     """
 
     scale_width    = kwargs.get('scale_width',  1)
@@ -44,11 +46,12 @@ def show_features_0D(data, marker='o', cmap='bwr', color=None, **kwargs):
     channel_axis   = kwargs.get('channel_axis', -1)
     markersize     = kwargs.get('markersize',  15)
     markerwidth    = kwargs.get('markerwidth', 2)
+    ylims          = kwargs.get('ylims', 'auto')
 
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('scale_width', 'scale_height', 'show_borders',
                           'show_title', 'show_y_zero', 'title_fontsize',
-                          'channel_axis', 'markersize', 'markerwidth')
+                          'channel_axis', 'markersize', 'markerwidth', 'ylims')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
@@ -81,8 +84,15 @@ def show_features_0D(data, marker='o', cmap='bwr', color=None, **kwargs):
         plt.axhline(0, color='k', linewidth=1)
     plt.scatter(x.flatten(), data.flatten(), marker=marker,
                 s=markersize, linewidth=markerwidth, color=color)
+
     plt.gca().set_xticks(np.arange(1, len(data) + 1), minor=True)
     plt.gca().tick_params(which='minor', length=4)
+    if ylims == 'auto':
+        ymax = np.max(np.abs(data))
+        ymin = -ymax
+    else:
+        ymin, ymax = ylims
+    plt.gca().set_ylim(-ymax, ymax)
 
     if show_title:
         title = _get_title(data, show_title)
