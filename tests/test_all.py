@@ -83,7 +83,8 @@ def test_all():
 def _test_outputs(model):
     x, _ = make_data(K.int_shape(model.input), model.layers[2].units)
     outs = get_layer_outputs(model, x, layer_idx=1)
-    show_features_1D(outs[0], show_y_zero=True)
+    show_features_1D(outs[:1], show_y_zero=True)
+    show_features_1D(outs[0])
     show_features_2D(outs)
 
 
@@ -98,8 +99,9 @@ def _test_outputs_gradients(model):
     kwargs2 = dict(n_rows=2,    show_xy_ticks=[1, 1], show_borders=False,
                    max_timesteps=None)
 
-    show_features_1D(grads_all[0], **kwargs1)
-    show_features_1D(grads_all,    **kwargs2)
+    show_features_1D(grads_all[0],  **kwargs1)
+    show_features_1D(grads_all[:1], **kwargs1)
+    show_features_1D(grads_all,     **kwargs2)
     show_features_2D(grads_all[0], norm=(-.01, .01), show_colorbar=True, **kwargs1)
     show_features_2D(grads_all,    norm=None,        reflect_half=True,  **kwargs2)
     show_features_0D(grads_last,   marker='o', color=None, show_title='grads')
@@ -122,6 +124,84 @@ def _test_weights(model):
     rnn_heatmap(model,   layer_name=name, mode='weights')
 
 
+def make_model(rnn_layer, batch_shape, units=6, bidirectional=False, use_bias=True,
+               activation='tanh', recurrent_dropout=0, new_imports={}):
+    Input         = IMPORTS['Input']
+    Bidirectional = IMPORTS['Bidirectional']
+    Model         = IMPORTS['Model']
+    if new_imports != {}:
+        Input         = new_imports['Input']
+        Bidirectional = new_imports['Bidirectional']
+        Model         = new_imports['Model']
+
+    kw = {}
+    if not use_bias:
+        kw['use_bias'] = False  # for CuDNN or misc case
+    if activation == 'relu':
+        kw['activation'] = 'relu'  # for nan detection
+        kw['recurrent_dropout'] = recurrent_dropout
+
+    ipt = Input(batch_shape=batch_shape)
+    if bidirectional:
+        x = Bidirectional(rnn_layer(units, return_sequences=True, **kw))(ipt)
+    else:
+        x = rnn_layer(units, return_sequences=True, **kw)(ipt)
+    out = rnn_layer(units, return_sequences=False)(x)
+
+    model = Model(ipt, out)
+    model.compile('adam', 'mse')
+    return model
+
+
+def make_data(batch_shape, units):
+    return (np.random.randn(*batch_shape),
+            np.random.uniform(-1, 1, (batch_shape[0], units)))
+
+
+def train_model(model, iterations):
+    batch_shape = K.int_shape(model.input)
+    units = model.layers[2].units
+    x, y = make_data(batch_shape, units)
+
+    for i in range(iterations):
+        model.train_on_batch(x, y)
+        print(end='.')  # progbar
+        if i % 40 == 0:
+            x, y = make_data(batch_shape, units)
+
+
+def _make_nonrnn_model():
+    if os.environ.get("TF_KERAS", '0') == '1':
+        from tensorflow.keras.layers import Input, Dense
+        from tensorflow.keras.models import Model
+    else:
+        from keras.layers import Input, Dense
+        from keras.models import Model
+    ipt = Input((16,))
+    out = Dense(16)(ipt)
+    model = Model(ipt, out)
+    model.compile('adam', 'mse')
+    return model
+
+
+def reset_seeds(reset_graph_with_backend=None, verbose=1):
+    if reset_graph_with_backend is not None:
+        K = reset_graph_with_backend
+        K.clear_session()
+        tf.compat.v1.reset_default_graph()
+        if verbose:
+            print("KERAS AND TENSORFLOW GRAPHS RESET")
+
+    np.random.seed(1)
+    random.seed(2)
+    if tf.__version__[0] == '2':
+        tf.random.set_seed(3)
+    else:
+        tf.set_random_seed(3)
+    if verbose:
+        print("RANDOM SEEDS RESET")
+
+
 def test_misc():  # misc tests to improve coverage %
     units = 6
     batch_shape = (8, 100, 2*units)
@@ -135,8 +215,10 @@ def test_misc():  # misc tests to improve coverage %
     grads_4D = np.expand_dims(grads, -1)
     _grads = np.transpose(grads, (2, 1, 0))
 
-    show_features_2D(_grads, n_rows=1.5, channel_axis=0)
-    show_features_2D(_grads[:, :, 0],    channel_axis=0)
+    show_features_1D(grads,    subplot_samples=True)
+    show_features_1D(grads[0], subplot_samples=True)
+    show_features_2D(_grads, n_rows=1.5)
+    show_features_2D(_grads[:, :, 0])
     rnn_histogram(model, layer_idx=1, show_xy_ticks=[0, 0], equate_axes=2)
     rnn_heatmap(model, layer_idx=1, cmap=None, normalize=True, show_borders=False)
     rnn_heatmap(model, layer_idx=1, cmap=None, absolute_value=True)
@@ -155,7 +237,7 @@ def test_misc():  # misc tests to improve coverage %
     _pass_on_error(show_features_0D, grads_4D)
     _pass_on_error(show_features_1D, grads_4D)
     _pass_on_error(show_features_2D, grads_4D)
-    _pass_on_error(show_features_2D, grads, channel_axis=1)
+    _pass_on_error(show_features_2D, grads)
     _pass_on_error(get_layer_gradients, model, x, y, layer_idx=1, mode='cactus')
     _pass_on_error(get_layer_gradients, model, x, y, layer_idx=1,
                    layer_name='gru', layer=model.layers[1])
@@ -243,81 +325,4 @@ def test_misc():  # misc tests to improve coverage %
         del model, _model
 
     assert True
-
-
-def make_model(rnn_layer, batch_shape, units=6, bidirectional=False, use_bias=True,
-               activation='tanh', recurrent_dropout=0, new_imports={}):
-    Input         = IMPORTS['Input']
-    Bidirectional = IMPORTS['Bidirectional']
-    Model         = IMPORTS['Model']
-    if new_imports != {}:
-        Input         = new_imports['Input']
-        Bidirectional = new_imports['Bidirectional']
-        Model         = new_imports['Model']
-
-    kw = {}
-    if not use_bias:
-        kw['use_bias'] = False  # for CuDNN or misc case
-    if activation == 'relu':
-        kw['activation'] = 'relu'  # for nan detection
-        kw['recurrent_dropout'] = recurrent_dropout
-
-    ipt = Input(batch_shape=batch_shape)
-    if bidirectional:
-        x = Bidirectional(rnn_layer(units, return_sequences=True, **kw))(ipt)
-    else:
-        x = rnn_layer(units, return_sequences=True, **kw)(ipt)
-    out = rnn_layer(units, return_sequences=False)(x)
-
-    model = Model(ipt, out)
-    model.compile('adam', 'mse')
-    return model
-
-
-def make_data(batch_shape, units):
-    return (np.random.randn(*batch_shape),
-            np.random.uniform(-1, 1, (batch_shape[0], units)))
-
-
-def train_model(model, iterations):
-    batch_shape = K.int_shape(model.input)
-    units = model.layers[2].units
-    x, y = make_data(batch_shape, units)
-
-    for i in range(iterations):
-        model.train_on_batch(x, y)
-        print(end='.')  # progbar
-        if i % 40 == 0:
-            x, y = make_data(batch_shape, units)
-
-
-def _make_nonrnn_model():
-    if os.environ.get("TF_KERAS", '0') == '1':
-        from tensorflow.keras.layers import Input, Dense
-        from tensorflow.keras.models import Model
-    else:
-        from keras.layers import Input, Dense
-        from keras.models import Model
-    ipt = Input((16,))
-    out = Dense(16)(ipt)
-    model = Model(ipt, out)
-    model.compile('adam', 'mse')
-    return model
-
-
-def reset_seeds(reset_graph_with_backend=None, verbose=1):
-    if reset_graph_with_backend is not None:
-        K = reset_graph_with_backend
-        K.clear_session()
-        tf.compat.v1.reset_default_graph()
-        if verbose:
-            print("KERAS AND TENSORFLOW GRAPHS RESET")
-
-    np.random.seed(1)
-    random.seed(2)
-    if tf.__version__[0] == '2':
-        tf.random.set_seed(3)
-    else:
-        tf.set_random_seed(3)
-    if verbose:
-        print("RANDOM SEEDS RESET")
+    cprint("\n<< MISC TESTS PASSED >>\n", 'green')

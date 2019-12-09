@@ -1,16 +1,19 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
+from termcolor import colored
+
+
+note_str = colored("NOTE: ", 'blue')
 
 
 def show_features_0D(data, marker='o', cmap='bwr', color=None, **kwargs):
-    """Plots 0D aligned scatterplots in a standalone graph or subplot grid.
+    """Plots 0D aligned scatterplots in a standalone graph.
 
     iter == list/tuple (both work)
 
     Arguments:
-        data: np.ndarray, 2D/3D. Data to plot.
-              2D -> standalone graph; 3D -> subplot grid.
+        data: np.ndarray, 2D: (samples, channels).
         marker: str. Pyplot kwarg specifying scatter plot marker shape.
         cmap: str. Pyplot cmap (colormap) kwarg for the heatmap. Overridden
               by `color`!=None.
@@ -43,7 +46,6 @@ def show_features_0D(data, marker='o', cmap='bwr', color=None, **kwargs):
     show_title     = kwargs.get('show_title',   'outputs')
     show_y_zero    = kwargs.get('show_y_zero',  True)
     title_fontsize = kwargs.get('title_fontsize', 14)
-    channel_axis   = kwargs.get('channel_axis', -1)
     markersize     = kwargs.get('markersize',  15)
     markerwidth    = kwargs.get('markerwidth', 2)
     ylims          = kwargs.get('ylims', 'auto')
@@ -67,11 +69,8 @@ def show_features_0D(data, marker='o', cmap='bwr', color=None, **kwargs):
 
     _catch_unknown_kwargs(kwargs)
 
-    if len(data.shape)!=2 and len(data.shape)!=3:
-        raise Exception("`data` must be 2D or 3D")
-    if len(data.shape)==3:
-        raise Exception("3D `data` unsupported for `show_features_0D`")
-    data = _process_channel_axis(data, channel_axis)
+    if len(data.shape)!=2:
+        raise Exception("`data` must be 2D")
 
     if color is None:
         cmap = cm.get_cmap(cmap)
@@ -103,18 +102,23 @@ def show_features_0D(data, marker='o', cmap='bwr', color=None, **kwargs):
     plt.show()
 
 
-def show_features_1D(data, n_rows=None, label_channels=True,
-                     equate_axes=True, max_timesteps=None, **kwargs):
+def show_features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
+                     max_timesteps=None, subplot_samples=False, **kwargs):
     """Plots 1D curves in a standalone graph or subplot grid.
     Arguments:
         data: np.ndarray, 2D/3D. Data to plot.
               2D -> standalone graph; 3D -> subplot grid.
+              3D: (samples, timesteps, channels)
+              2D: (timesteps, channels) or (timesteps, samples)
         n_rows: int/None. Number of rows in subplot grid. If None,
               determines automatically, closest to n_rows == n_cols.
         label_channels: bool. If True, labels subplot grid chronologically.
         equate_axes:    bool. If True, subplots will share x- and y-axes limits.
         max_timesteps:  int/None. Max number of timesteps to show per plot.
               If None, keeps original.
+        subplot_samples: bool. If True, generates a subplot per dim 0 of `data`
+              instead of dim 2 - i.e. (Channels vs. Timesteps) vs. Samples.
+
     iter == list/tuple (both work)
     kwargs:
         scale_width:   float. Scale width  of resulting plot by a factor.
@@ -147,7 +151,6 @@ def show_features_1D(data, n_rows=None, label_channels=True,
     show_title      = kwargs.get('show_title', 'outputs')
     show_y_zero     = kwargs.get('show_y_zero', False)
     title_fontsize  = kwargs.get('title_fontsize', 14)
-    channel_axis    = kwargs.get('channel_axis',  -1)
     dpi             = kwargs.get('dpi', 76)
     color           = kwargs.get('color', None)
     annotation_xy   = kwargs.get('annotation_xy', (.03, .9))
@@ -162,38 +165,49 @@ def show_features_1D(data, n_rows=None, label_channels=True,
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
 
-    def _get_title(data, show_title):
+    def _get_title(data, show_title, subplot_samples):
         feature = "Context-feature"
         context = "Context-units"
-
         if show_title in ['grads', 'outputs']:
             feature = "Gradients" if show_title=='grads' else "Outputs"
             context = "Timesteps"
 
-        if len(data.shape)==3:
-            return "((%s vs. %s) vs. Samples) vs. Channels" % (feature, context)
-        else:
-            return "(%s vs. %s) vs. Channels" % (feature, context)
+        subplot_mode_3d = "vs. Samples) vs. Channels"
+        subplot_mode_2d = "vs. Channels"
+        if subplot_samples:
+            subplot_mode_3d = "vs. Channels) vs. Samples"
+            subplot_mode_2d = "vs. Samples"
 
-    def _get_feature_outputs(data, subplot_idx):
-        if len(data.shape)==3:
-            feature_outputs = []
-            for entry in data:
-                feature_outputs.append(entry[:, subplot_idx-1][:max_timesteps])
-            return feature_outputs
+        if len(data.shape)==3 and data.shape[-1]!=1:
+            return "((%s vs. %s) %s" % (feature, context, subplot_mode_3d)
         else:
-            return [data[:, subplot_idx-1][:max_timesteps]]
+            return "(%s vs. %s) %s" % (feature, context, subplot_mode_2d)
+
+    def _get_feature_outputs(data, ax_idx):
+        channel_idx = ax_idx
+        feature_outputs = []
+        for sample in data:
+            feature_outputs.append(sample[:max_timesteps, channel_idx-1])
+        return feature_outputs
+
+    def _process_data(data):
+        if len(data.shape) not in (2, 3):
+            raise Exception("`data` must be 2D or 3D")
+        if len(data.shape)==2 and subplot_samples:
+            print(note_str + "`subplot_samples` w/ 2D `data` will only change "
+                  + "title shown, and assumes `data` dims (timesteps, samples)")
+        elif subplot_samples:
+            data = data.T
+        if len(data.shape)==2:
+            data = data.T
+            data = np.expand_dims(data, -1)
+        return data
 
     _catch_unknown_kwargs(kwargs)
+    data = _process_data(data)
 
-    if len(data.shape)!=2 and len(data.shape)!=3:
-        raise Exception("`data` must be 2D or 3D")
-    data = _process_channel_axis(data, channel_axis)
-    if len(data.shape)==3:
-        n_features = data[0].shape[channel_axis]
-    else:
-        n_features = data.shape[channel_axis]
-    n_rows, n_cols = _get_nrows_and_ncols(n_rows, n_features)
+    n_subplots = data.shape[-1]
+    n_rows, n_cols = _get_nrows_and_ncols(n_rows, n_subplots)
 
     if color is None:
         n_colors = len(data) if len(data.shape)==3 else 1
@@ -204,8 +218,8 @@ def show_features_1D(data, n_rows=None, label_channels=True,
     axes = np.asarray(axes)
 
     if show_title:
-        title = _get_title(data, show_title)
-        plt.suptitle(title, weight='bold', fontsize=title_fontsize)
+        title = _get_title(data, show_title, subplot_samples)
+        plt.suptitle(title, weight='bold', fontsize=title_fontsize, y=.93)
     fig.set_size_inches(12*scale_width, 8*scale_height)
 
     for ax_idx, ax in enumerate(axes.flat):
@@ -221,9 +235,9 @@ def show_features_1D(data, n_rows=None, label_channels=True,
         if not show_xy_ticks[1]:
             ax.set_yticks([])
         if label_channels:
-            ax.annotate(str(ax_idx), weight='bold',
-                        color='g', xycoords='axes fraction',
-                        fontsize=annotation_size, xy=annotation_xy)
+            ax.annotate(str(ax_idx), weight='bold', color='g',
+                        fontsize=annotation_size,
+                        xycoords='axes fraction', xy=annotation_xy)
         if not show_borders:
             ax.set_frame_on(False)
 
@@ -239,6 +253,8 @@ def show_features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=Fals
     Arguments:
         data: np.ndarray, 2D/3D. Data to plot.
               2D -> standalone graph; 3D -> subplot grid.
+              3D: (samples, timesteps, channels)
+              2D: (timesteps, channels)
         n_rows: int/None. Number of rows in subplot grid. If None,
               determines automatically, closest to n_rows == n_cols.
         norm: float iter. Normalizes colors to range between norm==(vmin, vmax),
@@ -266,14 +282,16 @@ def show_features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=Fals
               `data` dim (2D/3D). If other str, shows `show_title` as supertitle.
               If False, no title is shown.
         title_fontsize: int. Title fontsize.
-        channel_axis: int. `data` axis holding channels/features. -1 = last axis.
+        channel_axis: int, 0 or -1. `data` axis holding channels/features.
+              -1 --> (samples,  timesteps, channels)
+              0  --> (channels, timesteps, samples)
         dpi: int. Pyplot kwarg, 'dots per inch', specifying plot resolution
     """
 
     scale_width    = kwargs.get('scale_width',   1)
     scale_height   = kwargs.get('scale_height',  1)
-    show_borders   = kwargs.get('show_borders', True)
-    show_xy_ticks  = kwargs.get('show_xy_ticks',  [True, True])
+    show_borders   = kwargs.get('show_borders',  True)
+    show_xy_ticks  = kwargs.get('show_xy_ticks', [True, True])
     show_colorbar  = kwargs.get('show_colorbar', False)
     show_title     = kwargs.get('show_title',    'outputs')
     title_fontsize = kwargs.get('title_fontsize', 14)
@@ -309,7 +327,6 @@ def show_features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=Fals
 
     def _process_data(data, max_timesteps, reflect_half,
                       timesteps_xaxis, channel_axis):
-        data = _process_channel_axis(data, channel_axis)
         if max_timesteps is not None:
             data = data[..., :max_timesteps, :]
         if reflect_half:
@@ -324,21 +341,21 @@ def show_features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=Fals
 
     _catch_unknown_kwargs(kwargs)
 
-    if len(data.shape)!=2 and len(data.shape)!=3:
+    if len(data.shape) not in (2, 3):
         raise Exception("`data` must be 2D or 3D")
     data = _process_data(data, max_timesteps, reflect_half,
                          timesteps_xaxis, channel_axis)
 
     vmin, vmax = norm or (None, None)
-    n_samples = len(data) if len(data.shape)==3 else 1
-    n_rows, n_cols = _get_nrows_and_ncols(n_rows, n_samples)
+    n_subplots = len(data) if len(data.shape)==3 else 1
+    n_rows, n_cols = _get_nrows_and_ncols(n_rows, n_subplots)
 
     fig, axes = plt.subplots(n_rows, n_cols, dpi=dpi)
     axes = np.asarray(axes)
 
     if show_title:
         title = _get_title(data, show_title, timesteps_xaxis, vmin, vmax)
-        plt.suptitle(title, weight='bold', fontsize=title_fontsize)
+        plt.suptitle(title, weight='bold', fontsize=title_fontsize, y=.93)
 
     for ax_idx, ax in enumerate(axes.flat):
         img = ax.imshow(data[ax_idx], cmap=cmap, vmin=vmin, vmax=vmax)
@@ -357,18 +374,6 @@ def show_features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=Fals
     plt.show()
 
 
-def _process_channel_axis(data, channel_axis):
-    if len(data.shape)==3 and channel_axis==1:
-        raise Exception("`timesteps` dim must be dim 1 for 3D `data` "
-                        + "(got `channel_axis`==1)")
-    elif len(data.shape)==3 and channel_axis==0:
-        return np.transpose(data, (2, 1, 0))
-    elif len(data.shape)==2 and channel_axis==0:
-        return data.T
-    else:
-        return data
-
-
 def _get_nrows_and_ncols(n_rows, n_subplots):
     if n_rows is None:
         n_rows = int(np.sqrt(n_subplots))
@@ -379,5 +384,4 @@ def _get_nrows_and_ncols(n_rows, n_subplots):
                (n_subplots / n_rows).is_integer()):
         n_cols -= 1
         n_rows = int(n_subplots / n_cols)
-
     return n_rows, n_cols
