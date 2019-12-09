@@ -33,7 +33,7 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**EX : bi-LSTM, 32 units** - activations, `activation='relu'`
+**EX 1: bi-LSTM, 32 units** - activations, `activation='relu'`
 
  - Each subplot is an independent RNN channel's output (`return_sequences=True`)
  - In this example, each channel/filter appears to extract complex independent features of varying bias, frequency, and probabilistic distribution
@@ -44,7 +44,7 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**EX 1: one sample, uni-LSTM, 6 units** -- `return_sequences=True`, trained for 20 iterations <br>
+**EX 2: one sample, uni-LSTM, 6 units** -- `return_sequences=True`, trained for 20 iterations <br>
 `show_features_1D(grads[0], n_rows=2)`
 
  - _Note_: gradients are to be read _right-to-left_, as they're computed (from last timestep to first)
@@ -55,7 +55,7 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**EX 2: all (16) samples, uni-LSTM, 6 units** -- `return_sequences=True`, trained for 20 iterations <br>
+**EX 3: all (16) samples, uni-LSTM, 6 units** -- `return_sequences=True`, trained for 20 iterations <br>
 `show_features_1D(grads, n_rows=2)`<br>
 `show_features_2D(grads, n_rows=4, norm=(-.01, .01))`
 
@@ -68,7 +68,7 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**EX 3: all (16) samples, uni-LSTM, 6 units** -- `return_sequences=True`, trained for 200 iterations <br>
+**EX 4: all (16) samples, uni-LSTM, 6 units** -- `return_sequences=True`, trained for 200 iterations <br>
 `show_features_1D(grads, n_rows=2)`<br>
 `show_features_2D(grads, n_rows=4, norm=(-.01, .01))`
 
@@ -81,7 +81,7 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**EX 4: 2D vs. 1D, uni-LSTM**: 256 units, `return_sequences=True`, trained for 200 iterations <br>
+**EX 5: 2D vs. 1D, uni-LSTM**: 256 units, `return_sequences=True`, trained for 200 iterations <br>
 `show_features_1D(grads[0])`<br>
 `show_features_2D(grads[:, :, 0], norm=(-.0001, .0001))`
 
@@ -92,7 +92,7 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**EX 5: bi-GRU, 256 units (512 total)** -- `return_sequences=True`, trained for 400 iterations <br>
+**EX 6: bi-GRU, 256 units (512 total)** -- `return_sequences=True`, trained for 400 iterations <br>
 `show_features_2D(grads[0], norm=(-.0001, .0001), reflect_half=True)`
 
  - Backward layer's gradients are flipped for consistency w.r.t. time axis
@@ -103,7 +103,7 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**EX 6: 0D, all (16) samples, uni-LSTM, 6 units** -- `return_sequences=False`, trained for 200 iterations<br>
+**EX 7: 0D, all (16) samples, uni-LSTM, 6 units** -- `return_sequences=False`, trained for 200 iterations<br>
 `show_features_0D(grads)`
 
  - `return_sequences=False` utilizes only the last timestep's gradient (which is still derived from all timesteps, unless using truncated BPTT), requiring a new approach
@@ -114,7 +114,7 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**EX 7: LSTM vs. GRU vs. SimpleRNN, unidir, 256 units** -- `return_sequences=True`, trained for 250 iterations<br>
+**EX 8: LSTM vs. GRU vs. SimpleRNN, unidir, 256 units** -- `return_sequences=True`, trained for 250 iterations<br>
 `show_features_2D(grads, n_rows=8, norm=(-.0001, .0001), show_xy_ticks=[0,0], show_title=False)`
 
  - _Note_: the comparison isn't very meaningful; each network thrives w/ different hyperparameters, whereas same ones were used for all. LSTM, for one, bears the most parameters per unit, drowning out SimpleRNN
@@ -125,7 +125,7 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 <hr>
 
 
-**EX 1: uni-LSTM, 256 units, weights** -- `batch_shape = (16, 100, 20)` (input)<br>
+**EX 9: uni-LSTM, 256 units, weights** -- `batch_shape = (16, 100, 20)` (input)<br>
 `rnn_histogram(model, 'lstm', equate_axes=False, show_bias=False)`<br>
 `rnn_histogram(model, 'lstm', equate_axes=True,  show_bias=False)`<br>
 `rnn_heatmap(model, 'lstm')`
@@ -147,7 +147,7 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**EX 2: bi-CuDNNLSTM, 256 units, weights** -- `batch_shape = (16, 100, 16)` (input)<br>
+**EX 10: bi-CuDNNLSTM, 256 units, weights** -- `batch_shape = (16, 100, 16)` (input)<br>
 `rnn_histogram(model, 'bidir', equate_axes=2)`<br>
 `rnn_heatmap(model, 'bidir', norm=(-.8, .8))`
 
@@ -160,7 +160,7 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**EX 3: uni-CuDNNGRU, 64 units, weights gradients** -- `batch_shape = (16, 100, 16)` (input)<br>
+**EX 11: uni-CuDNNGRU, 64 units, weights gradients** -- `batch_shape = (16, 100, 16)` (input)<br>
 `rnn_heatmap(model, 'gru', mode='grads', input_data=x, labels=y, cmap=None, absolute_value=True)`
 
  - We may wish to visualize _gradient intensity_, which can be done via `absolute_value=True` and a greyscale colormap
@@ -172,25 +172,13 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**BONUS EX: LSTM NaN detection, 512 units, weights** -- `batch_shape = (16, 100, 16)` (input)
+**EX 12: NaN detection: LSTM, 512 units, weights** -- `batch_shape = (16, 100, 16)` (input)
 
  - Both the heatmap and the histogram come with built-in NaN detection - kernel-, gate-, and direction-wise
  - Heatmap will print NaNs to console, whereas histogram will mark them directly on the plot
  - Both will set NaN values to zero before plotting; in example below, all related non-NaN weights were already zero
 
 <img src="https://i.stack.imgur.com/T6ZAa.png" width="600">
-
-<hr>
-
-**EX : bi-LSTM, 32 units** - activations, `activation='relu'`
-
- - Each subplot is an independent RNN channel's output (`return_sequences=True`)
- - In this example, each channel/filter appears to extract complex independent features of varying bias, frequency, and probabilistic distribution
-
-<img src="https://i.stack.imgur.com/k7RrD.png" width="800">
-
-<img src="https://i.stack.imgur.com/HF8gH.png" width="800">
-
 
 
 ## Usage 
@@ -242,12 +230,7 @@ show_features_2D(grads_all, n_rows=8, show_xy_ticks=[1,1], norm=(-.01, .01))
 show_features_0D(grads_last)
 ```
 
-## To-do
- - [ ] Add weights visualization code _(soon)_
- - [ ] Add weights gradients examples _(soon)_
- - [ ] Add activations visualization examples _(soon)_
- - [ ] Add advanced usage code examples
-  
+
 
   [1]: https://i.stack.imgur.com/PVoU0.png
   [2]: https://i.stack.imgur.com/OaX6I.png
