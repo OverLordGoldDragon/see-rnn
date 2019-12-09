@@ -103,7 +103,7 @@ def _test_outputs_gradients(model):
     show_features_2D(grads_all[0], norm=(-.01, .01), show_colorbar=True, **kwargs1)
     show_features_2D(grads_all,    norm=None,        reflect_half=True,  **kwargs2)
     show_features_0D(grads_last,   marker='o', color=None, show_title='grads')
-    show_features_0D(grads_last,   marker='x', color='blue')
+    show_features_0D(grads_last,   marker='x', color='blue', ylims=(-.1, .1))
     print('\n')  # improve separation
 
 
