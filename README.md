@@ -26,10 +26,23 @@ RNN weights, gradients, &amp; activations visualization in Keras &amp; TensorFlo
 
 ```python
 # for all examples
-grads = get_layer_gradients(model, x, y, layer_idx=1)  # return_sequences=True
-grads = get_layer_gradients(model, x, y, layer_idx=2)  # return_sequences=False
+grads = get_rnn_gradients(model, x, y, layer_idx=1)  # return_sequences=True
+grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 # all examples use timesteps=100
 ```
+
+<hr>
+
+**EX : bi-LSTM, 32 units** - activations, `activation='relu'`
+
+ - Each subplot is an independent RNN channel's output (`return_sequences=True`)
+ - In this example, each channel/filter appears to extract complex independent features of varying bias, frequency, and probabilistic distribution
+
+<img src="https://i.stack.imgur.com/k7RrD.png" width="800">
+
+<img src="https://i.stack.imgur.com/HF8gH.png" width="800">
+
+<hr>
 
 **EX 1: one sample, uni-LSTM, 6 units** -- `return_sequences=True`, trained for 20 iterations <br>
 `show_features_1D(grads[0], n_rows=2)`
@@ -111,22 +124,74 @@ grads = get_layer_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**EX 8: LSTM activations, unidir, 60 units** -- `return_sequences=True`<br>
-`outputs = get_layer_outputs(model, x, layer_idx=1)  # return_sequences=True`<br>
-`show_features_1D(outputs)`
 
-<img src="https://i.stack.imgur.com/l26NF.png" width="700">
+**EX 1: uni-LSTM, 256 units, weights** -- `batch_shape = (16, 100, 20)` (input)<br>
+`rnn_histogram(model, 'lstm', equate_axes=False, show_bias=False)`<br>
+`rnn_histogram(model, 'lstm', equate_axes=True,  show_bias=False)`<br>
+`rnn_heatmap(model, 'lstm')`
+
+ - Top plot is a histogram subplot grid, showing weight distributions per kernel, and within each kernel, per gate
+ - Second plot sets `equate_axes=True` for an even comparison across kernels and gates, improving quality of comparison, but potentially degrading visual appeal
+ - Last plot is a heatmap of the same weights, with gate separations marked by vertical lines, and bias weights also included
+ - Unlike histograms, the heatmap _preserves channel/context information_: input-to-hidden and hidden-to-hidden transforming matrices can be clearly distinguished
+ - Note the large concentration of maximal values at the Forget gate; as trivia, in Keras (and usually), bias gates are all initialized to zeros, except the Forget bias, which is initialized to ones
+
+
+
+<img src="https://i.stack.imgur.com/1Deh4.png" width="600">
+
+<img src="https://i.stack.imgur.com/IZN6k.png" width="600">
+
+<img src="https://i.stack.imgur.com/E9GkQ.png" width="620">
+
 
 <hr>
 
-**EX 9: LSTM weights, bidirectional, 256 units** -- `return_sequences=True`<br>
-`rnn_weights_histogram(model, layer_idx=1)`
+**EX 2: bi-CuDNNLSTM, 256 units, weights** -- `batch_shape = (16, 100, 16)` (input)<br>
+`rnn_histogram(model, 'bidir', equate_axes=2)`<br>
+`rnn_heatmap(model, 'bidir', norm=(-.8, .8))`
 
- - The plot has a built-in NaN detector, displaying % of weights w/ NaN values _(exploding gradients)_ 
- 
-<img src="https://i.stack.imgur.com/0aX4R.png" width="900">
+ - Bidirectional is supported by both; biases included in this example for histograms
+ - Note again the bias heatmaps; they no longer appear to reside in the same locality as in EX 1. Indeed, `CuDNNLSTM` (and `CuDNNGRU`) biases are defined and initialized differently - something that can't be inferred from histograms
+
+<img src="https://i.stack.imgur.com/vkGiF.png" width="900">
+
+<img src="https://i.stack.imgur.com/gEjp0.png" width="900">
 
 <hr>
+
+**EX 3: uni-CuDNNGRU, 64 units, weights gradients** -- `batch_shape = (16, 100, 16)` (input)<br>
+`rnn_heatmap(model, 'gru', mode='grads', input_data=x, labels=y, cmap=None, absolute_value=True)`
+
+ - We may wish to visualize _gradient intensity_, which can be done via `absolute_value=True` and a greyscale colormap
+ - Gate separations are apparent even without explicit separating lines in this example:
+   - `New` is the most active kernel gate (input-to-hidden), suggesting more error correction on _permitting information flow_
+   - `Reset` is the least active recurrent gate (hidden-to-hidden), suggesting least error correction on memory-keeping
+
+<img src="https://i.stack.imgur.com/cwiAS.png" width="600">
+
+<hr>
+
+**BONUS EX: LSTM NaN detection, 512 units, weights** -- `batch_shape = (16, 100, 16)` (input)
+
+ - Both the heatmap and the histogram come with built-in NaN detection - kernel-, gate-, and direction-wise
+ - Heatmap will print NaNs to console, whereas histogram will mark them directly on the plot
+ - Both will set NaN values to zero before plotting; in example below, all related non-NaN weights were already zero
+
+<img src="https://i.stack.imgur.com/T6ZAa.png" width="600">
+
+<hr>
+
+**EX : bi-LSTM, 32 units** - activations, `activation='relu'`
+
+ - Each subplot is an independent RNN channel's output (`return_sequences=True`)
+ - In this example, each channel/filter appears to extract complex independent features of varying bias, frequency, and probabilistic distribution
+
+<img src="https://i.stack.imgur.com/k7RrD.png" width="800">
+
+<img src="https://i.stack.imgur.com/HF8gH.png" width="800">
+
+
 
 ## Usage 
 
@@ -139,7 +204,7 @@ import numpy as np
 from keras.layers import Input, LSTM
 from keras.models import Model
 from keras.optimizers import Adam
-from see_rnn import get_layer_gradients, show_features_1D, show_features_2D
+from see_rnn import get_rnn_gradients, show_features_1D, show_features_2D
 from see_rnn import show_features_0D
 
 def make_model(rnn_layer, batch_shape, units):
@@ -169,8 +234,8 @@ model = make_model(LSTM, batch_shape, units)
 train_model(model, 300, batch_shape)
 
 x, y  = make_data(batch_shape)
-grads_all  = get_layer_gradients(model, x, y, layer_idx=1)  # return_sequences=True
-grads_last = get_layer_gradients(model, x, y, layer_idx=2)  # return_sequences=False
+grads_all  = get_rnn_gradients(model, x, y, layer_idx=1)  # return_sequences=True
+grads_last = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 show_features_1D(grads_all, n_rows=2, show_xy_ticks=[1,1])
 show_features_2D(grads_all, n_rows=8, show_xy_ticks=[1,1], norm=(-.01, .01))
