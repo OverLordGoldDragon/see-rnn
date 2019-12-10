@@ -20,6 +20,7 @@ RNN weights, gradients, &amp; activations visualization in Keras &amp; TensorFlo
   - **Kernel visuals**: kernel, recurrent kernel, and bias shown explicitly
   - **Gate visuals**: gates in gated architectures (LSTM, GRU) shown explicitly
   - **Channel visuals**: cell units (feature extractors) shown explicitly
+  - **General visuals**: methods also applicable to CNNs & others
 
 
 ## Why use?
