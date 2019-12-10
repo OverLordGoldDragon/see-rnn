@@ -12,7 +12,7 @@
 
 RNN weights, gradients, &amp; activations visualization in Keras &amp; TensorFlow (LSTM, GRU, SimpleRNN, CuDNN, & all others)
 
-<img src="https://user-images.githubusercontent.com/16495490/69360375-df132d80-0ca3-11ea-80ef-e5749965e3ff.png" width="900">
+<img src="https://user-images.githubusercontent.com/16495490/70570599-a6d18180-1bb5-11ea-8a0d-9c4ef43c69b1.png" width="900">
 <img src="https://user-images.githubusercontent.com/16495490/69359963-133a1e80-0ca3-11ea-9c9a-2c59baa112dd.png" width="850">
 
 ## Features
@@ -20,7 +20,23 @@ RNN weights, gradients, &amp; activations visualization in Keras &amp; TensorFlo
   - **Kernel visuals**: kernel, recurrent kernel, and bias shown explicitly
   - **Gate visuals**: gates in gated architectures (LSTM, GRU) shown explicitly
   - **Channel visuals**: cell units (feature extractors) shown explicitly
+  - **General visuals**: methods also applicable to CNNs & others
 
+
+## Why use?
+
+Introspection is a powerful tool for debugging, regularizing, and understanding neural networks; this repo's methods enable:
+ 
+ - Monitoring **weights & activations progression** - how each changes epoch-to-epoch, iteration-to-iteration
+ - Evaluating **learning effectiveness** - how well gradient backpropagates layer-to-layer, timestep-to-timestep
+ - Assessing **layer health** - what percentage of neurons are "dead" or "exploding"
+ 
+It enables answering questions such as:
+ - Is my RNN learning **long-term dependencies**? >> Monitor gradients: if a non-zero gradient flows through every timestep, then _every timestep contributes to learning_ - i.e., resultant gradients stem from accounting for every input timestep, so the _entire sequence influences weight updates_. Hence, an RNN _no longer ignores portions of long sequences_, and is forced to _learn from them_
+ - Is my RNN learning **independent representations**? >> Monitor activations: if each channel's outputs are distinct and decorrelated, then the RNN extracts richly diverse features.
+ - Why do I have **validation loss spikes**? >> Monitor all: val. spikes may stem from sharp changes in layer weights due to large gradients, which will visibly alter activation patterns; seeing the details can help inform a correction
+ 
+For further info on potential uses, see [this SO](https://stackoverflow.com/questions/48714407/rnn-regularization-which-component-to-regularize/58868383#58868383).
 
 ## Examples
 
@@ -28,11 +44,29 @@ RNN weights, gradients, &amp; activations visualization in Keras &amp; TensorFlo
 # for all examples
 grads = get_rnn_gradients(model, x, y, layer_idx=1)  # return_sequences=True
 grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
+outs  = get_layer_outputs(model, x,    layer_idx=1)  # return_sequences=True
 # all examples use timesteps=100
+# NOTE: `title_mode` kwarg below was omitted for simplicity; for Gradient visuals, would set to 'grads'
 ```
 
-**EX 1: one sample, uni-LSTM, 6 units** -- `return_sequences=True`, trained for 20 iterations <br>
-`show_features_1D(grads[0], n_rows=2)`
+<hr>
+
+**EX 1: bi-LSTM, 32 units** - activations, `activation='relu'`<br>
+`show_features_1D(outs[:1], equate_axes=False)`<br>
+`show-features_1D(outs[:1], equate_axes=True, show_y_zero=True)`
+
+ - Each subplot is an independent RNN channel's output (`return_sequences=True`)
+ - In this example, each channel/filter appears to extract complex independent features of varying bias, frequency, and probabilistic distribution
+ - Note that `equate_axes=False` better pronounces features' _shape_, whereas `=True` allows for an even comparison - but may greatly 'shrink' waveforms to appear flatlined (not shown here)
+
+<img src="https://i.stack.imgur.com/k7RrD.png" width="800">
+
+<img src="https://i.stack.imgur.com/HF8gH.png" width="800">
+
+<hr>
+
+**EX 2: one sample, uni-LSTM, 6 units** - gradients, `return_sequences=True`, trained for 20 iterations <br>
+`show_features_1D(grads[:1], n_rows=2)`
 
  - _Note_: gradients are to be read _right-to-left_, as they're computed (from last timestep to first)
  - Rightmost (latest) timesteps consistently have a higher gradient
@@ -42,7 +76,7 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**EX 2: all (16) samples, uni-LSTM, 6 units** -- `return_sequences=True`, trained for 20 iterations <br>
+**EX 3: all (16) samples, uni-LSTM, 6 units** -- `return_sequences=True`, trained for 20 iterations <br>
 `show_features_1D(grads, n_rows=2)`<br>
 `show_features_2D(grads, n_rows=4, norm=(-.01, .01))`
 
@@ -55,7 +89,7 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**EX 3: all (16) samples, uni-LSTM, 6 units** -- `return_sequences=True`, trained for 200 iterations <br>
+**EX 4: all (16) samples, uni-LSTM, 6 units** -- `return_sequences=True`, trained for 200 iterations <br>
 `show_features_1D(grads, n_rows=2)`<br>
 `show_features_2D(grads, n_rows=4, norm=(-.01, .01))`
 
@@ -68,8 +102,8 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**EX 4: 2D vs. 1D, uni-LSTM**: 256 units, `return_sequences=True`, trained for 200 iterations <br>
-`show_features_1D(grads[0])`<br>
+**EX 5: 2D vs. 1D, uni-LSTM**: 256 units, `return_sequences=True`, trained for 200 iterations <br>
+`show_features_1D(grads[0, :, :])`<br>
 `show_features_2D(grads[:, :, 0], norm=(-.0001, .0001))`
 
  - 2D is better suited for comparing many channels across few samples
@@ -79,7 +113,7 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**EX 5: bi-GRU, 256 units (512 total)** -- `return_sequences=True`, trained for 400 iterations <br>
+**EX 6: bi-GRU, 256 units (512 total)** -- `return_sequences=True`, trained for 400 iterations <br>
 `show_features_2D(grads[0], norm=(-.0001, .0001), reflect_half=True)`
 
  - Backward layer's gradients are flipped for consistency w.r.t. time axis
@@ -90,7 +124,7 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**EX 6: 0D, all (16) samples, uni-LSTM, 6 units** -- `return_sequences=False`, trained for 200 iterations<br>
+**EX 7: 0D, all (16) samples, uni-LSTM, 6 units** -- `return_sequences=False`, trained for 200 iterations<br>
 `show_features_0D(grads)`
 
  - `return_sequences=False` utilizes only the last timestep's gradient (which is still derived from all timesteps, unless using truncated BPTT), requiring a new approach
@@ -101,8 +135,8 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**EX 7: LSTM vs. GRU vs. SimpleRNN, unidir, 256 units** -- `return_sequences=True`, trained for 250 iterations<br>
-`show_features_2D(grads, n_rows=8, norm=(-.0001, .0001), show_xy_ticks=[0,0], show_title=False)`
+**EX 8: LSTM vs. GRU vs. SimpleRNN, unidir, 256 units** -- `return_sequences=True`, trained for 250 iterations<br>
+`show_features_2D(grads, n_rows=8, norm=(-.0001, .0001), show_xy_ticks=[0,0], title_mode=False)`
 
  - _Note_: the comparison isn't very meaningful; each network thrives w/ different hyperparameters, whereas same ones were used for all. LSTM, for one, bears the most parameters per unit, drowning out SimpleRNN
  - In this setup, LSTM definitively stomps GRU and SimpleRNN
@@ -111,26 +145,68 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**EX 8: LSTM activations, unidir, 60 units** -- `return_sequences=True`<br>
-`outputs = get_layer_outputs(model, x, layer_idx=1)  # return_sequences=True`<br>
-`show_features_1D(outputs)`
 
-<img src="https://i.stack.imgur.com/l26NF.png" width="700">
+**EX 9: uni-LSTM, 256 units, weights** -- `batch_shape = (16, 100, 20)` (input)<br>
+`rnn_histogram(model, 'lstm', equate_axes=False, show_bias=False)`<br>
+`rnn_histogram(model, 'lstm', equate_axes=True,  show_bias=False)`<br>
+`rnn_heatmap(model, 'lstm')`
+
+ - Top plot is a histogram subplot grid, showing weight distributions per kernel, and within each kernel, per gate
+ - Second plot sets `equate_axes=True` for an even comparison across kernels and gates, improving quality of comparison, but potentially degrading visual appeal
+ - Last plot is a heatmap of the same weights, with gate separations marked by vertical lines, and bias weights also included
+ - Unlike histograms, the heatmap _preserves channel/context information_: input-to-hidden and hidden-to-hidden transforming matrices can be clearly distinguished
+ - Note the large concentration of maximal values at the Forget gate; as trivia, in Keras (and usually), bias gates are all initialized to zeros, except the Forget bias, which is initialized to ones
+
+
+
+<img src="https://i.stack.imgur.com/1Deh4.png" width="600">
+
+<img src="https://i.stack.imgur.com/IZN6k.png" width="600">
+
+<img src="https://i.stack.imgur.com/E9GkQ.png" width="620">
+
 
 <hr>
 
-**EX 9: LSTM weights, bidirectional, 256 units** -- `return_sequences=True`<br>
-`rnn_weights_histogram(model, layer_idx=1)`
+**EX 10: bi-CuDNNLSTM, 256 units, weights** -- `batch_shape = (16, 100, 16)` (input)<br>
+`rnn_histogram(model, 'bidir', equate_axes=2)`<br>
+`rnn_heatmap(model, 'bidir', norm=(-.8, .8))`
 
- - The plot has a built-in NaN detector, displaying % of weights w/ NaN values _(exploding gradients)_ 
- 
-<img src="https://i.stack.imgur.com/0aX4R.png" width="900">
+ - Bidirectional is supported by both; biases included in this example for histograms
+ - Note again the bias heatmaps; they no longer appear to reside in the same locality as in EX 1. Indeed, `CuDNNLSTM` (and `CuDNNGRU`) biases are defined and initialized differently - something that can't be inferred from histograms
+
+<img src="https://i.stack.imgur.com/vkGiF.png" width="900">
+
+<img src="https://i.stack.imgur.com/gEjp0.png" width="900">
 
 <hr>
+
+**EX 11: uni-CuDNNGRU, 64 units, weights gradients** -- `batch_shape = (16, 100, 16)` (input)<br>
+`rnn_heatmap(model, 'gru', mode='grads', input_data=x, labels=y, cmap=None, absolute_value=True)`
+
+ - We may wish to visualize _gradient intensity_, which can be done via `absolute_value=True` and a greyscale colormap
+ - Gate separations are apparent even without explicit separating lines in this example:
+   - `New` is the most active kernel gate (input-to-hidden), suggesting more error correction on _permitting information flow_
+   - `Reset` is the least active recurrent gate (hidden-to-hidden), suggesting least error correction on memory-keeping
+
+<img src="https://i.stack.imgur.com/cwiAS.png" width="600">
+
+<hr>
+
+**EX 12: NaN detection: LSTM, 512 units, weights** -- `batch_shape = (16, 100, 16)` (input)
+
+ - Both the heatmap and the histogram come with built-in NaN detection - kernel-, gate-, and direction-wise
+ - Heatmap will print NaNs to console, whereas histogram will mark them directly on the plot
+ - Both will set NaN values to zero before plotting; in example below, all related non-NaN weights were already zero
+
+<img src="https://i.stack.imgur.com/T6ZAa.png" width="600">
+
 
 ## Usage 
 
-Minimal example below - for full usage, see module docstrings, which describe all functionality. _Note_: if using `tensorflow.keras` imports, set `import os; os.environ["TF_KERAS"]='True'`.
+**QUICKSTART**: run [rnn_sandbox.py](https://github.com/OverLordGoldDragon/see-rnn/rnn_sandbox.py), which includes all major examples and allows easy exploration of various plot configs.
+
+_Note_: if using `tensorflow.keras` imports, set `import os; os.environ["TF_KERAS"]='True'`. Minimal example below.
 
 [visuals_gen.py](https://github.com/OverLordGoldDragon/see-rnn/blob/master/see_rnn/visuals_gen.py) functions can also be used to visualize `Conv1D` activations, gradients, or any other meaningfully-compatible data formats. Likewise, [inspect_gen.py](https://github.com/OverLordGoldDragon/see-rnn/blob/master/see_rnn/inspect_gen.py) also works for non-RNN layers.
 
@@ -177,12 +253,7 @@ show_features_2D(grads_all, n_rows=8, show_xy_ticks=[1,1], norm=(-.01, .01))
 show_features_0D(grads_last)
 ```
 
-## To-do
- - [ ] Add weights visualization code _(soon)_
- - [ ] Add weights gradients examples _(soon)_
- - [ ] Add activations visualization examples _(soon)_
- - [ ] Add advanced usage code examples
-  
+
 
   [1]: https://i.stack.imgur.com/PVoU0.png
   [2]: https://i.stack.imgur.com/OaX6I.png
