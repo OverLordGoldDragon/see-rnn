@@ -40,7 +40,7 @@ if TF_2 and not TF_KERAS:
           + "are not supported in TF2, and will be skipped")
 
 
-def test_all():
+def test_main():
     units = 6
     batch_shape = (8, 100, 2*units)
     iterations = 20
@@ -208,37 +208,27 @@ def reset_seeds(reset_graph_with_backend=None, verbose=1):
         print("RANDOM SEEDS RESET")
 
 
-def test_misc():  # misc tests to improve coverage %
+def _pass_on_error(func, *args, **kwargs):
+    try:
+        func(*args, **kwargs)
+    except BaseException as e:
+        print("Task Failed Successfully:", e)
+        pass
+
+
+def test_errors():  # test Exception cases
     units = 6
     batch_shape = (8, 100, 2*units)
 
     reset_seeds(reset_graph_with_backend=K)
     model = make_model(GRU, batch_shape, activation='relu', recurrent_dropout=0.3)
-
     x, y = make_data(batch_shape, units)
     model.train_on_batch(x, y)
+
     grads = get_layer_gradients(model, x, y, layer_idx=1)
     grads_4D = np.expand_dims(grads, -1)
-    _grads = np.transpose(grads, (2, 1, 0))
 
-    show_features_1D(grads,    subplot_samples=True)
-    show_features_1D(grads[0], subplot_samples=True)
-    show_features_2D(_grads, n_rows=1.5)
-    show_features_2D(_grads[:, :, 0])
-    rnn_histogram(model, layer_idx=1, show_xy_ticks=[0, 0], equate_axes=2)
-    rnn_heatmap(model, layer_idx=1, cmap=None, normalize=True, show_borders=False)
-    rnn_heatmap(model, layer_idx=1, cmap=None, absolute_value=True)
-    rnn_heatmap(model, layer_idx=1, norm=None)
-    rnn_heatmap(model, layer_idx=1, norm=(-.004, .004))
-
-    def _pass_on_error(func, *args, **kwargs):
-        try:
-            func(*args, **kwargs)
-        except BaseException as e:
-            print("Task Failed Successfully:", e)
-            pass
-
-    from see_rnn.inspect_gen import get_layer, _make_grads_fn, _detect_nans
+    from see_rnn.inspect_gen import get_layer, _make_grads_fn
 
     _pass_on_error(show_features_0D, grads)
     _pass_on_error(show_features_0D, grads_4D)
@@ -265,6 +255,33 @@ def test_misc():  # misc tests to improve coverage %
     _pass_on_error(rnn_histogram, model, layer_idx=1, data=[1])
     _pass_on_error(rnn_histogram, model, layer_idx=1, data=[[1]])
 
+    cprint("\n<< EXCEPTION TESTS PASSED >>\n", 'green')
+    assert True
+
+
+def test_misc():  # misc tests to improve coverage %
+    units = 6
+    batch_shape = (8, 100, 2*units)
+
+    reset_seeds(reset_graph_with_backend=K)
+    model = make_model(GRU, batch_shape, activation='relu', recurrent_dropout=0.3)
+    x, y = make_data(batch_shape, units)
+    model.train_on_batch(x, y)
+
+    grads = get_layer_gradients(model, x, y, layer_idx=1)
+
+    show_features_1D(grads,    subplot_samples=True)
+    show_features_1D(grads[0], subplot_samples=True)
+    show_features_2D(grads.T, n_rows=1.5)
+    show_features_2D(grads.T[:, :, 0])
+    rnn_histogram(model, layer_idx=1, show_xy_ticks=[0, 0], equate_axes=2)
+    rnn_heatmap(model, layer_idx=1, cmap=None, normalize=True, show_borders=False)
+    rnn_heatmap(model, layer_idx=1, cmap=None, absolute_value=True)
+    rnn_heatmap(model, layer_idx=1, norm=None)
+    rnn_heatmap(model, layer_idx=1, norm=(-.004, .004))
+
+    from see_rnn.inspect_gen import get_layer, _detect_nans
+
     get_layer(model, layer_name='gru')
     get_rnn_weights(model, layer_idx=1, concat_gates=False, as_tensors=True)
     rnn_heatmap(model, layer_idx=1, input_data=x, labels=y, mode='weights')
@@ -282,6 +299,7 @@ def test_misc():  # misc tests to improve coverage %
     del model
     reset_seeds(reset_graph_with_backend=K)
 
+    # test SimpleRNN & other
     _model = make_model(SimpleRNN, batch_shape, units=128, use_bias=False)
     train_model(_model, iterations=1)  # TF2-Keras-Graph bug workaround
     rnn_histogram(_model, layer_idx=1)  # test _pretty_hist
@@ -293,6 +311,16 @@ def test_misc():  # misc tests to improve coverage %
     os.environ["TF_KERAS"] = '0'
     get_rnn_weights(_model, layer_idx=1, concat_gates=False)
     del _model
+
+    assert True
+    cprint("\n<< MISC TESTS PASSED >>\n", 'green')
+
+
+def test_envs():  # pseudo-tests for coverage for different env flags
+    reset_seeds(reset_graph_with_backend=K)
+    units = 6
+    batch_shape = (8, 100, 2*units)
+    x, y = make_data(batch_shape, units)
 
     from importlib import reload
 
@@ -340,4 +368,4 @@ def test_misc():  # misc tests to improve coverage %
         del model, _model
 
     assert True
-    cprint("\n<< MISC TESTS PASSED >>\n", 'green')
+    cprint("\n<< ENV TESTS PASSED >>\n", 'green')
