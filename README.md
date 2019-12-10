@@ -28,15 +28,19 @@ RNN weights, gradients, &amp; activations visualization in Keras &amp; TensorFlo
 # for all examples
 grads = get_rnn_gradients(model, x, y, layer_idx=1)  # return_sequences=True
 grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
+outs  = get_layer_outputs(model, x,    layer_idx=1)  # return_sequences=True
 # all examples use timesteps=100
 ```
 
 <hr>
 
-**EX 1: bi-LSTM, 32 units** - activations, `activation='relu'`
+**EX 1: bi-LSTM, 32 units** - activations, `activation='relu'`<br>
+`show_features_1D(outs[:1], equate_axes=False)`<br>
+`show-features_1D(outs[:1], equate_axes=True, show_y_zero=True)`
 
  - Each subplot is an independent RNN channel's output (`return_sequences=True`)
  - In this example, each channel/filter appears to extract complex independent features of varying bias, frequency, and probabilistic distribution
+ - Note that `equate_axes=False` better pronounces features' _shape_, whereas `=True` allows for an even comparison - but may greatly 'shrink' waveforms to appear flatlined (not shown here)
 
 <img src="https://i.stack.imgur.com/k7RrD.png" width="800">
 
@@ -44,8 +48,8 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 <hr>
 
-**EX 2: one sample, uni-LSTM, 6 units** -- `return_sequences=True`, trained for 20 iterations <br>
-`show_features_1D(grads[0], n_rows=2)`
+**EX 2: one sample, uni-LSTM, 6 units** - gradients, `return_sequences=True`, trained for 20 iterations <br>
+`show_features_1D(grads[:1], n_rows=2)`
 
  - _Note_: gradients are to be read _right-to-left_, as they're computed (from last timestep to first)
  - Rightmost (latest) timesteps consistently have a higher gradient
@@ -82,7 +86,7 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 <hr>
 
 **EX 5: 2D vs. 1D, uni-LSTM**: 256 units, `return_sequences=True`, trained for 200 iterations <br>
-`show_features_1D(grads[0])`<br>
+`show_features_1D(grads[0, :, :])`<br>
 `show_features_2D(grads[:, :, 0], norm=(-.0001, .0001))`
 
  - 2D is better suited for comparing many channels across few samples
@@ -183,7 +187,9 @@ grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 ## Usage 
 
-Minimal example below - for full usage, see module docstrings, which describe all functionality. _Note_: if using `tensorflow.keras` imports, set `import os; os.environ["TF_KERAS"]='True'`.
+**QUICKSTART**: run [rnn_sandbox.py](https://github.com/OverLordGoldDragon/see-rnn/rnn_sandbox.py), which includes all major examples and allows easy exploration of various plot configs.
+
+_Note_: if using `tensorflow.keras` imports, set `import os; os.environ["TF_KERAS"]='True'`. Minimal example below.
 
 [visuals_gen.py](https://github.com/OverLordGoldDragon/see-rnn/blob/master/see_rnn/visuals_gen.py) functions can also be used to visualize `Conv1D` activations, gradients, or any other meaningfully-compatible data formats. Likewise, [inspect_gen.py](https://github.com/OverLordGoldDragon/see-rnn/blob/master/see_rnn/inspect_gen.py) also works for non-RNN layers.
 
