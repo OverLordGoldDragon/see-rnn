@@ -2,7 +2,7 @@ import os
 import tensorflow as tf
 
 
-TF_KERAS = bool(os.environ.get("TF_KERAS", 'False') == 'True')
+TF_KERAS = bool(os.environ.get("TF_KERAS", '0') == '1')
 USING_GPU = bool(tf.config.experimental.list_physical_devices('GPU') != [])
 
 if TF_KERAS:
@@ -19,5 +19,3 @@ else:
     from keras.models import Model
     if USING_GPU:
         from keras.layers import CuDNNLSTM, CuDNNGRU
-
-from . import test_all
