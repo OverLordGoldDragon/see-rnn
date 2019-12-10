@@ -95,7 +95,7 @@ def _test_outputs_gradients(model):
     grads_last = get_layer_gradients(model, x, y, layer_idx=2,     mode='outputs')
 
     kwargs1 = dict(n_rows=None, show_xy_ticks=[0, 0], show_borders=True,
-                   max_timesteps=50, show_title='grads')
+                   max_timesteps=50, title_mode='grads')
     kwargs2 = dict(n_rows=2,    show_xy_ticks=[1, 1], show_borders=False,
                    max_timesteps=None)
 
@@ -104,7 +104,7 @@ def _test_outputs_gradients(model):
     show_features_1D(grads_all,     **kwargs2)
     show_features_2D(grads_all[0], norm=(-.01, .01), show_colorbar=True, **kwargs1)
     show_features_2D(grads_all,    norm=None,        reflect_half=True,  **kwargs2)
-    show_features_0D(grads_last,   marker='o', color=None, show_title='grads')
+    show_features_0D(grads_last,   marker='o', color=None, title_mode='grads')
     show_features_0D(grads_last,   marker='x', color='blue', ylims=(-.1, .1))
     print('\n')  # improve separation
 

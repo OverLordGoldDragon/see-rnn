@@ -27,9 +27,9 @@ def show_features_0D(data, marker='o', cmap='bwr', color=None, **kwargs):
         scale_width:   float. Scale width  of resulting plot by a factor.
         scale_height:  float. Scale height of resulting plot by a factor.
         show_borders:  bool.  If True, shows boxes around plot(s).
-        show_title:    bool/str. If True, shows generic supertitle.
+        title_mode:    bool/str. If True, shows generic supertitle.
               If str in ('grads', 'outputs'), shows supertitle tailored to
-              `data` dim (2D/3D). If other str, shows `show_title` as supertitle.
+              `data` dim (2D/3D). If other str, shows `title_mode` as supertitle.
               If False, no title is shown.
         show_y_zero: bool. If True, draws y=0.
         title_fontsize: int. Title fontsize.
@@ -43,7 +43,7 @@ def show_features_0D(data, marker='o', cmap='bwr', color=None, **kwargs):
     scale_width    = kwargs.get('scale_width',  1)
     scale_height   = kwargs.get('scale_height', 1)
     show_borders   = kwargs.get('show_borders', False)
-    show_title     = kwargs.get('show_title',   'outputs')
+    title_mode     = kwargs.get('title_mode',   'outputs')
     show_y_zero    = kwargs.get('show_y_zero',  True)
     title_fontsize = kwargs.get('title_fontsize', 14)
     markersize     = kwargs.get('markersize',  15)
@@ -52,18 +52,18 @@ def show_features_0D(data, marker='o', cmap='bwr', color=None, **kwargs):
 
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('scale_width', 'scale_height', 'show_borders',
-                          'show_title', 'show_y_zero', 'title_fontsize',
+                          'title_mode', 'show_y_zero', 'title_fontsize',
                           'channel_axis', 'markersize', 'markerwidth', 'ylims')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
 
-    def _get_title(data, show_title):
+    def _get_title(data, title_mode):
         feature = "Context-feature"
         context = "Context-units"
 
-        if show_title in ['grads', 'outputs']:
-            feature = "Gradients" if show_title=='grads' else "Outputs"
+        if title_mode in ['grads', 'outputs']:
+            feature = "Gradients" if title_mode=='grads' else "Outputs"
             context = "Timesteps"
         return "(%s vs. %s) vs. Channels" % (feature, context)
 
@@ -93,8 +93,8 @@ def show_features_0D(data, marker='o', cmap='bwr', color=None, **kwargs):
         ymin, ymax = ylims
     plt.gca().set_ylim(-ymax, ymax)
 
-    if show_title:
-        title = _get_title(data, show_title)
+    if title_mode:
+        title = _get_title(data, title_mode)
         plt.title(title, weight='bold', fontsize=title_fontsize)
     if not show_borders:
         plt.box(None)
@@ -127,9 +127,9 @@ def show_features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
         show_borders:  bool.  If True, shows boxes around plot(s).
               Ex: [1, 1] -> show both x- and y-ticks (and their labels).
                   [0, 0] -> hide both.
-        show_title: bool/str. If True, shows generic supertitle.
+        title_mode: bool/str. If True, shows generic supertitle.
               If str in ('grads', 'outputs'), shows supertitle tailored to
-              `data` dim (2D/3D). If other str, shows `show_title` as supertitle.
+              `data` dim (2D/3D). If other str, shows `title_mode` as supertitle.
               If False, no title is shown.
         show_y_zero: bool. If True, draw y=0 for each plot.
         title_fontsize: int. Title fontsize.
@@ -149,7 +149,7 @@ def show_features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
     scale_height    = kwargs.get('scale_height',  1)
     show_borders    = kwargs.get('show_borders', True)
     show_xy_ticks   = kwargs.get('show_xy_ticks',  [True, True])
-    show_title      = kwargs.get('show_title', 'outputs')
+    title_mode      = kwargs.get('title_mode', 'outputs')
     show_y_zero     = kwargs.get('show_y_zero', False)
     title_fontsize  = kwargs.get('title_fontsize', 14)
     dpi             = kwargs.get('dpi', 76)
@@ -159,18 +159,18 @@ def show_features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
 
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('scale_width', 'scale_height', 'show_borders',
-                          'show_xy_ticks', 'show_title', 'show_y_zero',
+                          'show_xy_ticks', 'title_mode', 'show_y_zero',
                           'title_fontsize', 'channel_axis', 'dpi',
                           'color', 'annotation_xy', 'annotation_size')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
 
-    def _get_title(data, show_title, subplot_samples):
+    def _get_title(data, title_mode, subplot_samples):
         feature = "Context-feature"
         context = "Context-units"
-        if show_title in ['grads', 'outputs']:
-            feature = "Gradients" if show_title=='grads' else "Outputs"
+        if title_mode in ['grads', 'outputs']:
+            feature = "Gradients" if title_mode=='grads' else "Outputs"
             context = "Timesteps"
 
         subplot_mode_3d = "vs. Samples) vs. Channels"
@@ -218,8 +218,8 @@ def show_features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
                              sharey=equate_axes, dpi=dpi)
     axes = np.asarray(axes)
 
-    if show_title:
-        title = _get_title(data, show_title, subplot_samples)
+    if title_mode:
+        title = _get_title(data, title_mode, subplot_samples)
         plt.suptitle(title, weight='bold', fontsize=title_fontsize, y=.93)
     fig.set_size_inches(12*scale_width, 8*scale_height)
 
@@ -278,9 +278,9 @@ def show_features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=Fals
               Ex: [1, 1] -> show both x- and y-ticks (and their labels).
                   [0, 0] -> hide both.
         show_colorbar: bool. If True, shows one colorbar next to plot(s).
-        show_title:    bool/str. If True, shows generic supertitle.
+        title_mode:    bool/str. If True, shows generic supertitle.
               If str in ('grads', 'outputs'), shows supertitle tailored to
-              `data` dim (2D/3D). If other str, shows `show_title` as supertitle.
+              `data` dim (2D/3D). If other str, shows `title_mode` as supertitle.
               If False, no title is shown.
         title_fontsize: int. Title fontsize.
         channel_axis: int, 0 or -1. `data` axis holding channels/features.
@@ -294,27 +294,27 @@ def show_features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=Fals
     show_borders   = kwargs.get('show_borders',  True)
     show_xy_ticks  = kwargs.get('show_xy_ticks', [True, True])
     show_colorbar  = kwargs.get('show_colorbar', False)
-    show_title     = kwargs.get('show_title',    'outputs')
+    title_mode     = kwargs.get('title_mode',    'outputs')
     title_fontsize = kwargs.get('title_fontsize', 14)
     channel_axis   = kwargs.get('channel_axis', -1)
     dpi            = kwargs.get('dpi', 76)
 
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('scale_width', 'scale_height', 'show_borders',
-                          'show_xy_ticks', 'show_colorbar', 'show_title',
+                          'show_xy_ticks', 'show_colorbar', 'title_mode',
                           'title_fontsize', 'channel_axis', 'dpi')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
 
-    def _get_title(data, show_title, timesteps_xaxis, vmin, vmax):
+    def _get_title(data, title_mode, timesteps_xaxis, vmin, vmax):
         feature = "Context-feature"
         context = "Context-units"
         context_order = "(%s vs. Channels)" % context
         extra_dim = ""
 
-        if show_title in ['grads', 'outputs']:
-            feature = "Gradients" if show_title=='grads' else "Outputs"
+        if title_mode in ['grads', 'outputs']:
+            feature = "Gradients" if title_mode=='grads' else "Outputs"
             context = "Timesteps"
         if timesteps_xaxis:
             context_order = "(Channels vs. %s)" % context
@@ -354,8 +354,8 @@ def show_features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=Fals
     fig, axes = plt.subplots(n_rows, n_cols, dpi=dpi)
     axes = np.asarray(axes)
 
-    if show_title:
-        title = _get_title(data, show_title, timesteps_xaxis, vmin, vmax)
+    if title_mode:
+        title = _get_title(data, title_mode, timesteps_xaxis, vmin, vmax)
         plt.suptitle(title, weight='bold', fontsize=title_fontsize, y=.93)
 
     for ax_idx, ax in enumerate(axes.flat):

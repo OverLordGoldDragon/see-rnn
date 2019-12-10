@@ -135,7 +135,7 @@ outs  = get_layer_outputs(model, x,    layer_idx=1)  # return_sequences=True
 <hr>
 
 **EX 8: LSTM vs. GRU vs. SimpleRNN, unidir, 256 units** -- `return_sequences=True`, trained for 250 iterations<br>
-`show_features_2D(grads, n_rows=8, norm=(-.0001, .0001), show_xy_ticks=[0,0], show_title=False)`
+`show_features_2D(grads, n_rows=8, norm=(-.0001, .0001), show_xy_ticks=[0,0], title_mode=False)`
 
  - _Note_: the comparison isn't very meaningful; each network thrives w/ different hyperparameters, whereas same ones were used for all. LSTM, for one, bears the most parameters per unit, drowning out SimpleRNN
  - In this setup, LSTM definitively stomps GRU and SimpleRNN
