@@ -46,6 +46,7 @@ grads = get_rnn_gradients(model, x, y, layer_idx=1)  # return_sequences=True
 grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 outs  = get_layer_outputs(model, x,    layer_idx=1)  # return_sequences=True
 # all examples use timesteps=100
+# NOTE: `title_mode` kwarg below was omitted for simplicity; for Gradient visuals, would set to 'grads'
 ```
 
 <hr>
