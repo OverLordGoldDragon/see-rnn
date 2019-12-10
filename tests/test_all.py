@@ -259,7 +259,7 @@ def test_errors():  # test Exception cases
     assert True
 
 
-def test_misc():  # misc tests to improve coverage %
+def test_misc():  # test miscellaneous functionalities
     units = 6
     batch_shape = (8, 100, 2*units)
 
