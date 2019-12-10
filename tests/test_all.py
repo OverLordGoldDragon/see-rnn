@@ -288,7 +288,8 @@ def test_misc():  # misc tests to improve coverage %
     K.set_value(_model.optimizer.lr, 1e50)  # SimpleRNNs seem ridiculously robust
     train_model(_model, iterations=20)
     rnn_heatmap(_model, layer_idx=1)
-    get_rnn_weights(_model, layer_idx=1)
+    data = get_rnn_weights(_model, layer_idx=1)
+    rnn_heatmap(_model, layer_idx=1, input_data=x, labels=y, data=data)
     os.environ["TF_KERAS"] = '0'
     get_rnn_weights(_model, layer_idx=1, concat_gates=False)
     del _model
