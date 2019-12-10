@@ -7,7 +7,7 @@
 
 ![](https://img.shields.io/badge/keras-tensorflow-blue.svg)
 ![](https://img.shields.io/badge/keras-tf.keras-blue.svg)
-![](https://img.shields.io/badge/keras-tf.keras/eager-blue.svg)
+![](https://img.shields.io/badge/keras-tf.keras/eager-blue.svg) 
 ![](https://img.shields.io/badge/keras-tf.keras/2.0-blue.svg)
 
 RNN weights, gradients, &amp; activations visualization in Keras &amp; TensorFlow (LSTM, GRU, SimpleRNN, CuDNN, & all others)
