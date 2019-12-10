@@ -12,7 +12,7 @@
 
 RNN weights, gradients, &amp; activations visualization in Keras &amp; TensorFlow (LSTM, GRU, SimpleRNN, CuDNN, & all others)
 
-<img src="https://user-images.githubusercontent.com/16495490/69360375-df132d80-0ca3-11ea-80ef-e5749965e3ff.png" width="900">
+<img src="https://user-images.githubusercontent.com/16495490/70570599-a6d18180-1bb5-11ea-8a0d-9c4ef43c69b1.png" width="900">
 <img src="https://user-images.githubusercontent.com/16495490/69359963-133a1e80-0ca3-11ea-9c9a-2c59baa112dd.png" width="850">
 
 ## Features
