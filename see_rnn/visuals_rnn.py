@@ -29,7 +29,7 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
                      2 --> 1, but lims shared for forward & backward plots.
                      Bias plot lims never affected.
         data: np.ndarray. Pre-fetched data to plot directly - e.g., returned by
-              `get_layer_outputs`. Overrides `input_data`, `labels` and `mode`.
+              `get_rnn_weights`. Overrides `input_data`, `labels` and `mode`.
               `model` and layer args are still needed to fetch RNN-specific info.
     (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
          input data formats
@@ -225,7 +225,7 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
               is also True, sets vmin==vmax==None instead.
               If None, Pyplot handles norm.
         data: np.ndarray. Pre-fetched data to plot directly - e.g., returned by
-              `get_layer_outputs`. Overrides `input_data`, `labels` and `mode`.
+              `get_rnn_weights`. Overrides `input_data`, `labels` and `mode`.
               `model` and layer args are still needed to fetch RNN-specific info.
     (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
          input data formats
