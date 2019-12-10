@@ -20,7 +20,23 @@ RNN weights, gradients, &amp; activations visualization in Keras &amp; TensorFlo
   - **Kernel visuals**: kernel, recurrent kernel, and bias shown explicitly
   - **Gate visuals**: gates in gated architectures (LSTM, GRU) shown explicitly
   - **Channel visuals**: cell units (feature extractors) shown explicitly
+  - **General visuals**: methods also applicable to CNNs & others
 
+
+## Why use?
+
+Introspection is a powerful tool for debugging, regularizing, and understanding neural networks; this repo's methods enable:
+ 
+ - Monitoring **weights & activations progression** - how each changes epoch-to-epoch, iteration-to-iteration
+ - Evaluating **learning effectiveness** - how well gradient backpropagates layer-to-layer, timestep-to-timestep
+ - Assessing **layer health** - what percentage of neurons are "dead" or "exploding"
+ 
+It enables answering questions such as:
+ - Is my RNN learning **long-term dependencies**? >> Monitor gradients: if a non-zero gradient flows through every timestep, then _every timestep contributes to learning_ - i.e., resultant gradients stem from accounting for every input timestep, so the _entire sequence influences weight updates_. Hence, an RNN _no longer ignores portions of long sequences_, and is forced to _learn from them_
+ - Is my RNN learning **independent representations**? >> Monitor activations: if each channel's outputs are distinct and decorrelated, then the RNN extracts richly diverse features.
+ - Why do I have **validation loss spikes**? >> Monitor all: val. spikes may stem from sharp changes in layer weights due to large gradients, which will visibly alter activation patterns; seeing the details can help inform a correction
+ 
+For further info on potential uses, see [this SO](https://stackoverflow.com/questions/48714407/rnn-regularization-which-component-to-regularize/58868383#58868383).
 
 ## Examples
 
