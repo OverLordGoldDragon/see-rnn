@@ -100,6 +100,10 @@ def viz_weights_grads(model, layer_idx=1):
     print('\n')
     rnn_heatmap(model,   mode='grads', cmap=None, absolute_value=True, **kws)
 
+def viz_prefetched_data(model, data, layer_idx=1):
+    rnn_histogram(model, layer_idx=layer_idx, data=data)
+    rnn_heatmap(model,   layer_idx=layer_idx, data=data)
+
 ###############################################################################
 units = 64
 batch_shape = (32, 100, 16)
@@ -112,3 +116,6 @@ viz_outs_grads(model, 1)
 viz_outs_grads_last(model, 2)
 viz_weights(model, 1)
 viz_weights_grads(model, 1)
+
+data = get_rnn_weights(model, layer_idx=1)
+viz_prefetched_data(model, data, 1)

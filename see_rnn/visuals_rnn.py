@@ -7,7 +7,7 @@ from .inspect_gen import _detect_nans
 
 def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
                   input_data=None, labels=None, mode='weights', equate_axes=1,
-                  **kwargs):
+                  data=None, **kwargs):
     """Plots histogram grid of RNN weights/gradients by kernel, gate (if gated),
        and direction (if bidirectional). Also detects NaNs and shows on plots.
 
@@ -28,6 +28,9 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
                      recurrent subplots' x- & y-axes lims set to common value.
                      2 --> 1, but lims shared for forward & backward plots.
                      Bias plot lims never affected.
+        data: np.ndarray. Pre-fetched data to plot directly - e.g., returned by
+              `get_layer_outputs`. Overrides `input_data`, `labels` and `mode`.
+              `model` and layer args are still needed to fetch RNN-specific info.
     (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
          input data formats
 
@@ -105,7 +108,7 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
 
     _catch_unknown_kwargs(kwargs)
     data, rnn_info = _process_rnn_args(model, layer_name, layer_idx, layer,
-                                       input_data, labels, mode)
+                                       input_data, labels, mode, data)
     (rnn_type, gate_names, num_gates, rnn_dim,
      is_bidir, uses_bias, direction_names) = _unpack_rnn_info(rnn_info)
     gated_types  = ['LSTM', 'GRU', 'CuDNNLSTM', 'CuDNNGRU']
@@ -193,9 +196,9 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
 
 def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
                 input_data=None, labels=None, mode='weights', cmap='bwr',
-                norm='auto', **kwargs):
+                norm='auto', data=None, **kwargs):
     """Plots histogram grid of RNN weights/gradients by kernel, gate (if gated),
-       and direction (if bidirectional). Also detects NaNs and shows on plots.
+       and direction (if bidirectional). Also detects NaNs and prints in console.
 
     Arguments:
         model: keras.Model/tf.keras.Model.
@@ -221,6 +224,9 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
               gates, and directions), zero-centered; however, if `absolute_value`
               is also True, sets vmin==vmax==None instead.
               If None, Pyplot handles norm.
+        data: np.ndarray. Pre-fetched data to plot directly - e.g., returned by
+              `get_layer_outputs`. Overrides `input_data`, `labels` and `mode`.
+              `model` and layer args are still needed to fetch RNN-specific info.
     (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
          input data formats
 
@@ -288,7 +294,7 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
 
     _catch_unknown_kwargs(kwargs)
     data, rnn_info = _process_rnn_args(model, layer_name, layer_idx, layer,
-                                       input_data, labels, mode, norm)
+                                       input_data, labels, mode, data, norm)
     (rnn_type, gate_names, num_gates, rnn_dim,
      is_bidir, uses_bias, direction_names) = _unpack_rnn_info(rnn_info)
 

@@ -19,7 +19,7 @@ def _validate_args(layer_name, layer_idx, layer):
 
 
 def _process_rnn_args(model, layer_name, layer_idx, layer, input_data, labels,
-                      mode, norm=None):
+                      mode, data=None, norm=None):
     """Helper method to validate `input_data` & `labels` dims, layer info args,
        `mode` arg, and fetch various pertinent RNN attributes.
     """
@@ -28,8 +28,25 @@ def _process_rnn_args(model, layer_name, layer_idx, layer, input_data, labels,
     from .inspect_rnn import get_rnn_weights
 
     def _validate_args_(layer_name, layer_idx, layer, input_data, labels,
-                        mode, norm):
+                        mode, norm, data):
         _validate_args(layer_name, layer_idx, layer)
+
+        if data is not None:
+            got_inputs = (input_data is not None) or (labels is not None)
+            if got_inputs:
+                print(note_str + "`data` will override `input_data`, `labels`, "
+                      + "and `mode`")
+            if not isinstance(data, list):
+                raise Exception("`data` must be a list of kernel & gate matrices")
+
+            if not (isinstance(data[0], np.ndarray) or isinstance(data[0], list)):
+                raise Exception("`data` list elements must be numpy arrays "
+                                + "or lists")
+            elif isinstance(data[0], list):
+                if not isinstance(data[0][0], np.ndarray):
+                    raise Exception("`data` list elements' elements must be "
+                                    + "numpy arrays")
+
         if mode not in ['weights', 'grads']:
             raise Exception("`mode` must be one of: 'weights', 'grads'")
         if mode == 'grads' and (input_data is None or labels is None):
@@ -46,7 +63,7 @@ def _process_rnn_args(model, layer_name, layer_idx, layer, input_data, labels,
                             + "list, tuple, np.ndarray) of length 2")
 
     _validate_args_(layer_name, layer_idx, layer,
-                    input_data, labels, mode, norm)
+                    input_data, labels, mode, norm, data)
 
     if layer is None:
         layer = get_layer(model, layer_name, layer_idx)
@@ -62,12 +79,13 @@ def _process_rnn_args(model, layer_name, layer_idx, layer, input_data, labels,
     else:
         uses_bias  = layer.layer.use_bias if is_bidir else layer.use_bias
 
-    if mode=='weights':
-        data = get_rnn_weights(model, layer_name, layer_idx,
-                               as_tensors=False, concat_gates=True)
-    else:
-        data = get_layer_gradients(model, input_data, labels,
-                                   layer=layer, mode='weights')
+    if data is None:
+        if mode=='weights':
+            data = get_rnn_weights(model, layer_name, layer_idx,
+                                   as_tensors=False, concat_gates=True)
+        else:
+            data = get_layer_gradients(model, input_data, labels,
+                                       layer=layer, mode='weights')
 
     rnn_info = dict(rnn_type=rnn_type, gate_names=gate_names,
                     num_gates=num_gates, is_bidir=is_bidir,

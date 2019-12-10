@@ -124,6 +124,12 @@ def _test_weights(model):
     rnn_heatmap(model,   layer_name=name, mode='weights')
 
 
+def _test_prefetched_data(model):
+    weights = get_rnn_weights(model, layer_idx=1)
+    rnn_histogram(model, layer_idx=1, data=weights)
+    rnn_heatmap(model,   layer_idx=1, data=weights)
+
+
 def make_model(rnn_layer, batch_shape, units=6, bidirectional=False, use_bias=True,
                activation='tanh', recurrent_dropout=0, new_imports={}):
     Input         = IMPORTS['Input']
@@ -228,7 +234,8 @@ def test_misc():  # misc tests to improve coverage %
     def _pass_on_error(func, *args, **kwargs):
         try:
             func(*args, **kwargs)
-        except:
+        except BaseException as e:
+            print("Task Failed Successfully:", e)
             pass
 
     from see_rnn.inspect_gen import get_layer, _make_grads_fn, _detect_nans
@@ -253,10 +260,15 @@ def test_misc():  # misc tests to improve coverage %
     _pass_on_error(show_features_0D, grads, cake='lie')
     _pass_on_error(show_features_1D, grads, pup='not just any')
     _pass_on_error(show_features_2D, grads, true=False)
+    outs = get_layer_outputs(model, x, layer_idx=1)
+    _pass_on_error(rnn_histogram, model, layer_idx=1, data=outs)
+    _pass_on_error(rnn_histogram, model, layer_idx=1, data=[1])
+    _pass_on_error(rnn_histogram, model, layer_idx=1, data=[[1]])
 
     get_layer(model, layer_name='gru')
-    get_rnn_weights(model, layer_idx=1, concat_gates=True,  as_tensors=True)
+    get_rnn_weights(model, layer_idx=1, concat_gates=False, as_tensors=True)
     rnn_heatmap(model, layer_idx=1, input_data=x, labels=y, mode='weights')
+    _test_prefetched_data(model)
 
     # test NaN detection
     nan_txt = _detect_nans(np.array([1]*9999 + [np.nan])).replace('\n', ' ')

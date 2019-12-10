@@ -15,7 +15,7 @@ note_str = colored("NOTE: ", 'blue')
 
 
 def get_rnn_weights(model, layer_name=None, layer_idx=None, layer=None,
-                    as_tensors=False, concat_gates=False):
+                    as_tensors=False, concat_gates=True):
     """Retrievers RNN layer weights.
 
     Arguments:
@@ -52,7 +52,7 @@ def get_rnn_weights(model, layer_name=None, layer_idx=None, layer=None,
         return _get_cell_weights(cell, as_tensors, concat_gates)
 
 
-def _get_cell_weights(rnn_cell, as_tensors=True, concat_gates=False):
+def _get_cell_weights(rnn_cell, as_tensors=True, concat_gates=True):
     """Retrieves RNN layer weights from their cell(s).
     NOTE: if CuDNNLSTM or CuDNNGRU cell, `rnn_cell` must be the layer instead,
           where non-CuDNN cell attributes are stored.
