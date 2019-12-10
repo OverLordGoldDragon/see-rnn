@@ -105,6 +105,7 @@ def show_features_0D(data, marker='o', cmap='bwr', color=None, **kwargs):
 def show_features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
                      max_timesteps=None, subplot_samples=False, **kwargs):
     """Plots 1D curves in a standalone graph or subplot grid.
+
     Arguments:
         data: np.ndarray, 2D/3D. Data to plot.
               2D -> standalone graph; 3D -> subplot grid.
