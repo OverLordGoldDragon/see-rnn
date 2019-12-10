@@ -289,6 +289,8 @@ def test_misc():  # misc tests to improve coverage %
     train_model(_model, iterations=20)
     rnn_heatmap(_model, layer_idx=1)
     get_rnn_weights(_model, layer_idx=1)
+    os.environ["TF_KERAS"] = '0'
+    get_rnn_weights(_model, layer_idx=1, concat_gates=False)
     del _model
 
     from importlib import reload
