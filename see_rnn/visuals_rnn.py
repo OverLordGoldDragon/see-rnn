@@ -336,12 +336,20 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
             w_idx = type_idx + direction_idx*(2 + uses_bias)
             matrix_data = data[w_idx]
 
+            is_vector = (len(matrix_data.shape) == 1)
+            if is_vector:
+                matrix_data = np.expand_dims(matrix_data, -1)
+
             nan_txt = _detect_nans(matrix_data)
             if nan_txt is not None:
                 _print_nans(nan_txt, matrix_data, kernel_type, gate_names, rnn_dim)
 
+            aspect = 20 / len(matrix_data) if is_vector else 'auto'
             img = ax.imshow(matrix_data, cmap=cmap, interpolation='nearest',
-                            aspect='auto', vmin=vmin, vmax=vmax)
+                            aspect=aspect, vmin=vmin, vmax=vmax)
+            if is_vector:
+                ax.set_xticks([])
+
             if gate_sep_width != 0:
                 lw = gate_sep_width
                 [ax.axvline(rnn_dim * gate_idx - .5, linewidth=lw, color='k')
@@ -357,6 +365,8 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
             if not show_borders:
                 ax.set_frame_on(False)
 
+        if is_vector:
+            plt.subplots_adjust(right=.7, wspace=-.4)
         if show_colorbar:
             fig.colorbar(img, ax=axes)
 

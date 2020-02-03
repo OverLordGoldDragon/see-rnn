@@ -270,9 +270,9 @@ def test_misc():  # test miscellaneous functionalities
 
     grads = get_layer_gradients(model, x, y, layer_idx=1)
 
-    show_features_1D(grads,    subplot_samples=True)
+    show_features_1D(grads,    subplot_samples=True, tight=True, borderwidth=2)
     show_features_1D(grads[0], subplot_samples=True)
-    show_features_2D(grads.T, n_rows=1.5)
+    show_features_2D(grads.T, n_rows=1.5, tight=True, borderwidth=2)
     show_features_2D(grads.T[:, :, 0])
     rnn_histogram(model, layer_idx=1, show_xy_ticks=[0, 0], equate_axes=2)
     rnn_heatmap(model, layer_idx=1, cmap=None, normalize=True, show_borders=False)
