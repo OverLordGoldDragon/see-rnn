@@ -165,7 +165,8 @@ def show_features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
         allowed_kwargs = ('scale_width', 'scale_height', 'show_borders',
                           'show_xy_ticks', 'title_mode', 'show_y_zero',
                           'title_fontsize', 'channel_axis', 'dpi', 'tight',
-                          'color', 'annotation_xy', 'annotation_size')
+                          'borderwidth', 'color',
+                          'annotation_xy', 'annotation_size')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
