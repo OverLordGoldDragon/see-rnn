@@ -127,13 +127,15 @@ def show_features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
         show_borders:  bool.  If True, shows boxes around plot(s).
               Ex: [1, 1] -> show both x- and y-ticks (and their labels).
                   [0, 0] -> hide both.
+        show_xy_ticks: int/bool iter. Slot 0 -> x, Slot 1 -> y.
         title_mode: bool/str. If True, shows generic supertitle.
               If str in ('grads', 'outputs'), shows supertitle tailored to
               `data` dim (2D/3D). If other str, shows `title_mode` as supertitle.
               If False, no title is shown.
         show_y_zero: bool. If True, draw y=0 for each plot.
         title_fontsize: int. Title fontsize.
-        show_xy_ticks: int/bool iter. Slot 0 -> x, Slot 1 -> y.
+        tight: bool. If True, plots compactly by removing subplot padding.
+        borderwidth: float / None. Width of subplot borders.
         channel_axis: int. `data` axis holding channels/features. -1 = last axis.
         dpi: int. Pyplot kwarg, 'dots per inch', specifying plot resolution
         color: (float iter) iter / str / str iter / None. Pyplot kwarg,
@@ -152,6 +154,8 @@ def show_features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
     title_mode      = kwargs.get('title_mode', 'outputs')
     show_y_zero     = kwargs.get('show_y_zero', False)
     title_fontsize  = kwargs.get('title_fontsize', 14)
+    tight           = kwargs.get('tight', False)
+    borderwidth     = kwargs.get('borderwidth', None)
     dpi             = kwargs.get('dpi', 76)
     color           = kwargs.get('color', None)
     annotation_xy   = kwargs.get('annotation_xy', (.03, .9))
@@ -160,7 +164,7 @@ def show_features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('scale_width', 'scale_height', 'show_borders',
                           'show_xy_ticks', 'title_mode', 'show_y_zero',
-                          'title_fontsize', 'channel_axis', 'dpi',
+                          'title_fontsize', 'channel_axis', 'dpi', 'tight',
                           'color', 'annotation_xy', 'annotation_size')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
@@ -220,7 +224,8 @@ def show_features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
 
     if title_mode:
         title = _get_title(data, title_mode, subplot_samples)
-        plt.suptitle(title, weight='bold', fontsize=title_fontsize, y=.93)
+        y = .93 + .12 * tight
+        plt.suptitle(title, weight='bold', fontsize=title_fontsize, y=y)
     fig.set_size_inches(12*scale_width, 8*scale_height)
 
     for ax_idx, ax in enumerate(axes.flat):
@@ -241,7 +246,12 @@ def show_features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
                         xycoords='axes fraction', xy=annotation_xy)
         if not show_borders:
             ax.set_frame_on(False)
-
+    
+    if tight:
+        plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
+    if borderwidth is not None:
+        for ax in axes.flat:
+            [s.set_linewidth(borderwidth) for s in ax.spines.values()]
     plt.show()
 
 
@@ -283,9 +293,11 @@ def show_features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=Fals
               `data` dim (2D/3D). If other str, shows `title_mode` as supertitle.
               If False, no title is shown.
         title_fontsize: int. Title fontsize.
+        tight: bool. If True, plots compactly by removing subplot padding.
         channel_axis: int, 0 or -1. `data` axis holding channels/features.
               -1 --> (samples,  timesteps, channels)
               0  --> (channels, timesteps, samples)
+        borderwidth: float / None. Width of subplot borders.
         dpi: int. Pyplot kwarg, 'dots per inch', specifying plot resolution
     """
 
@@ -296,13 +308,16 @@ def show_features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=Fals
     show_colorbar  = kwargs.get('show_colorbar', False)
     title_mode     = kwargs.get('title_mode',    'outputs')
     title_fontsize = kwargs.get('title_fontsize', 14)
+    tight          = kwargs.get('tight', False)
     channel_axis   = kwargs.get('channel_axis', -1)
+    borderwidth    = kwargs.get('borderwidth', None)
     dpi            = kwargs.get('dpi', 76)
 
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('scale_width', 'scale_height', 'show_borders',
                           'show_xy_ticks', 'show_colorbar', 'title_mode',
-                          'title_fontsize', 'channel_axis', 'dpi')
+                          'title_fontsize', 'channel_axis', 'tight', 
+                          'borderwidth', 'dpi')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
@@ -351,12 +366,13 @@ def show_features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=Fals
     n_subplots = len(data) if len(data.shape)==3 else 1
     n_rows, n_cols = _get_nrows_and_ncols(n_rows, n_subplots)
 
-    fig, axes = plt.subplots(n_rows, n_cols, dpi=dpi)
+    fig, axes = plt.subplots(n_rows, n_cols, dpi=dpi, sharex=True, sharey=True)
     axes = np.asarray(axes)
 
     if title_mode:
         title = _get_title(data, title_mode, timesteps_xaxis, vmin, vmax)
-        plt.suptitle(title, weight='bold', fontsize=title_fontsize, y=.93)
+        y = .93 + .12 * tight
+        plt.suptitle(title, weight='bold', fontsize=title_fontsize, y=y)
 
     for ax_idx, ax in enumerate(axes.flat):
         img = ax.imshow(data[ax_idx], cmap=cmap, vmin=vmin, vmax=vmax)
@@ -370,6 +386,12 @@ def show_features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=Fals
 
     if show_colorbar:
         fig.colorbar(img, ax=axes.ravel().tolist())
+
+    if tight:
+        plt.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
+    if borderwidth is not None:
+        for ax in axes.flat:
+            [s.set_linewidth(borderwidth) for s in ax.spines.values()]
 
     plt.gcf().set_size_inches(8*scale_width, 8*scale_height)
     plt.show()
