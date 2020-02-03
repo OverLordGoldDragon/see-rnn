@@ -365,6 +365,8 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
             if not show_borders:
                 ax.set_frame_on(False)
 
+        if is_vector:
+            plt.subplots_adjust(right=.7, wspace=-.4)
         if show_colorbar:
             fig.colorbar(img, ax=axes)
 
