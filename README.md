@@ -42,8 +42,8 @@ For further info on potential uses, see [this SO](https://stackoverflow.com/ques
 
 ```python
 # for all examples
-grads = get_rnn_gradients(model, x, y, layer_idx=1)  # return_sequences=True
-grads = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
+grads = get_layer_gradients(model, x, y, layer_idx=1)  # return_sequences=True
+grads = get_layer_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 outs  = get_layer_outputs(model, x,    layer_idx=1)  # return_sequences=True
 # all examples use timesteps=100
 # NOTE: `title_mode` kwarg below was omitted for simplicity; for Gradient visuals, would set to 'grads'
@@ -201,7 +201,17 @@ outs  = get_layer_outputs(model, x,    layer_idx=1)  # return_sequences=True
 
 <img src="https://i.stack.imgur.com/T6ZAa.png" width="600">
 
+<hr>
 
+**EX 13: Sparse Conv1D autoencoder weights** -- `w = layer.get_weights()[0]; w.shape == (16, 64, 128)`<br>
+`show_features_2D(w, n_rows=16, norm=(-.1, .1), tight=True, borderwidth=1, title_mode=title)`<br>
+`# title = "((Layer Channels vs. Kernels) vs. Weights) vs. Input Channels -- norm = (-0.1, 0.1)"`
+
+ - One of stacked `Conv1D` sparse autoencoder layers; network trained with `Dropout(0.5, noise_shape=(batch_size, 1, channels))` (Spatial Dropout), encouraging sparse features which may benefit classification
+ - Weights are seen to be 'sparse'; some are uniformly low, others uniformly large, others have bands of large weights among lows
+ 
+ <img src="https://user-images.githubusercontent.com/16495490/74095140-fd9bfe80-4b05-11ea-9b86-20e918b91a4b.png" width="600">
+ 
 ## Usage 
 
 **QUICKSTART**: run [rnn_sandbox.py](https://github.com/OverLordGoldDragon/see-rnn/blob/master/rnn_sandbox.py), which includes all major examples and allows easy exploration of various plot configs.
@@ -215,7 +225,7 @@ import numpy as np
 from keras.layers import Input, LSTM
 from keras.models import Model
 from keras.optimizers import Adam
-from see_rnn import get_rnn_gradients, show_features_1D, show_features_2D
+from see_rnn import get_layer_gradients, show_features_1D, show_features_2D
 from see_rnn import show_features_0D
 
 def make_model(rnn_layer, batch_shape, units):
@@ -245,8 +255,8 @@ model = make_model(LSTM, batch_shape, units)
 train_model(model, 300, batch_shape)
 
 x, y  = make_data(batch_shape)
-grads_all  = get_rnn_gradients(model, x, y, layer_idx=1)  # return_sequences=True
-grads_last = get_rnn_gradients(model, x, y, layer_idx=2)  # return_sequences=False
+grads_all  = get_layer_gradients(model, x, y, layer_idx=1)  # return_sequences=True
+grads_last = get_layer_gradients(model, x, y, layer_idx=2)  # return_sequences=False
 
 show_features_1D(grads_all, n_rows=2, show_xy_ticks=[1,1])
 show_features_2D(grads_all, n_rows=8, show_xy_ticks=[1,1], norm=(-.01, .01))
