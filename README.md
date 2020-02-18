@@ -216,7 +216,7 @@ outs  = get_layer_outputs(model, x,    layer_idx=1)  # return_sequences=True
 
 **QUICKSTART**: run [rnn_sandbox.py](https://github.com/OverLordGoldDragon/see-rnn/blob/master/rnn_sandbox.py), which includes all major examples and allows easy exploration of various plot configs.
 
-_Note_: if using `tensorflow.keras` imports, set `import os; os.environ["TF_KERAS"]='True'`. Minimal example below.
+_Note_: if using `tensorflow.keras` imports, set `import os; os.environ["TF_KERAS"]='1'`. Minimal example below.
 
 [visuals_gen.py](https://github.com/OverLordGoldDragon/see-rnn/blob/master/see_rnn/visuals_gen.py) functions can also be used to visualize `Conv1D` activations, gradients, or any other meaningfully-compatible data formats. Likewise, [inspect_gen.py](https://github.com/OverLordGoldDragon/see-rnn/blob/master/see_rnn/inspect_gen.py) also works for non-RNN layers.
 
