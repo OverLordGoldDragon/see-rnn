@@ -38,13 +38,21 @@ It enables answering questions such as:
  
 For further info on potential uses, see [this SO](https://stackoverflow.com/questions/48714407/rnn-regularization-which-component-to-regularize/58868383#58868383).
 
+## To-do
+
+Will possibly implement:
+
+ - [ ] Weight norm inspection (all layers); see [here](https://github.com/OverLordGoldDragon/see-rnn/issues/10#issuecomment-590537205)
+ - [ ] Interpretability visuals (e.g. saliency maps, adversarial attacks)
+ - [ ] Tools for better probing backprop of `return_sequences=False`
+ 
 ## Examples
 
 ```python
 # for all examples
 grads = get_layer_gradients(model, x, y, layer_idx=1)  # return_sequences=True
 grads = get_layer_gradients(model, x, y, layer_idx=2)  # return_sequences=False
-outs  = get_layer_outputs(model, x,    layer_idx=1)  # return_sequences=True
+outs  = get_layer_outputs(model, x,      layer_idx=1)  # return_sequences=True
 # all examples use timesteps=100
 # NOTE: `title_mode` kwarg below was omitted for simplicity; for Gradient visuals, would set to 'grads'
 ```
