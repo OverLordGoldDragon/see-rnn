@@ -1,17 +1,19 @@
 import os
-from termcolor import colored
 import numpy as np
+
+from termcolor import colored
 from .utils import _validate_args
 
+
 TF_KERAS = os.environ.get("TF_KERAS", '0') == '1'
-warn_str = colored("WARNING: ", 'red')
-note_str = colored("NOTE: ", 'blue')
+WARN = colored("WARNING:", 'red')
+NOTE = colored("NOTE:", 'blue')
 
 
 if TF_KERAS:
     import tensorflow.keras.backend as K
-    print(note_str + "`sample_weights` & `learning_phase` not yet supported "
-          + "for `TF_KERAS`, and will be ignored (%s.py)" % __name__)
+    print(NOTE, "`sample_weights` & `learning_phase` not yet supported "
+          "for `TF_KERAS`, and will be ignored (%s.py)" % __name__)
 else:
     import keras.backend as K
 
@@ -100,15 +102,13 @@ def get_layer(model, layer_name=None, layer_idx=None):
     """Returns layer by index or name.
     If multiple matches are found, returns earliest.
     """
-
     _validate_args(layer_name, layer_idx, layer=None)
     if layer_idx is not None:
         return model.layers[layer_idx]
 
     layer = [layer for layer in model.layers if layer_name in layer.name]
     if len(layer) > 1:
-        print(warn_str + "multiple matching layer names found; "
-              + "picking earliest")
+        print(WARN, "multiple matching layer names found; picking earliest")
     elif len(layer) == 0:
         raise Exception("no layers found w/ names matching "
                         + "substring: '%s'" % layer_name)
@@ -119,7 +119,6 @@ def _make_grads_fn(model, layer, mode='outputs'):
     """Returns gradient computation function w.r.t. layer outputs or weights.
     NOTE: gradients will be clipped if `clipnorm` or `clipvalue` were set.
     """
-
     if mode not in ['outputs', 'weights']:
         raise Exception("`mode` must be one of: 'outputs', 'weights'")
 
@@ -135,7 +134,7 @@ def _make_grads_fn(model, layer, mode='outputs'):
 
 
 def _detect_nans(data):
-    data = np.array(data).flatten()
+    data = np.array(data).ravel()
     perc_nans = 100 * np.sum(np.isnan(data)) / len(data)
     if perc_nans == 0:
         return None

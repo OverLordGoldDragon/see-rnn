@@ -1,6 +1,8 @@
-from termcolor import colored
 import matplotlib.pyplot as plt
 import numpy as np
+
+from termcolor import colored
+
 from .utils import _process_rnn_args
 from .inspect_gen import _detect_nans
 
@@ -35,8 +37,8 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
          input data formats
 
     kwargs:
-        scale_width:   float. Scale width  of resulting plot by a factor.
-        scale_height:  float. Scale height of resulting plot by a factor.
+        w:   float. Scale width  of resulting plot by a factor.
+        h:  float. Scale height of resulting plot by a factor.
         show_borders:  bool.  If True, shows boxes around plots.
         show_xy_ticks: int/bool iter. Slot 0 -> x, Slot 1 -> y.
               Ex: [1, 1] -> show both x- and y-ticks (and their labels).
@@ -44,14 +46,14 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
         bins: int. Pyplot `hist` kwarg: number of histogram bins per subplot.
     """
 
-    scale_width   = kwargs.get('scale_width',  1)
-    scale_height  = kwargs.get('scale_height', 1)
+    w   = kwargs.get('w',  1)
+    h  = kwargs.get('h', 1)
     show_borders  = kwargs.get('show_borders', False)
     show_xy_ticks = kwargs.get('show_xy_ticks',  [True, True])
     bins          = kwargs.get('bins', 150)
 
     def _catch_unknown_kwargs(kwargs):
-        allowed_kwargs = ('scale_width', 'scale_height', 'show_borders',
+        allowed_kwargs = ('w', 'h', 'show_borders',
                           'show_xy_ticks', 'bins')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
@@ -135,7 +137,7 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
                     start = gate_idx * rnn_dim
                     end   = start + rnn_dim
                     matrix_data = matrix_data[:, start:end]
-                matrix_data = matrix_data.flatten()
+                matrix_data = matrix_data.ravel()
 
                 nan_txt = _detect_nans(matrix_data)
                 if nan_txt is not None:  # NaNs detected
@@ -160,13 +162,13 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
                     ax.set_yticks([])
 
         plt.tight_layout()
-        plt.gcf().set_size_inches(11*scale_width, 4.5*scale_height)
+        plt.gcf().set_size_inches(11 * w, 4.5 * h)
 
         if uses_bias:  # does not equate axes
-            plt.figure(figsize=(11*scale_width, 4.5*scale_height))
-            plt.subplot(num_gates+1, 2, (2*num_gates+1, 2*num_gates+2))
+            plt.figure(figsize=(11 * w, 4.5 * h))
+            plt.subplot(num_gates + 1, 2, (2 * num_gates + 1, 2 * num_gates + 2))
 
-            matrix_data = data[2 + direction_idx*3].flatten()
+            matrix_data = data[2 + direction_idx*3].ravel()
             nan_txt = _detect_nans(matrix_data)
             if nan_txt is not None:  # NaNs detected
                 matrix_data[np.isnan(matrix_data)] = 0  # set NaNs to zero
@@ -180,7 +182,7 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
             plt.annotate('BIAS', fontsize=12, weight='bold',
                          xy=(0.90, 0.93), xycoords='axes fraction')
             plt.tight_layout()
-            plt.gcf().set_size_inches(11*scale_width, 4.5*scale_height)
+            plt.gcf().set_size_inches(11*w, 4.5*h)
             if not show_xy_ticks[0]:
                 plt.gca().set_xticks([])
             if not show_xy_ticks[1]:
@@ -231,8 +233,8 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
          input data formats
 
     kwargs:
-        scale_width:   float. Scale width  of resulting plot by a factor.
-        scale_height:  float. Scale height of resulting plot by a factor.
+        w:   float. Scale width  of resulting plot by a factor.
+        h:  float. Scale height of resulting plot by a factor.
         show_borders:  bool. If True, shows boxes around plots.
         show_colorbar: bool. If True, shows one colorbar next to plot(s).
         show_bias:     bool. If True, includes plot for bias (if layer uses bias)
@@ -246,8 +248,8 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
               before `normalize`.
     """
 
-    scale_width    = kwargs.get('scale_width',  1)
-    scale_height   = kwargs.get('scale_height', 1)
+    w    = kwargs.get('w',  1)
+    h   = kwargs.get('h', 1)
     show_borders   = kwargs.get('show_borders',  True)
     show_colorbar  = kwargs.get('show_colorbar', True)
     show_bias      = kwargs.get('show_bias', True)
@@ -256,7 +258,7 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
     absolute_value = kwargs.get('absolute_value', False)
 
     def _catch_unknown_kwargs(kwargs):
-        allowed_kwargs = ('scale_width', 'scale_height', 'show_borders',
+        allowed_kwargs = ('w', 'h', 'show_borders',
                           'show_colorbar', 'show_bias', 'gate_sep_width',
                           'normalize', 'absolute_value')
         for kwarg in kwargs:
@@ -321,17 +323,20 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
     else:
         vmin, vmax = norm
 
-    gate_names_str = '(%s)' % ', '.join(gate_names) if gate_names[0]!='' else ''
+    if gate_names[0] != '':
+        gate_names_str = '(%s)' % ', '.join(gate_names)
+    else:
+        gate_names_str = ''
 
     for direction_idx, direction_name in enumerate(direction_names):
-        fig = plt.figure(figsize=(14*scale_width, 5*scale_height))
+        fig = plt.figure(figsize=(14 * w, 5 * h))
         axes = []
         if direction_name != []:
             plt.suptitle(direction_name + ' LAYER', weight='bold', y=.98,
                          fontsize=13)
 
         for type_idx, kernel_type in enumerate(['KERNEL', 'RECURRENT']):
-            ax = plt.subplot(1, 2, type_idx+1)
+            ax = plt.subplot(1, 2, type_idx + 1)
             axes.append(ax)
             w_idx = type_idx + direction_idx*(2 + uses_bias)
             matrix_data = data[w_idx]
@@ -342,7 +347,8 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
 
             nan_txt = _detect_nans(matrix_data)
             if nan_txt is not None:
-                _print_nans(nan_txt, matrix_data, kernel_type, gate_names, rnn_dim)
+                _print_nans(nan_txt, matrix_data, kernel_type,
+                            gate_names, rnn_dim)
 
             aspect = 20 / len(matrix_data) if is_vector else 'auto'
             img = ax.imshow(matrix_data, cmap=cmap, interpolation='nearest',
@@ -361,7 +367,7 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
             y_label = ['Channel units', 'Hidden units'][type_idx]
             ax.set_ylabel(y_label, fontsize=12, weight='bold')
 
-            fig.set_size_inches(14*scale_width, 5*scale_height)
+            fig.set_size_inches(14*w, 5*h)
             if not show_borders:
                 ax.set_frame_on(False)
 
@@ -371,7 +377,7 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
             fig.colorbar(img, ax=axes)
 
         if uses_bias and show_bias:  # does not equate axes
-            plt.figure(figsize=(14*scale_width, 1*scale_height))
+            plt.figure(figsize=(14*w, 1*h))
             plt.subplot(num_gates+1, 2, (2*num_gates + 1, 2*num_gates + 2))
             weights_viz = np.atleast_2d(data[2 + direction_idx*(2 + uses_bias)])
 

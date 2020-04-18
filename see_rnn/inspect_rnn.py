@@ -1,4 +1,5 @@
 import os
+
 from termcolor import colored
 
 from .inspect_gen import get_layer
@@ -10,8 +11,8 @@ if TF_KERAS:
 else:
     import keras.backend as K
 
-warn_str = colored("WARNING: ", 'red')
-note_str = colored("NOTE: ", 'blue')
+WARN = colored("WARNING:", 'red')
+NOTE = colored("NOTE:", 'blue')
 
 
 def get_rnn_weights(model, layer_name=None, layer_idx=None, layer=None,
@@ -78,12 +79,12 @@ def _get_cell_weights(rnn_cell, as_tensors=True, concat_gates=True):
     rnn_type, gate_names, kernel_types = _get_cell_info(rnn_cell)
 
     if TF_KERAS and not concat_gates:
-        print(warn_str + "getting weights per-gate not supported for tf.keras "
-              + "implementations; fetching per concat_gates==True instead")
+        print(WARN, "getting weights per-gate not supported for tf.keras "
+              "implementations; fetching per concat_gates==True instead")
         concat_gates = True
     if not concat_gates and gate_names[0]=='':
-        print(warn_str + rnn_type + " is not a gated RNN; fetching per "
-              + "concat_gates==True instead")
+        print(WARN, rnn_type + " is not a gated RNN; fetching per "
+              "concat_gates==True instead")
         concat_gates = True
 
     if concat_gates:

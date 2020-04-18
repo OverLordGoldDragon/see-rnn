@@ -36,7 +36,7 @@ else:
     from keras.optimizers import Adam
 
 from see_rnn import get_layer_gradients, get_layer_outputs, get_rnn_weights
-from see_rnn import show_features_0D, show_features_1D, show_features_2D
+from see_rnn import features_0D, features_1D, features_2D
 from see_rnn import rnn_heatmap, rnn_histogram
 
 ###############################################################################
@@ -71,8 +71,8 @@ def viz_outs(model, layer_idx=1):
     x, y = make_data(K.int_shape(model.input), model.layers[2].units)
     outs = get_layer_outputs(model, x, layer_idx=layer_idx)
 
-    show_features_1D(outs[:1], n_rows=8, show_borders=False)
-    show_features_2D(outs,     n_rows=8, norm=(-1,1))
+    features_1D(outs[:1], n_rows=8, show_borders=False)
+    features_2D(outs,     n_rows=8, norm=(-1,1))
 
 def viz_weights(model, layer_idx=1):
     rnn_histogram(model, layer_idx=layer_idx, mode='weights', bins=400)
@@ -84,13 +84,13 @@ def viz_outs_grads(model, layer_idx=1):
     grads = get_layer_gradients(model, x, y, layer_idx=layer_idx)
     kws = dict(n_rows=8, title_mode='grads')
 
-    show_features_1D(grads[0], show_borders=False, **kws)
-    show_features_2D(grads,    norm=(-1e-4, 1e-4), **kws)
+    features_1D(grads[0], show_borders=False, **kws)
+    features_2D(grads,    norm=(-1e-4, 1e-4), **kws)
 
 def viz_outs_grads_last(model, layer_idx=2):  # return_sequences=False layer
     x, y = make_data(K.int_shape(model.input), model.layers[2].units)
     grads = get_layer_gradients(model, x, y, layer_idx=layer_idx)
-    show_features_0D(grads)
+    features_0D(grads)
 
 def viz_weights_grads(model, layer_idx=1):
     x, y = make_data(K.int_shape(model.input), model.layers[2].units)

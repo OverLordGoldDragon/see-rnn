@@ -8,12 +8,13 @@ from . import K
 from . import Input, LSTM, GRU, SimpleRNN, Bidirectional
 from . import Model
 from see_rnn import get_layer_gradients, get_layer_outputs, get_rnn_weights
-from see_rnn import show_features_0D, show_features_1D, show_features_2D
+from see_rnn import features_0D, features_1D, features_2D, features_hist
 from see_rnn import rnn_summary
 from see_rnn import rnn_heatmap, rnn_histogram
 
 
-IMPORTS = dict(K=K, Input=Input, GRU=GRU, Bidirectional=Bidirectional, Model=Model)
+IMPORTS = dict(K=K, Input=Input, GRU=GRU,
+               Bidirectional=Bidirectional, Model=Model)
 USING_GPU = bool(tf.config.experimental.list_physical_devices('GPU') != [])
 
 if USING_GPU:
@@ -25,7 +26,7 @@ TF_KERAS = bool(os.environ.get("TF_KERAS", '0') == '1')
 TF_EAGER = bool(os.environ.get("TF_EAGER", '0') == '1')
 TF_2 = (tf.__version__[0] == '2')
 
-warn_str = colored("WARNING: ", 'red')
+WARN = colored("WARNING:", 'red')
 
 if TF_EAGER:
     if not TF_2:
@@ -36,7 +37,7 @@ else:
         tf.compat.v1.disable_eager_execution()
     print("TF running in graph mode")
 if TF_2 and not TF_KERAS:
-    print(warn_str + "LSTM, CuDNNLSTM, and CuDNNGRU imported `from keras` "
+    print(WARN, "LSTM, CuDNNLSTM, and CuDNNGRU imported `from keras` "
           + "are not supported in TF2, and will be skipped")
 
 
@@ -83,9 +84,9 @@ def test_main():
 def _test_outputs(model):
     x, _ = make_data(K.int_shape(model.input), model.layers[2].units)
     outs = get_layer_outputs(model, x, layer_idx=1)
-    show_features_1D(outs[:1], show_y_zero=True)
-    show_features_1D(outs[0])
-    show_features_2D(outs)
+    features_1D(outs[:1], show_y_zero=True)
+    features_1D(outs[0])
+    features_2D(outs)
 
 
 def _test_outputs_gradients(model):
@@ -99,13 +100,15 @@ def _test_outputs_gradients(model):
     kwargs2 = dict(n_rows=2,    show_xy_ticks=[1, 1], show_borders=False,
                    max_timesteps=None)
 
-    show_features_1D(grads_all[0],  **kwargs1)
-    show_features_1D(grads_all[:1], **kwargs1)
-    show_features_1D(grads_all,     **kwargs2)
-    show_features_2D(grads_all[0], norm=(-.01, .01), show_colorbar=True, **kwargs1)
-    show_features_2D(grads_all,    norm=None,        reflect_half=True,  **kwargs2)
-    show_features_0D(grads_last,   marker='o', color=None, title_mode='grads')
-    show_features_0D(grads_last,   marker='x', color='blue', ylims=(-.1, .1))
+    features_1D(grads_all[0],  **kwargs1)
+    features_1D(grads_all[:1], **kwargs1)
+    features_1D(grads_all,     **kwargs2)
+    features_2D(grads_all[0], norm=(-.01, .01), show_colorbar=True, **kwargs1)
+    features_2D(grads_all,    norm=None,        reflect_half=True,  **kwargs2)
+    features_0D(grads_last,   marker='o', color=None, title_mode='grads')
+    features_0D(grads_last,   marker='x', color='blue', ylims=(-.1, .1))
+    features_hist(grads_all, bins=100, xlims=(-.01, .01), title="Outs hists")
+    features_hist(grads_all, bins=100, n_rows=4)
     print('\n')  # improve separation
 
 
@@ -130,8 +133,9 @@ def _test_prefetched_data(model):
     rnn_heatmap(model,   layer_idx=1, data=weights)
 
 
-def make_model(rnn_layer, batch_shape, units=6, bidirectional=False, use_bias=True,
-               activation='tanh', recurrent_dropout=0, new_imports={}):
+def make_model(rnn_layer, batch_shape, units=6, bidirectional=False,
+               use_bias=True, activation='tanh', recurrent_dropout=0,
+               new_imports={}):
     Input         = IMPORTS['Input']
     Bidirectional = IMPORTS['Bidirectional']
     Model         = IMPORTS['Model']
@@ -142,7 +146,7 @@ def make_model(rnn_layer, batch_shape, units=6, bidirectional=False, use_bias=Tr
 
     kw = {}
     if not use_bias:
-        kw['use_bias'] = False  # for CuDNN or misc case
+        kw['use_bias'] = False     # for CuDNN or misc case
     if activation == 'relu':
         kw['activation'] = 'relu'  # for nan detection
         kw['recurrent_dropout'] = recurrent_dropout
@@ -221,7 +225,8 @@ def test_errors():  # test Exception cases
     batch_shape = (8, 100, 2*units)
 
     reset_seeds(reset_graph_with_backend=K)
-    model = make_model(GRU, batch_shape, activation='relu', recurrent_dropout=0.3)
+    model = make_model(GRU, batch_shape, activation='relu',
+                       recurrent_dropout=0.3)
     x, y = make_data(batch_shape, units)
     model.train_on_batch(x, y)
 
@@ -230,11 +235,11 @@ def test_errors():  # test Exception cases
 
     from see_rnn.inspect_gen import get_layer, _make_grads_fn
 
-    _pass_on_error(show_features_0D, grads)
-    _pass_on_error(show_features_0D, grads_4D)
-    _pass_on_error(show_features_1D, grads_4D)
-    _pass_on_error(show_features_2D, grads_4D)
-    _pass_on_error(show_features_2D, grads)
+    _pass_on_error(features_0D, grads)
+    _pass_on_error(features_0D, grads_4D)
+    _pass_on_error(features_1D, grads_4D)
+    _pass_on_error(features_2D, grads_4D)
+    _pass_on_error(features_2D, grads)
     _pass_on_error(get_layer_gradients, model, x, y, layer_idx=1, mode='cactus')
     _pass_on_error(get_layer_gradients, model, x, y, layer_idx=1,
                    layer_name='gru', layer=model.layers[1])
@@ -247,9 +252,9 @@ def test_errors():  # test Exception cases
     _pass_on_error(rnn_heatmap, model, layer_idx=1, mode='grads')
     _pass_on_error(rnn_histogram, model, layer_idx=1, norm=None)
     _pass_on_error(rnn_heatmap, model, layer_index=9001)
-    _pass_on_error(show_features_0D, grads, cake='lie')
-    _pass_on_error(show_features_1D, grads, pup='not just any')
-    _pass_on_error(show_features_2D, grads, true=False)
+    _pass_on_error(features_0D, grads, cake='lie')
+    _pass_on_error(features_1D, grads, pup='not just any')
+    _pass_on_error(features_2D, grads, true=False)
     outs = get_layer_outputs(model, x, layer_idx=1)
     _pass_on_error(rnn_histogram, model, layer_idx=1, data=outs)
     _pass_on_error(rnn_histogram, model, layer_idx=1, data=[1])
@@ -264,16 +269,17 @@ def test_misc():  # test miscellaneous functionalities
     batch_shape = (8, 100, 2*units)
 
     reset_seeds(reset_graph_with_backend=K)
-    model = make_model(GRU, batch_shape, activation='relu', recurrent_dropout=0.3)
+    model = make_model(GRU, batch_shape, activation='relu',
+                       recurrent_dropout=0.3)
     x, y = make_data(batch_shape, units)
     model.train_on_batch(x, y)
 
     grads = get_layer_gradients(model, x, y, layer_idx=1)
 
-    show_features_1D(grads,    subplot_samples=True, tight=True, borderwidth=2)
-    show_features_1D(grads[0], subplot_samples=True)
-    show_features_2D(grads.T, n_rows=1.5, tight=True, borderwidth=2)
-    show_features_2D(grads.T[:, :, 0])
+    features_1D(grads,    subplot_samples=True, tight=True, borderwidth=2)
+    features_1D(grads[0], subplot_samples=True)
+    features_2D(grads.T, n_rows=1.5, tight=True, borderwidth=2)
+    features_2D(grads.T[:, :, 0])
     rnn_histogram(model, layer_idx=1, show_xy_ticks=[0, 0], equate_axes=2)
     rnn_heatmap(model, layer_idx=1, cmap=None, normalize=True, show_borders=False)
     rnn_heatmap(model, layer_idx=1, cmap=None, absolute_value=True)

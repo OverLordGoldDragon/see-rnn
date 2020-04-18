@@ -1,14 +1,14 @@
-from termcolor import colored
 import numpy as np
+from termcolor import colored
 
-note_str = colored("NOTE: ", 'blue')
-warn_str = colored("WARNING: ", 'red')
+NOTE = colored("NOTE:", 'blue')
+WARN = colored("WARNING:", 'red')
 
 
 def _validate_args(layer_name, layer_idx, layer):
     find_layer = layer_idx is not None or layer_name is not None
     if find_layer and layer is not None:
-        print(warn_str + "`layer` will override `layer_idx` & `layer_name`")
+        print(WARN, "`layer` will override `layer_idx` & `layer_name`")
 
     if layer is None:
         no_info  = layer_idx is None and layer_name is None
@@ -34,8 +34,8 @@ def _process_rnn_args(model, layer_name, layer_idx, layer, input_data, labels,
         if data is not None:
             got_inputs = (input_data is not None) or (labels is not None)
             if got_inputs:
-                print(note_str + "`data` will override `input_data`, `labels`, "
-                      + "and `mode`")
+                print(NOTE, "`data` will override `input_data`, `labels`, "
+                      "and `mode`")
             if not isinstance(data, list):
                 raise Exception("`data` must be a list of kernel & gate matrices")
 
@@ -52,8 +52,8 @@ def _process_rnn_args(model, layer_name, layer_idx, layer, input_data, labels,
         if mode == 'grads' and (input_data is None or labels is None):
             raise Exception("must supply input_data and labels for mode=='grads'")
         if mode == 'weights' and (input_data is not None or labels is not None):
-            print(note_str + "`input_data` and `labels will` be ignored for "
-                  + "`mode`=='weights'")
+            print(NOTE, "`input_data` and `labels will` be ignored for "
+                  "`mode`=='weights'")
 
         is_iter = (isinstance(norm, list) or isinstance(norm, tuple) or
                    isinstance(norm, np.ndarray))
