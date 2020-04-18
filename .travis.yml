@@ -30,7 +30,7 @@ before_install:
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda config --set always_yes yes --set changeps1 no
   - conda install setuptools
-  - conda install conda=4.7.12
+  - conda install conda
   - conda update --force conda
   - conda info -a
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION
@@ -38,7 +38,7 @@ before_install:
   - export LD_LIBRARY_PATH=$HOME/miniconda/envs/test-environment/lib/:$LD_LIBRARY_PATH
   - pip install -r requirements-test.txt
   - conda install matplotlib
-  - conda install coveralls
+  - pip install coveralls
   
 install:
   - |
