@@ -211,7 +211,7 @@ def reset_seeds(reset_graph_with_backend=None, verbose=1):
         print("RANDOM SEEDS RESET")
 
 
-def _pass_on_error(func, *args, **kwargs):
+def pass_on_error(func, *args, **kwargs):
     try:
         func(*args, **kwargs)
     except BaseException as e:
@@ -234,31 +234,31 @@ def test_errors():  # test Exception cases
 
     from see_rnn.inspect_gen import get_layer, _make_grads_fn
 
-    _pass_on_error(features_0D, grads)
-    _pass_on_error(features_0D, grads_4D)
-    _pass_on_error(features_1D, grads_4D)
-    _pass_on_error(features_2D, grads_4D)
-    _pass_on_error(features_2D, grads)
-    _pass_on_error(get_layer_gradients, model, x, y, layer_idx=1, mode='cactus')
-    _pass_on_error(get_layer_gradients, model, x, y, layer_idx=1,
+    pass_on_error(features_0D, grads)
+    pass_on_error(features_0D, grads_4D)
+    pass_on_error(features_1D, grads_4D)
+    pass_on_error(features_2D, grads_4D)
+    pass_on_error(features_2D, grads)
+    pass_on_error(get_layer_gradients, model, x, y, layer_idx=1, mode='cactus')
+    pass_on_error(get_layer_gradients, model, x, y, layer_idx=1,
                    layer_name='gru', layer=model.layers[1])
-    _pass_on_error(_make_grads_fn, model, model.layers[1], mode='banana')
-    _pass_on_error(get_layer, model)
-    _pass_on_error(get_layer, model, layer_name='capsule')
-    _pass_on_error(rnn_heatmap, model, layer_idx=1, input_data=x, labels=y,
+    pass_on_error(_make_grads_fn, model, model.layers[1], mode='banana')
+    pass_on_error(get_layer, model)
+    pass_on_error(get_layer, model, layer_name='capsule')
+    pass_on_error(rnn_heatmap, model, layer_idx=1, input_data=x, labels=y,
                    mode='coffee')
-    _pass_on_error(rnn_heatmap, model, layer_idx=1, norm=(0, 1, 2))
-    _pass_on_error(rnn_heatmap, model, layer_idx=1, mode='grads')
-    _pass_on_error(rnn_histogram, model, layer_idx=1, norm=None)
-    _pass_on_error(rnn_heatmap, model, layer_index=9001)
-    _pass_on_error(features_0D, grads, cake='lie')
-    _pass_on_error(features_1D, grads, pup='not just any')
-    _pass_on_error(features_2D, grads, true=False)
+    pass_on_error(rnn_heatmap, model, layer_idx=1, norm=(0, 1, 2))
+    pass_on_error(rnn_heatmap, model, layer_idx=1, mode='grads')
+    pass_on_error(rnn_histogram, model, layer_idx=1, norm=None)
+    pass_on_error(rnn_heatmap, model, layer_index=9001)
+    pass_on_error(features_0D, grads, cake='lie')
+    pass_on_error(features_1D, grads, pup='not just any')
+    pass_on_error(features_2D, grads, true=False)
     outs = get_layer_outputs(model, x, layer_idx=1)
-    _pass_on_error(rnn_histogram, model, layer_idx=1, data=outs)
-    _pass_on_error(rnn_histogram, model, layer_idx=1, data=[1])
-    _pass_on_error(rnn_histogram, model, layer_idx=1, data=[[1]])
-    _pass_on_error(features_hist, grads, co='vid')
+    pass_on_error(rnn_histogram, model, layer_idx=1, data=outs)
+    pass_on_error(rnn_histogram, model, layer_idx=1, data=[1])
+    pass_on_error(rnn_histogram, model, layer_idx=1, data=[[1]])
+    pass_on_error(features_hist, grads, co='vid')
 
     cprint("\n<< EXCEPTION TESTS PASSED >>\n", 'green')
     assert True
@@ -274,8 +274,9 @@ def test_misc():  # test miscellaneous functionalities
     x, y = make_data(batch_shape, units)
     model.train_on_batch(x, y)
 
-    weights_norm(model, 'gru', omit_weight_names='bias', verbose=1)
-    weights_norm(model, 'gru')
+    pass_on_error(weights_norm, model, 'gru', omit_weight_names='bias',
+                   verbose=1)
+    pass_on_error(weights_norm, model, 'gru')
 
     grads = get_layer_gradients(model, x, y, layer_idx=1)
 
@@ -366,7 +367,7 @@ def test_envs():  # pseudo-tests for coverage for different env flags
         model = make_model(_GRU, batch_shape, new_imports=new_imports)
 
         glg(model, x, y, layer_idx=1)
-        _pass_on_error(glg, model, x, y, 1)
+        pass_on_error(glg, model, x, y, 1)
         rs(model.layers[1])
 
         from see_rnn.inspect_rnn import get_rnn_weights as grw
@@ -377,7 +378,7 @@ def test_envs():  # pseudo-tests for coverage for different env flags
         get_rnn_weights(model, layer_idx=2, concat_gates=True, as_tensors=False)
 
         _model = _make_nonrnn_model()
-        _pass_on_error(_vrt, _model.layers[1])
+        pass_on_error(_vrt, _model.layers[1])
         del model, _model
 
     assert True
