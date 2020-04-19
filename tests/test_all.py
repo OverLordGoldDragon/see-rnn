@@ -8,7 +8,8 @@ from . import K
 from . import Input, LSTM, GRU, SimpleRNN, Bidirectional
 from . import Model
 from see_rnn import get_layer_gradients, get_layer_outputs, get_rnn_weights
-from see_rnn import features_0D, features_1D, features_2D, features_hist
+from see_rnn import features_0D, features_1D, features_2D
+from see_rnn import features_hist, features_hist_v2
 from see_rnn import rnn_summary
 from see_rnn import rnn_heatmap, rnn_histogram
 
@@ -204,10 +205,7 @@ def reset_seeds(reset_graph_with_backend=None, verbose=1):
 
     np.random.seed(1)
     random.seed(2)
-    if tf.__version__[0] == '2':
-        tf.random.set_seed(3)
-    else:
-        tf.set_random_seed(3)
+    tf.compat.v1.set_random_seed(3)
     if verbose:
         print("RANDOM SEEDS RESET")
 
@@ -281,7 +279,10 @@ def test_misc():  # test miscellaneous functionalities
     features_1D(grads[0], subplot_samples=True)
     features_2D(grads.T, n_rows=1.5, tight=True, borderwidth=2)
     features_2D(grads.T[:, :, 0])
-    features_hist(grads, show_borders=False, borderwidth=1, show_xy_ticks=[0, 0])
+    features_hist(grads, show_borders=False, borderwidth=1,
+                  show_xy_ticks=[0, 0], title="grads")
+    features_hist_v2(grads, show_borders=False, borderwidth=1,
+                     show_xy_ticks=[0, 0], title="Grads")
     rnn_histogram(model, layer_idx=1, show_xy_ticks=[0, 0], equate_axes=2)
     rnn_heatmap(model, layer_idx=1, cmap=None, normalize=True, show_borders=False)
     rnn_heatmap(model, layer_idx=1, cmap=None, norm='auto', absolute_value=True)
