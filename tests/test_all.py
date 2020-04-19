@@ -274,6 +274,7 @@ def test_misc():  # test miscellaneous functionalities
     x, y = make_data(batch_shape, units)
     model.train_on_batch(x, y)
 
+    # problem with TF2.0/2.1 graph in K.get_weights()
     pass_on_error(weights_norm, model, 'gru', omit_weight_names='bias',
                    verbose=1)
     pass_on_error(weights_norm, model, 'gru')
