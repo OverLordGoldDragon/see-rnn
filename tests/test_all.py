@@ -281,8 +281,8 @@ def test_misc():  # test miscellaneous functionalities
     features_2D(grads.T[:, :, 0])
     features_hist(grads, show_borders=False, borderwidth=1,
                   show_xy_ticks=[0, 0], title="grads")
-    features_hist_v2(grads, show_borders=False, borderwidth=1,
-                     show_xy_ticks=[0, 0], title="Grads")
+    features_hist_v2(grads[:, :4, :3], show_borders=False, borderwidth=1,
+                     show_xy_ticks=[0, 0], side_annot='row', title="Grads")
     rnn_histogram(model, layer_idx=1, show_xy_ticks=[0, 0], equate_axes=2)
     rnn_heatmap(model, layer_idx=1, cmap=None, normalize=True, show_borders=False)
     rnn_heatmap(model, layer_idx=1, cmap=None, norm='auto', absolute_value=True)

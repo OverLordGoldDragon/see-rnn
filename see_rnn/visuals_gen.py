@@ -661,7 +661,7 @@ def features_hist_v2(data, colnames=None, bins=100, ylim=None, tight=True,
         for col in range(n_cols):
             ax = axes[row, col]
             for subdata in data[row][col]:
-                ax.hist(subdata.ravel(), bins=bins, **kw['hist'])
+                ax.hist(subdata.ravel(), bins=bins, **kw['plot'])
 
             _style_axis(ax, kw, show_borders, show_xy_ticks)
 
