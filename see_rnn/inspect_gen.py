@@ -215,7 +215,7 @@ def weights_norm(model, names, _dict=None, stat_fns=(np.max, np.mean),
         print(txt.format(l_idx, *stats_flat))
 
 
-    def _get_layer_norm(stats_all, layer, stat_fns, axis=-1):
+    def _get_layer_norm(stats_all, layer, norm_fn, stat_fns, axis=-1):
         def _compute_norm(w, norm_fn, axis=-1):
             axis = axis if axis != -1 else len(w.shape) - 1
             reduction_axes = tuple([ax for ax in range(len(w.shape))
@@ -238,7 +238,7 @@ def weights_norm(model, names, _dict=None, stat_fns=(np.max, np.mean),
         for w_idx, (w, w_name) in enumerate(zip(W, w_names)):
             if any([to_omit in w_name for to_omit in omit_weight_names]):
                 continue
-            l2 = _compute_norm(w, axis)
+            l2 = _compute_norm(w, norm_fn, axis)
             l2_stats = [fn(l2) for fn in stat_fns]
             _append(stats_all, l2_stats, w_idx, l_name)
         return stats_all
@@ -248,7 +248,8 @@ def weights_norm(model, names, _dict=None, stat_fns=(np.max, np.mean),
 
     for l_idx, layer in enumerate(model.layers):
         if layer.name in names:
-            stats_all = _get_layer_norm(stats_all, layer, stat_fns, axis)
+            stats_all = _get_layer_norm(stats_all, layer, norm_fn,
+                                        stat_fns, axis)
             if verbose:
                 _print_stats(stats_all, l_idx, layer.name)
     return stats_all

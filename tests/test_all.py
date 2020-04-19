@@ -8,6 +8,7 @@ from . import K
 from . import Input, LSTM, GRU, SimpleRNN, Bidirectional
 from . import Model
 from see_rnn import get_layer_gradients, get_layer_outputs, get_rnn_weights
+from see_rnn import weights_norm
 from see_rnn import features_0D, features_1D, features_2D
 from see_rnn import features_hist, features_hist_v2
 from see_rnn import rnn_summary
@@ -272,6 +273,9 @@ def test_misc():  # test miscellaneous functionalities
                        recurrent_dropout=0.3)
     x, y = make_data(batch_shape, units)
     model.train_on_batch(x, y)
+
+    weights_norm(model, 'gru', omit_weight_names='bias', verbose=1)
+    weights_norm(model, 'gru')
 
     grads = get_layer_gradients(model, x, y, layer_idx=1)
 
