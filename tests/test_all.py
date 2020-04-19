@@ -243,6 +243,8 @@ def test_errors():  # test Exception cases
     pass_on_error(get_layer_gradients, model, x, y, layer_idx=1,
                    layer_name='gru', layer=model.layers[1])
     pass_on_error(_make_grads_fn, model, model.layers[1], mode='banana')
+    pass_on_error(features_hist, grads[:, :4, :3], po='tato')
+    pass_on_error(features_hist_v2, grads[:, :4, :3], po='tato')
     pass_on_error(get_layer, model)
     pass_on_error(get_layer, model, layer_name='capsule')
     pass_on_error(rnn_heatmap, model, layer_idx=1, input_data=x, labels=y,
@@ -287,8 +289,9 @@ def test_misc():  # test miscellaneous functionalities
     features_2D(grads.T[:, :, 0])
     features_hist(grads, show_borders=False, borderwidth=1,
                   show_xy_ticks=[0, 0], title="grads")
-    features_hist_v2(grads[:, :4, :3], show_borders=False, borderwidth=1,
-                     show_xy_ticks=[0, 0], side_annot='row', title="Grads")
+    features_hist_v2(grads[:, :4, :3], show_borders=False, xlims=(-.01, .01),
+                     ylim=100, borderwidth=1, show_xy_ticks=[0, 0],
+                     side_annot='row', title="Grads")
     rnn_histogram(model, layer_idx=1, show_xy_ticks=[0, 0], equate_axes=2)
     rnn_heatmap(model, layer_idx=1, cmap=None, normalize=True, show_borders=False)
     rnn_heatmap(model, layer_idx=1, cmap=None, norm='auto', absolute_value=True)

@@ -528,7 +528,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
         return kw
 
     def _catch_unknown_kwargs(kwargs):
-        allowed_kwargs = ('show_borders', 'show_xy_ticks', 'title',
+        allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks', 'title',
                           'borderwidth', 'annotations')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
@@ -579,8 +579,8 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
     plt.show()
 
 
-def features_hist_v2(data, colnames=None, bins=100, ylim=None, tight=True,
-                     side_annot=None, configs=None, **kwargs):
+def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
+                     tight=True, side_annot=None, configs=None, **kwargs):
     """Plots histograms in a subplot grid.
 
     Arguments:
@@ -590,6 +590,7 @@ def features_hist_v2(data, colnames=None, bins=100, ylim=None, tight=True,
               individual subplots (iteratively), flattens remaining dims.
         colnames: str list. Column titles, displayed on top subplot boxes.
         bins: int. Pyplot kwarg to plt.hist(), # of bins.
+        xlims: float tuple. x limits to apply to all subplots.
         ylim: float. Top y limit of all subplots.
         tight: bool. If True, plt.subplots_adjust (spacing) according to
               configs['tight'], defaulted to minimize intermediate padding.
@@ -639,7 +640,14 @@ def features_hist_v2(data, colnames=None, bins=100, ylim=None, tight=True,
         kw['subplot']['figsize'] = (size[0] * w, size[1] * h)
         return kw
 
-    def _style_axis(ax, kw, show_borders, show_xy_ticks):
+    def _catch_unknown_kwargs(kwargs):
+        allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks', 'title',
+                          'borderwidth')
+        for kwarg in kwargs:
+            if kwarg not in allowed_kwargs:
+                raise Exception("unknown kwarg `%s`" % kwarg)
+
+    def _style_axis(ax, kw, show_borders, show_xy_ticks, xlims):
         if row == 0 and colnames is not None:
             ax.set_title(f"{colnames[col]}", **kw['colnames'])
         if side_annot is not None and col == n_cols - 1:
@@ -650,7 +658,10 @@ def features_hist_v2(data, colnames=None, bins=100, ylim=None, tight=True,
             ax.set_xticks([])
         if not show_xy_ticks[1]:
             ax.set_yticks([])
+        if xlims is not None:
+            ax.set_xlim(*xlims)
 
+    _catch_unknown_kwargs(kwargs)
     kw = _process_configs(configs, w, h)
     fig, axes = plt.subplots(len(data), len(data[0]), **kw['subplot'])
     if title is not None:
@@ -663,7 +674,7 @@ def features_hist_v2(data, colnames=None, bins=100, ylim=None, tight=True,
             for subdata in data[row][col]:
                 ax.hist(subdata.ravel(), bins=bins, **kw['plot'])
 
-            _style_axis(ax, kw, show_borders, show_xy_ticks)
+            _style_axis(ax, kw, show_borders, show_xy_ticks, xlims)
 
     if ylim is not None:
         ax.set_ylim(0, ylim)
