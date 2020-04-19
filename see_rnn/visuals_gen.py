@@ -53,7 +53,8 @@ def features_0D(data, marker='o', cmap='bwr', color=None,
             }
         configs = configs or {}
         # override defaults, but keep those not in `configs`
-        defaults.update(configs)
+        for key in defaults:
+            defaults[key].update(configs.get(key, {}))
         kw = defaults.copy()
         return kw
 
@@ -174,7 +175,8 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
             }
         configs = configs or {}
         # override defaults, but keep those not in `configs`
-        defaults.update(configs)
+        for key in defaults:
+            defaults[key].update(configs.get(key, {}))
         kw = defaults.copy()
 
         if not equate_axes:
@@ -351,7 +353,8 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
             }
         configs = configs or {}
         # override defaults, but keep those not in `configs`
-        defaults.update(configs)
+        for key in defaults:
+            defaults[key].update(configs.get(key, {}))
         kw = defaults.copy()
 
         size = kw['subplot']['figsize']
@@ -520,7 +523,8 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             }
         configs = configs or {}
         # override defaults, but keep those not in `configs`
-        defaults.update(configs)
+        for key in defaults:
+            defaults[key].update(configs.get(key, {}))
         kw = defaults.copy()
 
         size = kw['subplot']['figsize']
@@ -633,7 +637,9 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
                                xy=(1.02, .5), xycoords='axes fraction'),
             }
         configs = configs or {}
-        defaults.update(configs)
+        # override defaults, but keep those not in `configs`
+        for key in defaults:
+            defaults[key].update(configs.get(key, {}))
         kw = defaults.copy()
 
         size = kw['subplot']['figsize']
