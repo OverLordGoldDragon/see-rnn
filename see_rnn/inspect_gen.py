@@ -2,6 +2,7 @@ import os
 import numpy as np
 
 from termcolor import colored
+from copy import deepcopy
 from .utils import _validate_args
 
 
@@ -188,7 +189,7 @@ def weights_norm(model, names, _dict=None, stat_fns=(np.max, np.mean),
             omit_weight_names = [omit_weight_names]
 
         if _dict:
-            stats_all = _dict.copy()
+            stats_all = deepcopy(_dict)  # do not mutate original dict
         else:
             stats_all = {name: [[]] for name in names}
         return stats_all, names, omit_weight_names
