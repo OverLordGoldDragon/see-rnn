@@ -8,7 +8,9 @@ from . import K
 from . import Input, LSTM, GRU, SimpleRNN, Bidirectional
 from . import Model
 from see_rnn import get_layer_gradients, get_layer_outputs, get_rnn_weights
-from see_rnn import features_0D, features_1D, features_2D, features_hist
+from see_rnn import weights_norm
+from see_rnn import features_0D, features_1D, features_2D
+from see_rnn import features_hist, features_hist_v2
 from see_rnn import rnn_summary
 from see_rnn import rnn_heatmap, rnn_histogram
 
@@ -204,15 +206,12 @@ def reset_seeds(reset_graph_with_backend=None, verbose=1):
 
     np.random.seed(1)
     random.seed(2)
-    if tf.__version__[0] == '2':
-        tf.random.set_seed(3)
-    else:
-        tf.set_random_seed(3)
+    tf.compat.v1.set_random_seed(3)
     if verbose:
         print("RANDOM SEEDS RESET")
 
 
-def _pass_on_error(func, *args, **kwargs):
+def pass_on_error(func, *args, **kwargs):
     try:
         func(*args, **kwargs)
     except BaseException as e:
@@ -235,31 +234,33 @@ def test_errors():  # test Exception cases
 
     from see_rnn.inspect_gen import get_layer, _make_grads_fn
 
-    _pass_on_error(features_0D, grads)
-    _pass_on_error(features_0D, grads_4D)
-    _pass_on_error(features_1D, grads_4D)
-    _pass_on_error(features_2D, grads_4D)
-    _pass_on_error(features_2D, grads)
-    _pass_on_error(get_layer_gradients, model, x, y, layer_idx=1, mode='cactus')
-    _pass_on_error(get_layer_gradients, model, x, y, layer_idx=1,
+    pass_on_error(features_0D, grads)
+    pass_on_error(features_0D, grads_4D)
+    pass_on_error(features_1D, grads_4D)
+    pass_on_error(features_2D, grads_4D)
+    pass_on_error(features_2D, grads)
+    pass_on_error(get_layer_gradients, model, x, y, layer_idx=1, mode='cactus')
+    pass_on_error(get_layer_gradients, model, x, y, layer_idx=1,
                    layer_name='gru', layer=model.layers[1])
-    _pass_on_error(_make_grads_fn, model, model.layers[1], mode='banana')
-    _pass_on_error(get_layer, model)
-    _pass_on_error(get_layer, model, layer_name='capsule')
-    _pass_on_error(rnn_heatmap, model, layer_idx=1, input_data=x, labels=y,
+    pass_on_error(_make_grads_fn, model, model.layers[1], mode='banana')
+    pass_on_error(features_hist, grads[:, :4, :3], po='tato')
+    pass_on_error(features_hist_v2, grads[:, :4, :3], po='tato')
+    pass_on_error(get_layer, model)
+    pass_on_error(get_layer, model, layer_name='capsule')
+    pass_on_error(rnn_heatmap, model, layer_idx=1, input_data=x, labels=y,
                    mode='coffee')
-    _pass_on_error(rnn_heatmap, model, layer_idx=1, norm=(0, 1, 2))
-    _pass_on_error(rnn_heatmap, model, layer_idx=1, mode='grads')
-    _pass_on_error(rnn_histogram, model, layer_idx=1, norm=None)
-    _pass_on_error(rnn_heatmap, model, layer_index=9001)
-    _pass_on_error(features_0D, grads, cake='lie')
-    _pass_on_error(features_1D, grads, pup='not just any')
-    _pass_on_error(features_2D, grads, true=False)
+    pass_on_error(rnn_heatmap, model, layer_idx=1, norm=(0, 1, 2))
+    pass_on_error(rnn_heatmap, model, layer_idx=1, mode='grads')
+    pass_on_error(rnn_histogram, model, layer_idx=1, norm=None)
+    pass_on_error(rnn_heatmap, model, layer_index=9001)
+    pass_on_error(features_0D, grads, cake='lie')
+    pass_on_error(features_1D, grads, pup='not just any')
+    pass_on_error(features_2D, grads, true=False)
     outs = get_layer_outputs(model, x, layer_idx=1)
-    _pass_on_error(rnn_histogram, model, layer_idx=1, data=outs)
-    _pass_on_error(rnn_histogram, model, layer_idx=1, data=[1])
-    _pass_on_error(rnn_histogram, model, layer_idx=1, data=[[1]])
-    _pass_on_error(features_hist, grads, co='vid')
+    pass_on_error(rnn_histogram, model, layer_idx=1, data=outs)
+    pass_on_error(rnn_histogram, model, layer_idx=1, data=[1])
+    pass_on_error(rnn_histogram, model, layer_idx=1, data=[[1]])
+    pass_on_error(features_hist, grads, co='vid')
 
     cprint("\n<< EXCEPTION TESTS PASSED >>\n", 'green')
     assert True
@@ -275,13 +276,22 @@ def test_misc():  # test miscellaneous functionalities
     x, y = make_data(batch_shape, units)
     model.train_on_batch(x, y)
 
+    # problem with TF2.0/2.1 graph in K.get_weights()
+    pass_on_error(weights_norm, model, 'gru', omit_weight_names='bias',
+                   verbose=1)
+    pass_on_error(weights_norm, model, 'gru')
+
     grads = get_layer_gradients(model, x, y, layer_idx=1)
 
     features_1D(grads,    subplot_samples=True, tight=True, borderwidth=2)
     features_1D(grads[0], subplot_samples=True)
     features_2D(grads.T, n_rows=1.5, tight=True, borderwidth=2)
     features_2D(grads.T[:, :, 0])
-    features_hist(grads, show_borders=False, borderwidth=1, show_xy_ticks=[0, 0])
+    features_hist(grads, show_borders=False, borderwidth=1,
+                  show_xy_ticks=[0, 0], title="grads")
+    features_hist_v2(grads[:, :4, :3], show_borders=False, xlims=(-.01, .01),
+                     ylim=100, borderwidth=1, show_xy_ticks=[0, 0],
+                     side_annot='row', title="Grads")
     rnn_histogram(model, layer_idx=1, show_xy_ticks=[0, 0], equate_axes=2)
     rnn_heatmap(model, layer_idx=1, cmap=None, normalize=True, show_borders=False)
     rnn_heatmap(model, layer_idx=1, cmap=None, norm='auto', absolute_value=True)
@@ -361,7 +371,7 @@ def test_envs():  # pseudo-tests for coverage for different env flags
         model = make_model(_GRU, batch_shape, new_imports=new_imports)
 
         glg(model, x, y, layer_idx=1)
-        _pass_on_error(glg, model, x, y, 1)
+        pass_on_error(glg, model, x, y, 1)
         rs(model.layers[1])
 
         from see_rnn.inspect_rnn import get_rnn_weights as grw
@@ -372,7 +382,7 @@ def test_envs():  # pseudo-tests for coverage for different env flags
         get_rnn_weights(model, layer_idx=2, concat_gates=True, as_tensors=False)
 
         _model = _make_nonrnn_model()
-        _pass_on_error(_vrt, _model.layers[1])
+        pass_on_error(_vrt, _model.layers[1])
         del model, _model
 
     assert True
