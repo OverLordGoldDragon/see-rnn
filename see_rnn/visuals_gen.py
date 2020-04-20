@@ -7,8 +7,7 @@ from termcolor import colored
 NOTE = colored("NOTE:", 'blue')
 
 
-def features_0D(data, marker='o', cmap='bwr', color=None,
-                configs=None, **kwargs):
+def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs):
     """Plots 0D aligned scatterplots in a standalone graph.
 
     iter == list/tuple (both work)
@@ -24,8 +23,8 @@ def features_0D(data, marker='o', cmap='bwr', color=None,
               automatically colors along equally spaced `cmap` gradient intervals.
               Ex: ['red', 'blue']; [[0., .8, 1.], [.2, .5, 0.]] (RGB)
         configs: dict. kwargs to customize various plot schemes:
-            'plot':    passed to plt.scatter()
-            'title':   passed to plt.suptitle()
+            'plot':  passed to plt.scatter()
+            'title': passed to plt.suptitle()
 
     kwargs:
         w: float. Scale width  of resulting plot by a factor.
@@ -48,8 +47,8 @@ def features_0D(data, marker='o', cmap='bwr', color=None,
 
     def _process_configs(configs, w, h):
         defaults = {
-            'plot':    dict(s=15, linewidth=2),
-            'title':   dict(weight='bold', fontsize=14),
+            'plot':  dict(s=15, linewidth=2),
+            'title': dict(weight='bold', fontsize=14),
             }
         configs = configs or {}
         # override defaults, but keep those not in `configs`
@@ -187,7 +186,8 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
 
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks',
-                          'title_mode', 'show_y_zero', 'tight', 'borderwidth')
+                          'title_mode', 'show_y_zero', 'tight',
+                          'borderwidth', 'color')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
@@ -335,10 +335,10 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
     """
 
     w, h           = kwargs.get('w', 1), kwargs.get('h', 1)
-    show_borders   = kwargs.get('show_borders',  True)
+    show_borders   = kwargs.get('show_borders', True)
     show_xy_ticks  = kwargs.get('show_xy_ticks', [1, 1])
     show_colorbar  = kwargs.get('show_colorbar', False)
-    title_mode     = kwargs.get('title_mode',    'outputs')
+    title_mode     = kwargs.get('title_mode', 'outputs')
     tight          = kwargs.get('tight', False)
     channel_axis   = kwargs.get('channel_axis', -1)
     borderwidth    = kwargs.get('borderwidth', None)
@@ -585,7 +585,8 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
 
 def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
                      tight=True, side_annot=None, configs=None, **kwargs):
-    """Plots histograms in a subplot grid.
+    """Plots histograms in a subplot grid; tailored for multiple histograms
+    per gridcell.
 
     Arguments:
         data: np.ndarray, n-dim. Data to plot.
