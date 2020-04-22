@@ -379,7 +379,7 @@ def test_envs():  # pseudo-tests for coverage for different env flags
                            Model=Model)
         model = make_model(_GRU, batch_shape, new_imports=new_imports)
 
-        glg(model, x, y, layer_idx=1)
+        pass_on_error(model, x, y, layer_idx=1)  # possibly _backend-induced err
         pass_on_error(glg, model, x, y, 1)
         rs(model.layers[1])
 
