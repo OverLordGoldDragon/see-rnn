@@ -1,18 +1,17 @@
 import os
 import re
-import codecs
 from setuptools import setup, find_packages
 
 current_path = os.path.abspath(os.path.dirname(__file__))
 
 
 def read_file(*parts):
-    with codecs.open(os.path.join(current_path, *parts), 'r', 'utf8') as reader:
+    with open(os.path.join(current_path, *parts), encoding='utf-8') as reader:
         return reader.read()
 
 
 def get_requirements(*parts):
-    with codecs.open(os.path.join(current_path, *parts), 'r', 'utf8') as reader:
+    with open(os.path.join(current_path, *parts), encoding='utf-8') as reader:
         return list(map(lambda x: x.strip(), reader.readlines()))
 
 
@@ -36,7 +35,7 @@ setup(
     description=('RNN weights, gradients, & activations visualization '
                  'in Keras & TensorFlow'),
     long_description=read_file('README.md'),
-    long_description_content_type='text/markdown',
+    long_description_content_type="text/markdown",
     keywords=(
         "rnn tensorflow keras visualization deep-learning lstm gru "
     ),
@@ -46,7 +45,8 @@ setup(
     tests_require=["pytest>=4.0", "pytest-cov"],
     classifiers=[
         "Programming Language :: Python :: 3.6",
-        "License :: MIT License",
+        "Programming Language :: Python :: 3.7",
+        "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Intended Audience :: Developers",
         "Intended Audience :: Education",

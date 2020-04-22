@@ -518,7 +518,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             'subplot': dict(sharex='col', sharey=True, dpi=76, figsize=(10, 10)),
             'title':   dict(weight='bold', fontsize=14, y=.93 + .12 * tight),
             'tight':   dict(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0),
-            'annot':   dict(weight='bold', fontsize=16, xy=(.03, .7),
+            'annot':   dict(weight='bold', fontsize=14, xy=(.02, .7),
                             xycoords='axes fraction', color='g'),
             }
         configs = configs or {}
@@ -547,6 +547,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
 
         if annotations == 'auto':
             annotations = list(map(str, range(len(data))))
+        annotations = annotations.copy()  # ensure external list is unaffected
         return n_rows, n_cols, annotations
 
     def _style_axis(ax, kw, show_borders, show_xy_ticks, annotations):
@@ -569,7 +570,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
         plt.suptitle(title, **kw['title'])
 
     for ax_idx, ax in enumerate(axes.flat):
-        ax.hist(data[ax_idx].ravel(), bins=bins, **kw['plot'])
+        ax.hist(np.asarray(data[ax_idx]).ravel(), bins=bins, **kw['plot'])
         _style_axis(ax, kw, show_borders, show_xy_ticks, annotations)
 
     if xlims is not None:
@@ -589,10 +590,14 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
     per gridcell.
 
     Arguments:
-        data: np.ndarray, n-dim. Data to plot.
+        data: np.ndarray / list of np.ndarray / list of lists. Data to plot.
               (rows, cols, subdata...)
-              Plots dim0 along rows, dim1 along cols, subdata within
+              - Plots dim0 along rows, dim1 along cols, subdata within
               individual subplots (iteratively), flattens remaining dims.
+              - If list of (list / np.ndarray), each of (top-level) list's
+              entries must contain same number of lists / arrays.
+              - `subdata` can have any number of entries of any dims, generating
+              dynamic number of histograms per gridcell.
         colnames: str list. Column titles, displayed on top subplot boxes.
         bins: int. Pyplot kwarg to plt.hist(), # of bins.
         xlims: float tuple. x limits to apply to all subplots.
@@ -654,6 +659,16 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
 
+    def _get_data_info(data):
+        n_rows = len(data)
+        n_cols = len(data[0])
+        if isinstance(data, (list, tuple)):
+            assert all(len(x) == n_cols for x in data[1:]), (
+                "When `data` is a list of lists or list of arrays, each "
+                "of the (top-level) list's entries must have the same "
+                "number of elements")
+        return n_rows, n_cols
+
     def _style_axis(ax, kw, show_borders, show_xy_ticks, xlims):
         if row == 0 and colnames is not None:
             ax.set_title(f"{colnames[col]}", **kw['colnames'])
@@ -670,16 +685,17 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
 
     _catch_unknown_kwargs(kwargs)
     kw = _process_configs(configs, w, h)
+    n_rows, n_cols = _get_data_info(data)
+
     fig, axes = plt.subplots(len(data), len(data[0]), **kw['subplot'])
     if title is not None:
         plt.suptitle(title, **kw['title'])
-    n_rows, n_cols = data.shape[:2]
 
     for row in range(n_rows):
         for col in range(n_cols):
             ax = axes[row, col]
             for subdata in data[row][col]:
-                ax.hist(subdata.ravel(), bins=bins, **kw['plot'])
+                ax.hist(np.asarray(subdata).ravel(), bins=bins, **kw['plot'])
 
             _style_axis(ax, kw, show_borders, show_xy_ticks, xlims)
 
