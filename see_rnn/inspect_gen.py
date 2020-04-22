@@ -170,8 +170,8 @@ def get_weights(model, name, as_list=False):
         raise Exception(f"weight w/ name '{name}' not found")
 
     if as_list:
-        return [K_eval(w) for w in weights]
-    return {name: K_eval(w) for name, w in zip(weight_names, weights)}
+        return [K_eval(w, K) for w in weights]
+    return {name: K_eval(w, K) for name, w in zip(weight_names, weights)}
 
 
 def _detect_nans(data):
@@ -271,7 +271,7 @@ def weights_norm(model, names, _dict=None, stat_fns=(np.max, np.mean),
             for stat_idx, stat in enumerate(l2_stats):
                 stats_all[l_name][w_idx][stat_idx].append(stat)
 
-        W = [K_eval(w) for w in layer.weights]
+        W = [K_eval(w, K) for w in layer.weights]
         w_names = [w.name for w in layer.weights]
         l_name = layer.name
 

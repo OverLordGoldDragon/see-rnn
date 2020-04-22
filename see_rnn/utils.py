@@ -1,5 +1,5 @@
 import numpy as np
-from ._backend import WARN, NOTE
+from ._backend import K, WARN, NOTE
 
 
 def _validate_args(layer_name, layer_idx, layer):
@@ -116,7 +116,7 @@ def _rnn_gate_names(rnn_type):
             }[rnn_type]
 
 
-def K_eval(x, backend):
+def K_eval(x, backend=K):
     """Workaround to TF2.0/2.1-Graph's buggy tensor evaluation"""
     K = backend
     try:
