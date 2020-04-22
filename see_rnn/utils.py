@@ -1,8 +1,5 @@
 import numpy as np
-from termcolor import colored
-
-NOTE = colored("NOTE:", 'blue')
-WARN = colored("WARNING:", 'red')
+from ._backend import WARN, NOTE
 
 
 def _validate_args(layer_name, layer_idx, layer):
@@ -117,3 +114,16 @@ def _rnn_gate_names(rnn_type):
             'SimpleRNN': [''],
             'IndRNN':    [''],
             }[rnn_type]
+
+
+def K_eval(x, backend):
+    """Workaround to TF2.0/2.1-Graph's buggy tensor evaluation"""
+    K = backend
+    try:
+        return K.get_value(K.to_dense(x))
+    except:
+        try:
+            eval_fn = K.function([], [x])
+            return eval_fn([])[0]
+        except:
+            return K.eager(K.eval)(x)

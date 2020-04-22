@@ -1,10 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
-from termcolor import colored
 
-
-NOTE = colored("NOTE:", 'blue')
+from ._backend import NOTE
 
 
 def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs):
