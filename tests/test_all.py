@@ -351,13 +351,14 @@ def test_envs():  # pseudo-tests for coverage for different env flags
 
     from importlib import reload
 
-    from see_rnn import inspect_gen, inspect_rnn, utils
+    from see_rnn import inspect_gen, inspect_rnn, utils, _backend
     for flag in ['1', '0']:
         os.environ["TF_KERAS"] = flag
         TF_KERAS = os.environ["TF_KERAS"] == '1'
         reload(inspect_gen)
         reload(inspect_rnn)
         reload(utils)
+        reload(_backend)
         from see_rnn.inspect_gen import get_gradients as glg
         from see_rnn.inspect_rnn import rnn_summary as rs
         from see_rnn.utils import _validate_rnn_type as _vrt
