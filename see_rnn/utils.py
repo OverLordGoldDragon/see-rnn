@@ -1,8 +1,5 @@
 import numpy as np
-from termcolor import colored
-
-NOTE = colored("NOTE:", 'blue')
-WARN = colored("WARNING:", 'red')
+from ._backend import K, WARN, NOTE
 
 
 def _validate_args(layer_name, layer_idx, layer):
@@ -24,7 +21,7 @@ def _process_rnn_args(model, layer_name, layer_idx, layer, input_data, labels,
        `mode` arg, and fetch various pertinent RNN attributes.
     """
 
-    from .inspect_gen import get_layer, get_layer_gradients
+    from .inspect_gen import get_layer, get_gradients
     from .inspect_rnn import get_rnn_weights
 
     def _validate_args_(layer_name, layer_idx, layer, input_data, labels,
@@ -84,7 +81,7 @@ def _process_rnn_args(model, layer_name, layer_idx, layer, input_data, labels,
             data = get_rnn_weights(model, layer_name, layer_idx,
                                    as_tensors=False, concat_gates=True)
         else:
-            data = get_layer_gradients(model, input_data, labels,
+            data = get_gradients(model, input_data, labels,
                                        layer=layer, mode='weights')
 
     rnn_info = dict(rnn_type=rnn_type, gate_names=gate_names,
@@ -117,3 +114,13 @@ def _rnn_gate_names(rnn_type):
             'SimpleRNN': [''],
             'IndRNN':    [''],
             }[rnn_type]
+
+
+def K_eval(x, backend=K):
+    """Workaround to TF2.0/2.1-Graph's buggy tensor evaluation"""
+    K = backend
+    try:
+        return K.get_value(K.to_dense(x))
+    except:
+        eval_fn = K.function([], [x])
+        return eval_fn([])[0]

@@ -1,26 +1,12 @@
-import os
 import numpy as np
 
-from termcolor import colored
 from copy import deepcopy
-from .utils import _validate_args
+from .utils import _validate_args, K_eval
+from ._backend import K, TF_KERAS, WARN
 
 
-TF_KERAS = os.environ.get("TF_KERAS", '0') == '1'
-WARN = colored("WARNING:", 'red')
-NOTE = colored("NOTE:", 'blue')
-
-
-if TF_KERAS:
-    import tensorflow.keras.backend as K
-    print(NOTE, "`sample_weights` & `learning_phase` not yet supported "
-          "for `TF_KERAS`, and will be ignored (%s.py)" % __name__)
-else:
-    import keras.backend as K
-
-
-def get_layer_outputs(model, input_data, layer_name=None, layer_idx=None,
-                      layer=None, learning_phase=0):
+def get_outputs(model, input_data, layer_name=None, layer_idx=None,
+                layer=None, learning_phase=0):
     """Retrieves layer outputs given input data and layer info.
 
     Arguments:
@@ -47,9 +33,9 @@ def get_layer_outputs(model, input_data, layer_name=None, layer_idx=None,
     return layers_fn([input_data, learning_phase])[0]
 
 
-def get_layer_gradients(model, input_data, labels, layer_name=None,
-                        layer_idx=None, layer=None, mode='outputs',
-                        sample_weights=None, learning_phase=0):
+def get_gradients(model, input_data, labels, layer_name=None,
+                  layer_idx=None, layer=None, mode='outputs',
+                  sample_weights=None, learning_phase=0):
     """Retrieves layer gradients w.r.t. outputs or weights.
     NOTE: gradients will be clipped if `clipvalue` or `clipnorm` were set.
 
@@ -124,7 +110,7 @@ def _make_grads_fn(model, layer, mode='outputs'):
     if mode not in ['outputs', 'weights']:
         raise Exception("`mode` must be one of: 'outputs', 'weights'")
 
-    params = layer.output if mode=='outputs' else layer.trainable_weights
+    params = layer.output if mode == 'outputs' else layer.trainable_weights
     grads = model.optimizer.get_gradients(model.total_loss, params)
 
     if TF_KERAS:
@@ -135,8 +121,61 @@ def _make_grads_fn(model, layer, mode='outputs'):
     return K.function(inputs=inputs, outputs=grads)
 
 
+def get_full_layer_name(model, name=None, idx=None):
+    """Given full or partial (substring) layer name, or layer index,
+    return complete layer name.
+
+    Arguments:
+        model: keras.Model / tf.keras.Model.
+        name: str/None. Layer name. Returns earliest match.
+        idx: int/None. Layer index. Returns model.layers[idx].name
+    """
+    _validate_args(name, idx, layer=None)
+    if idx is not None:
+        return model.layers[idx].name
+
+    for layer in model.layers:
+        if name in layer.name:
+            return layer.name
+    raise Exception(f"layer '{name}' not found")
+
+
+def get_weights(model, name, as_list=False):
+    """Given full or partial (substring) weight name, return weight values
+    (and corresponding names if as_list=False).
+
+    Arguments:
+        model: keras.Model / tf.keras.Model
+        name: str. If substring, returns earliest match. Can be layer name or
+                   include a weight (full or substring) in format
+                   {layer_name/weight_name}.
+        as_list: bool. True: return weight values as list in order of acquisition
+                       False: return weight name-value pairs in a dict
+    """
+    weights = []
+    weight_names = []
+    name = name.split('/')
+    layer_name = get_full_layer_name(model, name[0])
+    layer = model.get_layer(name=layer_name)
+
+    if len(name) == 2:  # contains weight name
+        for w in layer.weights:
+            if name[1] in w.name:
+                weights.append(w)
+                weight_names.append(w.name)
+    else:
+        weights = layer.weights
+        weight_names = [w.name for w in layer.weights]
+    if not weights:
+        raise Exception(f"weight w/ name '{name}' not found")
+
+    if as_list:
+        return [K_eval(w, K) for w in weights]
+    return {name: K_eval(w, K) for name, w in zip(weight_names, weights)}
+
+
 def _detect_nans(data):
-    data = np.array(data).ravel()
+    data = np.asarray(data).ravel()
     perc_nans = 100 * np.sum(np.isnan(data)) / len(data)
     if perc_nans == 0:
         return None
@@ -232,7 +271,7 @@ def weights_norm(model, names, _dict=None, stat_fns=(np.max, np.mean),
             for stat_idx, stat in enumerate(l2_stats):
                 stats_all[l_name][w_idx][stat_idx].append(stat)
 
-        W = layer.get_weights()
+        W = [K_eval(w, K) for w in layer.weights]
         w_names = [w.name for w in layer.weights]
         l_name = layer.name
 

@@ -1,18 +1,6 @@
-import os
-
-from termcolor import colored
-
 from .inspect_gen import get_layer
 from .utils import _validate_args, _validate_rnn_type
-
-TF_KERAS = os.environ.get("TF_KERAS", '0') == '1'
-if TF_KERAS:
-    import tensorflow.keras.backend as K
-else:
-    import keras.backend as K
-
-WARN = colored("WARNING:", 'red')
-NOTE = colored("NOTE:", 'blue')
+from ._backend import K, TF_KERAS, WARN
 
 
 def get_rnn_weights(model, layer_name=None, layer_idx=None, layer=None,

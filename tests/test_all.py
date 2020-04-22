@@ -7,10 +7,11 @@ from termcolor import cprint, colored
 from . import K
 from . import Input, LSTM, GRU, SimpleRNN, Bidirectional
 from . import Model
-from see_rnn import get_layer_gradients, get_layer_outputs, get_rnn_weights
+from see_rnn import get_gradients, get_outputs, get_weights, get_rnn_weights
 from see_rnn import weights_norm
 from see_rnn import features_0D, features_1D, features_2D
 from see_rnn import features_hist, features_hist_v2
+from see_rnn import get_full_layer_name
 from see_rnn import rnn_summary
 from see_rnn import rnn_heatmap, rnn_histogram
 
@@ -85,7 +86,7 @@ def test_main():
 
 def _test_outputs(model):
     x, _ = make_data(K.int_shape(model.input), model.layers[2].units)
-    outs = get_layer_outputs(model, x, layer_idx=1)
+    outs = get_outputs(model, x, layer_idx=1)
     features_1D(outs[:1], show_y_zero=True)
     features_1D(outs[0])
     features_2D(outs)
@@ -94,8 +95,8 @@ def _test_outputs(model):
 def _test_outputs_gradients(model):
     x, y = make_data(K.int_shape(model.input), model.layers[2].units)
     name = model.layers[1].name
-    grads_all  = get_layer_gradients(model, x, y, layer_name=name, mode='outputs')
-    grads_last = get_layer_gradients(model, x, y, layer_idx=2,     mode='outputs')
+    grads_all  = get_gradients(model, x, y, layer_name=name, mode='outputs')
+    grads_last = get_gradients(model, x, y, layer_idx=2,     mode='outputs')
 
     kwargs1 = dict(n_rows=None, show_xy_ticks=[0, 0], show_borders=True,
                    max_timesteps=50, title_mode='grads')
@@ -229,7 +230,7 @@ def test_errors():  # test Exception cases
     x, y = make_data(batch_shape, units)
     model.train_on_batch(x, y)
 
-    grads = get_layer_gradients(model, x, y, layer_idx=1)
+    grads = get_gradients(model, x, y, layer_idx=1)
     grads_4D = np.expand_dims(grads, -1)
 
     from see_rnn.inspect_gen import get_layer, _make_grads_fn
@@ -239,8 +240,8 @@ def test_errors():  # test Exception cases
     pass_on_error(features_1D, grads_4D)
     pass_on_error(features_2D, grads_4D)
     pass_on_error(features_2D, grads)
-    pass_on_error(get_layer_gradients, model, x, y, layer_idx=1, mode='cactus')
-    pass_on_error(get_layer_gradients, model, x, y, layer_idx=1,
+    pass_on_error(get_gradients, model, x, y, layer_idx=1, mode='cactus')
+    pass_on_error(get_gradients, model, x, y, layer_idx=1,
                    layer_name='gru', layer=model.layers[1])
     pass_on_error(_make_grads_fn, model, model.layers[1], mode='banana')
     pass_on_error(features_hist, grads[:, :4, :3], po='tato')
@@ -256,7 +257,7 @@ def test_errors():  # test Exception cases
     pass_on_error(features_0D, grads, cake='lie')
     pass_on_error(features_1D, grads, pup='not just any')
     pass_on_error(features_2D, grads, true=False)
-    outs = get_layer_outputs(model, x, layer_idx=1)
+    outs = get_outputs(model, x, layer_idx=1)
     pass_on_error(rnn_histogram, model, layer_idx=1, data=outs)
     pass_on_error(rnn_histogram, model, layer_idx=1, data=[1])
     pass_on_error(rnn_histogram, model, layer_idx=1, data=[[1]])
@@ -276,27 +277,38 @@ def test_misc():  # test miscellaneous functionalities
     x, y = make_data(batch_shape, units)
     model.train_on_batch(x, y)
 
-    # problem with TF2.0/2.1 graph in K.get_weights()
-    pass_on_error(weights_norm, model, 'gru', omit_weight_names='bias',
-                   verbose=1)
-    pass_on_error(weights_norm, model, 'gru')
+    weights_norm(model, 'gru', omit_weight_names='bias', verbose=1)
+    stats = weights_norm(model, 'gru')
+    weights_norm(model, 'gru', _dict=stats)
 
-    grads = get_layer_gradients(model, x, y, layer_idx=1)
+    grads = get_gradients(model, x, y, layer_idx=1)
 
-    features_1D(grads,    subplot_samples=True, tight=True, borderwidth=2)
+    features_1D(grads, subplot_samples=True, tight=True, borderwidth=2,
+                equate_axes=False)
     features_1D(grads[0], subplot_samples=True)
     features_2D(grads.T, n_rows=1.5, tight=True, borderwidth=2)
-    features_2D(grads.T[:, :, 0])
+    features_2D(grads.T[:, :, 0], norm='auto')
     features_hist(grads, show_borders=False, borderwidth=1,
                   show_xy_ticks=[0, 0], title="grads")
-    features_hist_v2(grads[:, :4, :3], show_borders=False, xlims=(-.01, .01),
-                     ylim=100, borderwidth=1, show_xy_ticks=[0, 0],
-                     side_annot='row', title="Grads")
+    features_hist_v2(list(grads[:, :4, :3]), colnames=list('abcd'),
+                     show_borders=False, xlims=(-.01, .01), ylim=100,
+                     borderwidth=1, show_xy_ticks=[0, 0], side_annot='row',
+                     title="Grads")
     rnn_histogram(model, layer_idx=1, show_xy_ticks=[0, 0], equate_axes=2)
     rnn_heatmap(model, layer_idx=1, cmap=None, normalize=True, show_borders=False)
     rnn_heatmap(model, layer_idx=1, cmap=None, norm='auto', absolute_value=True)
     rnn_heatmap(model, layer_idx=1, norm=None)
     rnn_heatmap(model, layer_idx=1, norm=(-.004, .004))
+
+    get_full_layer_name(model, name='gru')
+    get_full_layer_name(model, idx=1)
+    pass_on_error(get_full_layer_name, model, name='croc')
+
+    get_weights(model, name='gru', as_list=False)
+    get_weights(model, name='gru', as_list=True)
+    get_weights(model, name='gru/bias')
+    pass_on_error(get_weights, model, name='gru/goo')
+
 
     from see_rnn.inspect_gen import get_layer, _detect_nans
 
@@ -342,14 +354,15 @@ def test_envs():  # pseudo-tests for coverage for different env flags
 
     from importlib import reload
 
-    from see_rnn import inspect_gen, inspect_rnn, utils
+    from see_rnn import inspect_gen, inspect_rnn, utils, _backend
     for flag in ['1', '0']:
         os.environ["TF_KERAS"] = flag
         TF_KERAS = os.environ["TF_KERAS"] == '1'
+        reload(_backend)
+        reload(utils)
         reload(inspect_gen)
         reload(inspect_rnn)
-        reload(utils)
-        from see_rnn.inspect_gen import get_layer_gradients as glg
+        from see_rnn.inspect_gen import get_gradients as glg
         from see_rnn.inspect_rnn import rnn_summary as rs
         from see_rnn.utils import _validate_rnn_type as _vrt
 
@@ -370,7 +383,7 @@ def test_envs():  # pseudo-tests for coverage for different env flags
                            Model=Model)
         model = make_model(_GRU, batch_shape, new_imports=new_imports)
 
-        glg(model, x, y, layer_idx=1)
+        pass_on_error(model, x, y, layer_idx=1)  # possibly _backend-induced err
         pass_on_error(glg, model, x, y, 1)
         rs(model.layers[1])
 
