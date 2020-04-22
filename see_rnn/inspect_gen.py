@@ -124,7 +124,7 @@ def _make_grads_fn(model, layer, mode='outputs'):
     if mode not in ['outputs', 'weights']:
         raise Exception("`mode` must be one of: 'outputs', 'weights'")
 
-    params = layer.output if mode=='outputs' else layer.trainable_weights
+    params = layer.output if mode == 'outputs' else layer.trainable_weights
     grads = model.optimizer.get_gradients(model.total_loss, params)
 
     if TF_KERAS:
@@ -141,20 +141,17 @@ def get_full_layer_name(model, name=None, idx=None):
 
     Arguments:
         model: keras.Model / tf.keras.Model.
-        name: str/None. Layer name. If substring, returns earliest match.
+        name: str/None. Layer name. Returns earliest match.
         idx: int/None. Layer index. Returns model.layers[idx].name
     """
     _validate_args(name, idx, layer=None)
     if idx is not None:
         return model.layers[idx].name
 
-    layer_name = None
     for layer in model.layers:
         if name in layer.name:
-            layer_name = layer.name
-    if layer_name is None:
-        raise Exception(f"layer '{name}' not found")
-    return layer_name
+            return layer.name
+    raise Exception(f"layer '{name}' not found")
 
 
 def get_weights(model, name, as_list=False):
@@ -187,8 +184,8 @@ def get_weights(model, name, as_list=False):
         raise Exception(f"weight w/ name '{name}' not found")
 
     if as_list:
-        return [K.get_value(w) for w in weights]
-    return {name: K.get_value(w) for name, w in zip(weight_names, weights)}
+        return [K.eval(w) for w in weights]
+    return {name: K.eval(w) for name, w in zip(weight_names, weights)}
 
 
 def _detect_nans(data):
@@ -288,7 +285,7 @@ def weights_norm(model, names, _dict=None, stat_fns=(np.max, np.mean),
             for stat_idx, stat in enumerate(l2_stats):
                 stats_all[l_name][w_idx][stat_idx].append(stat)
 
-        W = layer.get_weights()
+        W = [K.eval(w) for w in layer.weights]
         w_names = [w.name for w in layer.weights]
         l_name = layer.name
 
