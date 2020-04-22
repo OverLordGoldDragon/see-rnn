@@ -278,19 +278,22 @@ def test_misc():  # test miscellaneous functionalities
     model.train_on_batch(x, y)
 
     weights_norm(model, 'gru', omit_weight_names='bias', verbose=1)
-    weights_norm(model, 'gru')
+    stats = weights_norm(model, 'gru')
+    weights_norm(model, 'gru', _dict=stats)
 
     grads = get_gradients(model, x, y, layer_idx=1)
 
-    features_1D(grads,    subplot_samples=True, tight=True, borderwidth=2)
+    features_1D(grads, subplot_samples=True, tight=True, borderwidth=2,
+                equate_axes=False)
     features_1D(grads[0], subplot_samples=True)
     features_2D(grads.T, n_rows=1.5, tight=True, borderwidth=2)
-    features_2D(grads.T[:, :, 0])
+    features_2D(grads.T[:, :, 0], norm='auto')
     features_hist(grads, show_borders=False, borderwidth=1,
                   show_xy_ticks=[0, 0], title="grads")
-    features_hist_v2(grads[:, :4, :3], show_borders=False, xlims=(-.01, .01),
-                     ylim=100, borderwidth=1, show_xy_ticks=[0, 0],
-                     side_annot='row', title="Grads")
+    features_hist_v2(list(grads[:, :4, :3]), colnames=list('abcd'),
+                     show_borders=False, xlims=(-.01, .01), ylim=100,
+                     borderwidth=1, show_xy_ticks=[0, 0], side_annot='row',
+                     title="Grads")
     rnn_histogram(model, layer_idx=1, show_xy_ticks=[0, 0], equate_axes=2)
     rnn_heatmap(model, layer_idx=1, cmap=None, normalize=True, show_borders=False)
     rnn_heatmap(model, layer_idx=1, cmap=None, norm='auto', absolute_value=True)
