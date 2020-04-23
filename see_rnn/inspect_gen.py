@@ -240,7 +240,7 @@ def weights_norm(model, names, _dict=None, stat_fns=(np.max, np.mean),
             stats_flat = []
             for w_stats in l_stats:
                 if isinstance(w_stats, list):
-                    [stats_flat.extend(s) for s in w_stats]
+                    _ = [stats_flat.extend(s) for s in w_stats]
                 else:
                     stats_flat.append(w_stats)
             return stats_flat
