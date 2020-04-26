@@ -3,23 +3,24 @@ import numpy as np
 
 from termcolor import colored
 
-from .utils import _process_rnn_args
+from .utils import _process_rnn_args, _save_rnn_fig
 from .inspect_gen import _detect_nans
 
 
-def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
-                  input_data=None, labels=None, mode='weights', equate_axes=1,
-                  data=None, **kwargs):
+# TODO: deprecate `name` & `idx` for `identifier`? (i.e. both)
+def rnn_histogram(model, name=None, idx=None, layer=None, input_data=None,
+                  labels=None, mode='weights', equate_axes=1, data=None,
+                  configs=None, **kwargs):
     """Plots histogram grid of RNN weights/gradients by kernel, gate (if gated),
        and direction (if bidirectional). Also detects NaNs and shows on plots.
 
     Arguments:
         model: keras.Model/tf.keras.Model.
-        layer_idx: int. Index of layer to fetch, via model.layers[layer_idx].
-        layer_name: str. Substring of name of layer to be fetched. Returns
-               earliest match if multiple found.
+        idx: int. Index of layer to fetch, via model.layers[idx].
+        name: str. Name of layer (can be substring) to be fetched. Returns
+              earliest match if multiple found.
         layer: keras.Layer/tf.keras.Layer. Layer whose gradients to return.
-               Overrides `layer_idx` and `layer_name`
+               Overrides `idx` and `name`
         input_data: np.ndarray & supported formats(1). Data w.r.t. which loss is
                to be computed for the gradient. Only for mode=='grads'.
         labels: np.ndarray & supported formats. Labels w.r.t. which loss is
@@ -37,8 +38,8 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
          input data formats
 
     kwargs:
-        w:   float. Scale width  of resulting plot by a factor.
-        h:  float. Scale height of resulting plot by a factor.
+        w: float. Scale width  of resulting plot by a factor.
+        h: float. Scale height of resulting plot by a factor.
         show_borders:  bool.  If True, shows boxes around plots.
         show_xy_ticks: int/bool iter. Slot 0 -> x, Slot 1 -> y.
               Ex: [1, 1] -> show both x- and y-ticks (and their labels).
@@ -46,169 +47,197 @@ def rnn_histogram(model, layer_name=None, layer_idx=None, layer=None,
         bins: int. Pyplot `hist` kwarg: number of histogram bins per subplot.
     """
 
-    w   = kwargs.get('w',  1)
-    h  = kwargs.get('h', 1)
+    w, h          = kwargs.get('w', 1), kwargs.get('h', 1)
     show_borders  = kwargs.get('show_borders', False)
-    show_xy_ticks = kwargs.get('show_xy_ticks',  [True, True])
+    show_xy_ticks = kwargs.get('show_xy_ticks', [1, 1])
     bins          = kwargs.get('bins', 150)
+    savepath      = kwargs.get('savepath', None)
+
+    def _process_configs(configs, w, h, equate_axes):
+        defaults = {
+            'plot':    dict(),
+            'subplot': dict(sharex=True, sharey=True, dpi=76, figsize=(9, 9)),
+            'title':   dict(weight='bold', fontsize=13, y=1.05),
+            'tight':   dict(),
+            'annot':     dict(fontsize=12, weight='bold',
+                              xy=(.90, .93), xycoords='axes fraction'),
+            'annot-nan': dict(fontsize=12, weight='bold', color='red',
+                              xy=(.05, .63), xycoords='axes fraction'),
+            'save': dict(),
+            }
+        configs = configs or {}
+        # override defaults, but keep those not in `configs`
+        for key in defaults:
+            defaults[key].update(configs.get(key, {}))
+        kw = defaults.copy()
+
+        if not equate_axes:
+            kw['subplot'].update({'sharex': False, 'sharey': False})
+        size = kw['subplot']['figsize']
+        kw['subplot']['figsize'] = (size[0] * w, size[1] * h)
+        return kw
 
     def _catch_unknown_kwargs(kwargs):
-        allowed_kwargs = ('w', 'h', 'show_borders',
-                          'show_xy_ticks', 'bins')
+        allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks', 'bins')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
 
-    def _pretty_hist(data, bins, ax=None):  # hist w/ looping gradient coloring
-        if ax is None:
-            N, bins, patches = plt.hist(data, bins=bins, density=True)
-        else:
-            N, bins, patches = ax.hist(data, bins=bins, density=True)
+    def _detect_and_zero_nans(matrix_data):
+        nan_txt = _detect_nans(matrix_data)
+        if nan_txt is not None:  # NaNs detected
+            matrix_data[np.isnan(matrix_data)] = 0  # set NaNs to zero
+        return matrix_data, nan_txt
 
-        if len(data) < 1000:
+    def _plot_bias(data, axes, direction_idx, bins, d, kw):
+        gs = axes[0, 0].get_gridspec()
+        for ax in axes[-1, :]:
+            ax.remove()
+        axbig = fig.add_subplot(gs[-1, :])
+
+        matrix_data = data[2 + direction_idx * 3].ravel()
+        matrix_data, nan_txt = _detect_and_zero_nans(matrix_data)
+        _pretty_hist(matrix_data, bins, ax=axbig)
+
+        d['gate_names'].append('BIAS')
+        _style_axis(axbig, gate_idx=-1, kernel_type=None, nan_txt=nan_txt,
+                    show_borders=show_borders, d=d, kw=kw)
+        for ax in axes[-2, :].flat:
+            # display x labels on bottom row above bias plot as it'll differ
+            # per bias row not sharing axes
+            ax.tick_params(axis='both', which='both', labelbottom=True)
+
+    def _pretty_hist(matrix_data, bins, ax):
+        # hist w/ looping gradient coloring & nan detection
+        N, bins, patches = ax.hist(matrix_data, bins=bins, density=True)
+
+        if len(matrix_data) < 1000:
             return  # fewer bins look better monochrome
 
-        bm = bins.max()
-        bins_norm = bins / bm
-
-        n_loops = 8  # number of gradient loops
+        bins_norm = bins / bins.max()
+        n_loops = 8   # number of gradient loops
         alpha = 0.94  # graph opacity
+
         for bin_norm, patch in zip(bins_norm, patches):
             grad = np.sin(np.pi * n_loops * bin_norm) / 15 + .04
-            color = (0.121569 + grad*1.2, 0.466667 + grad, 0.705882 + grad,
+            color = (0.121569 + grad * 1.2, 0.466667 + grad, 0.705882 + grad,
                      alpha)  # [.121569, .466667, ...] == matplotlib default blue
             patch.set_facecolor(color)
 
     def _get_axes_extrema(axes):
         axes = np.array(axes)
-        is_bidir = len(axes.shape)==3 and axes.shape[0]!=1
+        is_bidir = len(axes.shape) == 3 and axes.shape[0] != 1
         x_new, y_new = [], []
 
         for direction_idx in range(1 + is_bidir):
             axis = np.array(axes[direction_idx]).T
-            for type_idx in range(2):  # 2 = len(kernel_types)
+            for type_idx in range(2):  # 2 == len(kernel_types)
                 x_new += [np.max(np.abs([ax.get_xlim() for ax in axis[type_idx]]))]
                 y_new += [np.max(np.abs([ax.get_ylim() for ax in axis[type_idx]]))]
         return max(x_new), max(y_new)
 
-    def _set_axes_limits(axes, x_new, y_new):
+    def _set_axes_limits(axes, x_new, y_new, d):
         axes = np.array(axes)
-        is_bidir = len(axes.shape)==3 and axes.shape[0]!=1
+        is_bidir = len(axes.shape) == 3 and axes.shape[0] != 1
 
         for direction_idx in range(1 + is_bidir):
             axis = np.array(axes[direction_idx]).T
             for type_idx in range(2):
-                for gate_idx in range(num_gates):
+                for gate_idx in range(d['n_gates']):
                     axis[type_idx][gate_idx].set_xlim(-x_new, x_new)
                     axis[type_idx][gate_idx].set_ylim(0,      y_new)
 
-    def _unpack_rnn_info(rnn_info):
-        d = rnn_info
-        return (d['rnn_type'], d['gate_names'], d['num_gates'],
-                d['rnn_dim'],  d['is_bidir'],   d['uses_bias'],
-                d['direction_names'])
+    def _style_axis(ax, gate_idx, kernel_type, nan_txt, show_borders, d, kw):
+        if nan_txt is not None:
+            ax.annotate(nan_txt, **kw['annot-nan'])
 
+        is_gated = d['rnn_type'] in gated_types
+        if gate_idx == 0:
+            title = kernel_type + ' GATES' * is_gated
+            ax.set_title(title, weight='bold')
+        if is_gated:
+            ax.annotate(d['gate_names'][gate_idx], **kw['annot'])
+
+        if not show_borders:
+            ax.set_frame_on(False)
+        if not show_xy_ticks[0]:
+            ax.set_xticks([])
+        if not show_xy_ticks[1]:
+            ax.set_yticks([])
+
+    def _get_plot_data(data, direction_idx, type_idx, gate_idx, d):
+        matrix_idx = type_idx + direction_idx * (2 + d['uses_bias'])
+        matrix_data = data[matrix_idx]
+
+        if d['rnn_type'] in d['gated_types']:
+            start = gate_idx * d['rnn_dim']
+            end   = start + d['rnn_dim']
+            matrix_data = matrix_data[:, start:end]
+        return matrix_data.ravel()
+
+    kw = _process_configs(configs, w, h, equate_axes)
     _catch_unknown_kwargs(kwargs)
-    data, rnn_info = _process_rnn_args(model, layer_name, layer_idx, layer,
-                                       input_data, labels, mode, data)
-    (rnn_type, gate_names, num_gates, rnn_dim,
-     is_bidir, uses_bias, direction_names) = _unpack_rnn_info(rnn_info)
-    gated_types  = ['LSTM', 'GRU', 'CuDNNLSTM', 'CuDNNGRU']
-    kernel_types = ['KERNEL', 'RECURRENT']
+    data, rnn_info = _process_rnn_args(model, name, idx, layer, input_data,
+                                       labels, mode, data)
+    d = rnn_info
+    gated_types  = ('LSTM', 'GRU', 'CuDNNLSTM', 'CuDNNGRU')
+    kernel_types = ('KERNEL', 'RECURRENT')
+    d.update({'gated_types': gated_types, 'kernel_types': kernel_types})
 
-    axes = []
-    for direction_idx, direction_name in enumerate(direction_names):
-        share = (equate_axes >= 1)
-        _, subplot_axes = plt.subplots(num_gates, 2, sharex=share, sharey=share)
-        if num_gates == 1:
-            subplot_axes = np.expand_dims(subplot_axes, 0)
-        axes.append(subplot_axes)
+    subplots_axes = []
+    subplots_figs = []
+    for direction_idx, direction_name in enumerate(d['direction_names']):
+        n_rows = d['n_gates'] + d['uses_bias']
+        fig, axes = plt.subplots(n_rows, 2, **kw['subplot'])
+        axes = np.atleast_2d(axes)
+        subplots_axes.append(axes)
+        subplots_figs.append(fig)
+
         if direction_name != []:
-            plt.suptitle(direction_name + ' LAYER', weight='bold', y=1.05,
-                         fontsize=13)
+            plt.suptitle(direction_name + ' LAYER', **kw['title'])
 
         for type_idx, kernel_type in enumerate(kernel_types):
-            for gate_idx in range(num_gates):
-                ax = subplot_axes[gate_idx][type_idx]
-                matrix_idx = type_idx + direction_idx*(2 + uses_bias)
-                matrix_data = data[matrix_idx]
+            for gate_idx in range(d['n_gates']):
+                ax = axes[gate_idx][type_idx]
+                matrix_data = _get_plot_data(data, direction_idx,
+                                             type_idx, gate_idx, d)
 
-                if rnn_type in gated_types:
-                    start = gate_idx * rnn_dim
-                    end   = start + rnn_dim
-                    matrix_data = matrix_data[:, start:end]
-                matrix_data = matrix_data.ravel()
-
-                nan_txt = _detect_nans(matrix_data)
-                if nan_txt is not None:  # NaNs detected
-                    matrix_data[np.isnan(matrix_data)] = 0  # set NaNs to zero
+                matrix_data, nan_txt = _detect_and_zero_nans(matrix_data)
                 _pretty_hist(matrix_data, bins=bins, ax=ax)
 
-                if nan_txt is not None:
-                    ax.annotate(nan_txt, fontsize=12, weight='bold', color='red',
-                                xy=(0.05, 0.63), xycoords='axes fraction')
-                if gate_idx == 0:
-                    title = kernel_type + ' GATES' * (rnn_type in gated_types)
-                    ax.set_title(title, weight='bold')
-                if rnn_type in gated_types:
-                    ax.annotate(gate_names[gate_idx], fontsize=12, weight='bold',
-                                xy=(0.90, 0.93), xycoords='axes fraction')
+                _style_axis(ax, gate_idx, kernel_type, nan_txt, show_borders,
+                            d, kw)
+        if d['uses_bias']:
+            _plot_bias(data, axes, direction_idx, bins, d, kw)
 
-                if not show_borders:
-                    ax.set_frame_on(False)
-                if not show_xy_ticks[0]:
-                    ax.set_xticks([])
-                if not show_xy_ticks[1]:
-                    ax.set_yticks([])
-
-        plt.tight_layout()
-        plt.gcf().set_size_inches(11 * w, 4.5 * h)
-
-        if uses_bias:  # does not equate axes
-            plt.figure(figsize=(11 * w, 4.5 * h))
-            plt.subplot(num_gates + 1, 2, (2 * num_gates + 1, 2 * num_gates + 2))
-
-            matrix_data = data[2 + direction_idx*3].ravel()
-            nan_txt = _detect_nans(matrix_data)
-            if nan_txt is not None:  # NaNs detected
-                matrix_data[np.isnan(matrix_data)] = 0  # set NaNs to zero
-
-            _pretty_hist(matrix_data, bins)
-
-            if nan_txt is not None:
-                plt.annotate(nan_txt, fontsize=12, weight='bold', color='red',
-                             xy=(0.05, 0.63), xycoords='axes fraction')
-            plt.box(on=None)
-            plt.annotate('BIAS', fontsize=12, weight='bold',
-                         xy=(0.90, 0.93), xycoords='axes fraction')
-            plt.tight_layout()
-            plt.gcf().set_size_inches(11*w, 4.5*h)
-            if not show_xy_ticks[0]:
-                plt.gca().set_xticks([])
-            if not show_xy_ticks[1]:
-                plt.gca().set_yticks([])
+        if kw['tight']:
+            fig.subplots_adjust(**kw['tight'])
+        else:
+            fig.tight_layout()
 
     if equate_axes == 2:
-        x_new, y_new = _get_axes_extrema(axes)
-        _set_axes_limits(axes, x_new, y_new)
+        x_new, y_new = _get_axes_extrema(subplots_axes)
+        _set_axes_limits(subplots_axes, x_new, y_new, d)
 
     plt.show()
-    return axes
+    if savepath is not None:
+        _save_rnn_fig(subplots_figs, savepath, kw['save'])
+    return subplots_figs, subplots_axes
 
 
-def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
-                input_data=None, labels=None, mode='weights', cmap='bwr',
-                norm='auto', data=None, **kwargs):
+def rnn_heatmap(model, name=None, idx=None, layer=None, input_data=None,
+                labels=None, mode='weights', cmap='bwr',
+                norm='auto', data=None, configs=None, **kwargs):
     """Plots histogram grid of RNN weights/gradients by kernel, gate (if gated),
        and direction (if bidirectional). Also detects NaNs and prints in console.
 
     Arguments:
         model: keras.Model/tf.keras.Model.
-        layer_idx: int. Index of layer to fetch, via model.layers[layer_idx].
-        layer_name: str. Substring of name of layer to be fetched. Returns
-               earliest match if multiple found.
+        idx: int. Index of layer to fetch, via model.layers[idx].
+        name: str. Name of layer (can be substring) to be fetched. Returns
+              earliest match if multiple found.
         layer: keras.Layer/tf.keras.Layer. Layer whose gradients to return.
-               Overrides `layer_idx` and `layer_name`
+               Overrides `idx` and `name`
         input_data: np.ndarray & supported formats(1). Data w.r.t. which loss is
                to be computed for the gradient. Only for mode=='grads'.
         labels: np.ndarray & supported formats. Labels w.r.t. which loss is
@@ -233,8 +262,8 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
          input data formats
 
     kwargs:
-        w:   float. Scale width  of resulting plot by a factor.
-        h:  float. Scale height of resulting plot by a factor.
+        w: float. Scale width  of resulting plot by a factor.
+        h: float. Scale height of resulting plot by a factor.
         show_borders:  bool. If True, shows boxes around plots.
         show_colorbar: bool. If True, shows one colorbar next to plot(s).
         show_bias:     bool. If True, includes plot for bias (if layer uses bias)
@@ -248,22 +277,86 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
               before `normalize`.
     """
 
-    w    = kwargs.get('w',  1)
-    h   = kwargs.get('h', 1)
+    w, h           = kwargs.get('w', 1), kwargs.get('h', 1)
     show_borders   = kwargs.get('show_borders',  True)
     show_colorbar  = kwargs.get('show_colorbar', True)
     show_bias      = kwargs.get('show_bias', True)
     gate_sep_width = kwargs.get('gate_sep_width', 1)
     normalize      = kwargs.get('normalize', False)
     absolute_value = kwargs.get('absolute_value', False)
+    savepath       = kwargs.get('savepath', None)
+
+    def _process_configs(configs, w, h):
+        defaults = {
+            'plot':      dict(),
+            'subplot':   dict(dpi=76, figsize=(14, 8)),
+            'title':     dict(weight='bold', fontsize=14, y=.98),
+            'subtitle':  dict(weight='bold', fontsize=14),
+            'xlabel':    dict(fontsize=12, weight='bold'),
+            'ylabel':    dict(fontsize=12, weight='bold'),
+            'tight':     dict(),
+            'annot':     dict(fontsize=12, weight='bold',
+                              xy=(.90, .93), xycoords='axes fraction'),
+            'annot-nan': dict(fontsize=12, weight='bold', color='red',
+                              xy=(.05, .63), xycoords='axes fraction'),
+            'colorbar':  dict(fraction=.03),
+            'save':      dict(),
+            }
+        configs = configs or {}
+        # override defaults, but keep those not in `configs`
+        for key in defaults:
+            defaults[key].update(configs.get(key, {}))
+        kw = defaults.copy()
+
+        size = kw['subplot']['figsize']
+        kw['subplot']['figsize'] = (size[0] * w, size[1] * h)
+        return kw
 
     def _catch_unknown_kwargs(kwargs):
-        allowed_kwargs = ('w', 'h', 'show_borders',
-                          'show_colorbar', 'show_bias', 'gate_sep_width',
-                          'normalize', 'absolute_value')
+        allowed_kwargs = ('w', 'h', 'show_borders', 'show_colorbar',
+                          'show_bias', 'gate_sep_width', 'normalize',
+                          'absolute_value')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
+
+    def _process_data(data, absolute_value, normalize):
+        if absolute_value:
+            data = np.abs(data)
+        if normalize:
+            for idx in range(len(data)):
+                data[idx] -= np.min(data[idx])
+                if np.max(data[idx]) == 0:
+                    data[idx] = -data[idx]
+                else:
+                    data[idx] /= np.max(data[idx])
+        return data
+
+    def _get_style_info(cmap, norm, d):
+        def _make_common_norm(data):
+            idxs = [0, 1] + [2, 3] * (len(data) == 4) + [3, 4] * (len(data) == 6)
+            return np.max([np.max(np.abs(data[idx])) for idx in idxs])
+
+        if cmap is None:
+            cmap = plt.cm.bone
+
+        if norm == 'auto':
+            if absolute_value:
+                vmin, vmax = None, None
+            else:
+                vmax = _make_common_norm(data)
+                vmin = -vmax
+        elif norm is None:
+            vmin, vmax = None, None
+        else:
+            vmin, vmax = norm
+
+        if d['gate_names'][0] != '':
+            gate_names_str = '(%s)' % ', '.join(d['gate_names'])
+        else:
+            gate_names_str = ''
+
+        return cmap, vmin, vmax, gate_names_str
 
     def _print_nans(nan_txt, matrix_data, kernel_type, gate_names, rnn_dim):
         if gate_names[0] == '':
@@ -272,9 +365,9 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
             print(colored(nan_txt, 'red'))
         else:
             print('\n' + kernel_type + ":")
-            num_gates = len(gate_names)
+            n_gates = len(gate_names)
             gates_data = []
-            for gate_idx in range(num_gates):
+            for gate_idx in range(n_gates):
                 start, end = rnn_dim*gate_idx, rnn_dim*(gate_idx + 1)
                 gates_data.append(matrix_data[..., start:end])
 
@@ -284,111 +377,112 @@ def rnn_heatmap(model, layer_name=None, layer_idx=None, layer=None,
                     nan_txt = nan_txt.replace('\n', '')
                     print(gate_name + ':', colored(nan_txt, 'red'))
 
-    def _make_common_norm(data):
-        idxs = [0, 1] + [2, 3]*(len(data) == 4) + [3, 4]*(len(data) == 6)
-        return np.max([np.max(np.abs(data[idx])) for idx in idxs])
+    def _detect_and_print_nans(matrix_data, kernel_type, d):
+        nan_txt = _detect_nans(matrix_data)
+        if nan_txt is not None:
+            _print_nans(nan_txt, matrix_data, kernel_type,
+                        d['gate_names'], d['rnn_dim'])
 
-    def _unpack_rnn_info(rnn_info):
-        d = rnn_info
-        return (d['rnn_type'], d['gate_names'], d['num_gates'],
-                d['rnn_dim'],  d['is_bidir'],   d['uses_bias'],
-                d['direction_names'])
+    def _style_axis(ax, type_idx, kernel_type, show_borders, is_vector, d, kw):
+        if is_vector:
+            ax.set_xticks([])
+
+        if d['gate_sep_width'] != 0:
+            lw = d['gate_sep_width']
+            [ax.axvline(d['rnn_dim'] * gate_idx - .5, linewidth=lw, color='k')
+             for gate_idx in range(1, d['n_gates'])]
+
+        ax.set_title(kernel_type, **kw['subtitle'])
+        ax.set_xlabel(d['gate_names_str'], **kw['xlabel'])
+        y_label = ['Channel units', 'Hidden units'][type_idx]
+        ax.set_ylabel(y_label, **kw['ylabel'])
+
+        if not show_borders:
+            ax.set_frame_on(False)
+
+    def _make_subplots(show_bias, direction_name, d, kw):
+        if not (d['uses_bias'] and show_bias):
+            fig, axes = plt.subplots(1, 2, **kw['subplot'])
+            if axes.ndim == 1:
+                axes = np.expand_dims(axes, -1)
+            return fig, axes
+
+        fig, axes = plt.subplots(12, 2, **kw['subplot'])
+
+        # merge upper 11 axes to increase height ratio w.r.t. bias plot window
+        gs = axes[0, 0].get_gridspec()
+        for ax in axes.flat[:22]:
+            ax.remove()
+        axbig1 = fig.add_subplot(gs[:10, 0])
+        axbig2 = fig.add_subplot(gs[:10, 1])
+        axes = np.array([[axbig1, axbig2], [*axes.flat[-2:]]])
+        if axes.ndim == 1:
+            axes = np.expand_dims(axes, -1)
+
+        if direction_name != []:
+            fig.suptitle(direction_name + ' LAYER', **kw['title'])
+        return fig, axes
 
     _catch_unknown_kwargs(kwargs)
-    data, rnn_info = _process_rnn_args(model, layer_name, layer_idx, layer,
+    kw = _process_configs(configs, w, h)
+    data, rnn_info = _process_rnn_args(model, name, idx, layer,
                                        input_data, labels, mode, data, norm)
-    (rnn_type, gate_names, num_gates, rnn_dim,
-     is_bidir, uses_bias, direction_names) = _unpack_rnn_info(rnn_info)
+    d = rnn_info
+    d['gate_sep_width'] = gate_sep_width
 
-    if cmap is None:
-        cmap = plt.cm.bone
-    if absolute_value:
-        data = np.abs(data)
-    if normalize:
-        for idx in range(len(data)):
-            data[idx] -= np.min(data[idx])
-            if np.max(data[idx]) == 0:
-                data[idx] = -data[idx]
-            else:
-                data[idx] /= np.max(data[idx])
+    data = _process_data(data, absolute_value, normalize)
+    cmap, vmin, vmax, d['gate_names_str'] = _get_style_info(cmap, norm, d)
+    kernel_types = ['KERNEL', 'RECURRENT']
 
-    if norm=='auto':
-        if absolute_value:
-            vmin, vmax = None, None
-        else:
-            vmax = _make_common_norm(data)
-            vmin = -vmax
-    elif norm is None:
-        vmin, vmax = None, None
-    else:
-        vmin, vmax = norm
+    subplots_axes = []
+    subplots_figs = []
+    for direction_idx, direction_name in enumerate(d['direction_names']):
+        fig, axes = _make_subplots(show_bias, direction_name, d, kw)
+        subplots_axes.append(axes)
+        subplots_figs.append(fig)
 
-    if gate_names[0] != '':
-        gate_names_str = '(%s)' % ', '.join(gate_names)
-    else:
-        gate_names_str = ''
-
-    for direction_idx, direction_name in enumerate(direction_names):
-        fig = plt.figure(figsize=(14 * w, 5 * h))
-        axes = []
-        if direction_name != []:
-            plt.suptitle(direction_name + ' LAYER', weight='bold', y=.98,
-                         fontsize=13)
-
-        for type_idx, kernel_type in enumerate(['KERNEL', 'RECURRENT']):
-            ax = plt.subplot(1, 2, type_idx + 1)
-            axes.append(ax)
-            w_idx = type_idx + direction_idx*(2 + uses_bias)
+        ez = lambda *x: enumerate(zip(*x))
+        for type_idx, (kernel_type, ax) in ez(kernel_types, axes.flat):
+            w_idx = type_idx + direction_idx * (2 + d['uses_bias'])
             matrix_data = data[w_idx]
+            _detect_and_print_nans(matrix_data, kernel_type, d)
 
             is_vector = (len(matrix_data.shape) == 1)
             if is_vector:
                 matrix_data = np.expand_dims(matrix_data, -1)
 
-            nan_txt = _detect_nans(matrix_data)
-            if nan_txt is not None:
-                _print_nans(nan_txt, matrix_data, kernel_type,
-                            gate_names, rnn_dim)
-
             aspect = 20 / len(matrix_data) if is_vector else 'auto'
             img = ax.imshow(matrix_data, cmap=cmap, interpolation='nearest',
                             aspect=aspect, vmin=vmin, vmax=vmax)
-            if is_vector:
-                ax.set_xticks([])
-
-            if gate_sep_width != 0:
-                lw = gate_sep_width
-                [ax.axvline(rnn_dim * gate_idx - .5, linewidth=lw, color='k')
-                 for gate_idx in range(1, num_gates)]
-
-            # Styling
-            ax.set_title(kernel_type, fontsize=14, weight='bold')
-            ax.set_xlabel(gate_names_str, fontsize=12, weight='bold')
-            y_label = ['Channel units', 'Hidden units'][type_idx]
-            ax.set_ylabel(y_label, fontsize=12, weight='bold')
-
-            fig.set_size_inches(14*w, 5*h)
-            if not show_borders:
-                ax.set_frame_on(False)
+            _style_axis(ax, type_idx, kernel_type, show_borders, is_vector,
+                        d, kw)
 
         if is_vector:
             plt.subplots_adjust(right=.7, wspace=-.4)
         if show_colorbar:
-            fig.colorbar(img, ax=axes)
+            fig.colorbar(img, ax=axes[0, :], **kw['colorbar'])
 
-        if uses_bias and show_bias:  # does not equate axes
-            plt.figure(figsize=(14*w, 1*h))
-            plt.subplot(num_gates+1, 2, (2*num_gates + 1, 2*num_gates + 2))
-            weights_viz = np.atleast_2d(data[2 + direction_idx*(2 + uses_bias)])
+        if d['uses_bias'] and show_bias:
+            for ax in axes[-1, :]:
+                ax.remove()
+            gs = axes[0, 0].get_gridspec()
+            axbig = fig.add_subplot(gs[-1, :])
 
-            plt.imshow(weights_viz, cmap=cmap, interpolation='nearest',
-                       aspect='auto', vmin=vmin, vmax=vmax)
-            if gate_sep_width != 0:
-                lw = gate_sep_width
-                [plt.axvline(rnn_dim * gate_idx - .5, linewidth=lw, color='k')
-                 for gate_idx in range(1, num_gates)]
+            data_idx = 2 + direction_idx * (2 + d['uses_bias'])
+            weights_viz = np.atleast_2d(data[data_idx])
 
+            axbig.imshow(weights_viz, cmap=cmap, interpolation='nearest',
+                         aspect=1/5, vmin=vmin, vmax=vmax)
             # Styling
-            plt.box(on=None)
-            plt.title('BIAS', fontsize=12, weight='bold')
-            plt.gca().get_yaxis().set_ticks([])
+            if d['gate_sep_width'] != 0:
+                lw = d['gate_sep_width']
+                [axbig.axvline(d['rnn_dim'] * gate_idx - .5, linewidth=lw,
+                               color='k') for gate_idx in range(1, d['n_gates'])]
+            axbig.set_frame_on(False)
+            axbig.set_title('BIAS', **kw['subtitle'])
+            axbig.get_yaxis().set_ticks([])
+
+    plt.show()
+    if savepath is not None:
+        _save_rnn_fig(subplots_figs, savepath, kw['save'])
+    return subplots_figs, subplots_axes

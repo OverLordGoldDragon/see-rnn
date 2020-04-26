@@ -23,6 +23,7 @@ def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs
         configs: dict. kwargs to customize various plot schemes:
             'plot':  passed to plt.scatter()
             'title': passed to plt.suptitle()
+            'save':  passed to fig.savefig() if `savepath` is not None.
 
     kwargs:
         w: float. Scale width  of resulting plot by a factor.
@@ -35,18 +36,22 @@ def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs
         show_y_zero: bool. If True, draws y=0.
         ylims: str ('auto'); float list/tuple. Plot y-limits; if 'auto',
                sets both lims to max of abs(`data`) (such that y=0 is centered).
+        savepath: str/None. Path to save resulting figure to. Also see `configs`.
+               If None, doesn't save.
     """
 
     w, h         = kwargs.get('w', 1), kwargs.get('h', 1)
     show_borders = kwargs.get('show_borders', False)
-    title_mode   = kwargs.get('title_mode',   'outputs')
-    show_y_zero  = kwargs.get('show_y_zero',  True)
+    title_mode   = kwargs.get('title_mode', 'outputs')
+    show_y_zero  = kwargs.get('show_y_zero', True)
     ylims        = kwargs.get('ylims', 'auto')
+    savepath     = kwargs.get('savepath', None)
 
     def _process_configs(configs, w, h):
         defaults = {
             'plot':  dict(s=15, linewidth=2),
             'title': dict(weight='bold', fontsize=14),
+            'save':  dict(),
             }
         configs = configs or {}
         # override defaults, but keep those not in `configs`
@@ -102,8 +107,12 @@ def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs
         plt.title(title, **kw['title'])
     if not show_borders:
         plt.box(None)
-    plt.gcf().set_size_inches(12 * w, 4 * h)
+
+    fig = plt.gcf()
+    fig.set_size_inches(12 * w, 4 * h)
     plt.show()
+    if savepath is not None:
+        fig.savefig(savepath, **kw['save'])
 
 
 def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
@@ -160,6 +169,7 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
     tight         = kwargs.get('tight', False)
     borderwidth   = kwargs.get('borderwidth', None)
     color         = kwargs.get('color', None)
+    savepath      = kwargs.get('savepath', None)
 
     def _process_configs(configs, w, h, tight, equate_axes):
         defaults = {
@@ -168,7 +178,8 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
             'title':   dict(weight='bold', fontsize=14, y=.93 + .12 * tight),
             'tight':   dict(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0),
             'annot':   dict(weight='bold', fontsize=16, color='g',
-                            xy=(.03, .9), xycoords='axes fraction')
+                            xy=(.03, .9), xycoords='axes fraction'),
+            'save':    dict(),
             }
         configs = configs or {}
         # override defaults, but keep those not in `configs`
@@ -276,7 +287,10 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
     if borderwidth is not None:
         for ax in axes.flat:
             [s.set_linewidth(borderwidth) for s in ax.spines.values()]
+
     plt.show()
+    if savepath is not None:
+        fig.savefig(savepath, **kw['save'])
 
 
 def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
@@ -340,6 +354,7 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
     tight          = kwargs.get('tight', False)
     channel_axis   = kwargs.get('channel_axis', -1)
     borderwidth    = kwargs.get('borderwidth', None)
+    savepath       = kwargs.get('savepath', None)
 
     def _process_configs(configs, w, h, tight):
         defaults = {
@@ -348,6 +363,7 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
             'title':   dict(weight='bold', fontsize=14, y=.93 + .12 * tight),
             'tight':   dict(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0),
             'colorbar': dict(),
+            'save':     dict(),
             }
         configs = configs or {}
         # override defaults, but keep those not in `configs`
@@ -451,7 +467,10 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
     if borderwidth is not None:
         for ax in axes.flat:
             [s.set_linewidth(borderwidth) for s in ax.spines.values()]
+
     plt.show()
+    if savepath is not None:
+        fig.savefig(savepath, **kw['save'])
 
 
 def _get_nrows_and_ncols(n_rows, n_subplots):
@@ -509,6 +528,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
     title         = kwargs.get('title', None)
     borderwidth   = kwargs.get('borderwidth', None)
     annotations   = kwargs.get('annotations', 'auto')
+    savepath      = kwargs.get('savepath', None)
 
     def _process_configs(configs, w, h, tight):
         defaults = {
@@ -518,6 +538,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             'tight':   dict(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0),
             'annot':   dict(weight='bold', fontsize=14, xy=(.02, .7),
                             xycoords='axes fraction', color='g'),
+            'sasve':   dict(),
             }
         configs = configs or {}
         # override defaults, but keep those not in `configs`
@@ -579,7 +600,10 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
     if borderwidth is not None:
         for ax in axes.flat:
             [s.set_linewidth(borderwidth) for s in ax.spines.values()]
+
     plt.show()
+    if savepath is not None:
+        fig.savefig(savepath, **kw['save'])
 
 
 def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
@@ -627,6 +651,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
     show_xy_ticks = kwargs.get('show_xy_ticks', [1, 1])
     title         = kwargs.get('title', None)
     borderwidth   = kwargs.get('borderwidth', None)
+    savepath      = kwargs.get('savepath', None)
 
     def _process_configs(configs, w, h):
         defaults = {
@@ -639,6 +664,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
             'colnames':   dict(weight='bold', fontsize=14),
             'side_annot': dict(weight='bold', fontsize=14,
                                xy=(1.02, .5), xycoords='axes fraction'),
+            'save': dict(),
             }
         configs = configs or {}
         # override defaults, but keep those not in `configs`
@@ -704,4 +730,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
     if borderwidth is not None:
         for ax in axes.flat:
             [s.set_linewidth(borderwidth) for s in ax.spines.values()]
+
     plt.show()
+    if savepath is not None:
+        fig.savefig(savepath, **kw['save'])

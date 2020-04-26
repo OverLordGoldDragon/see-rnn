@@ -1,21 +1,36 @@
 import numpy as np
+from pathlib import Path
 from ._backend import K, WARN, NOTE
 
 
-def _validate_args(layer_name, layer_idx, layer):
-    find_layer = layer_idx is not None or layer_name is not None
+def _validate_args(name, idx, layer):
+    def _ensure_list(name, idx, layer):
+        # if None, leave as-is
+        name, idx, layer = [[x] if not isinstance(x, (list, type(None))) else x
+                            for x in (name, idx, layer)]
+        # ensure external lists unaffected
+        name, idx, layer = [x.copy() if isinstance(x, list) else x
+                            for x in (name, idx, layer)]
+        return name, idx, layer
+
+    def _one_requested(name, idx, layer):
+        return len(layer or name or idx) == 1  # give `layer` precedence
+
+    find_layer = idx is not None or name is not None
     if find_layer and layer is not None:
-        print(WARN, "`layer` will override `layer_idx` & `layer_name`")
+        print(WARN, "`layer` will override `idx` & `name`")
 
     if layer is None:
-        no_info  = layer_idx is None and layer_name is None
-        too_much_info = layer_idx is not None and layer_name is not None
+        no_info  = idx is None and name is None
+        too_much_info = idx is not None and name is not None
         if no_info or too_much_info:
-            raise Exception("must supply one (and only one) of "
-                            "`layer_idx`, `layer_name`")
+            raise Exception("supply one (and only one) of `idx`, `name`")
+
+    name, idx, layer = _ensure_list(name, idx, layer)
+    return name, idx, layer, _one_requested(name, idx, layer)
 
 
-def _process_rnn_args(model, layer_name, layer_idx, layer, input_data, labels,
+def _process_rnn_args(model, name, idx, layer, input_data, labels,
                       mode, data=None, norm=None):
     """Helper method to validate `input_data` & `labels` dims, layer info args,
        `mode` arg, and fetch various pertinent RNN attributes.
@@ -24,9 +39,9 @@ def _process_rnn_args(model, layer_name, layer_idx, layer, input_data, labels,
     from .inspect_gen import get_layer, get_gradients
     from .inspect_rnn import get_rnn_weights
 
-    def _validate_args_(layer_name, layer_idx, layer, input_data, labels,
+    def _validate_args_(name, idx, layer, input_data, labels,
                         mode, norm, data):
-        _validate_args(layer_name, layer_idx, layer)
+        _validate_args(name, idx, layer)
 
         if data is not None:
             got_inputs = (input_data is not None) or (labels is not None)
@@ -59,15 +74,13 @@ def _process_rnn_args(model, layer_name, layer_idx, layer, input_data, labels,
             raise Exception("`norm` must be None, 'auto' or iterable ( "
                             + "list, tuple, np.ndarray) of length 2")
 
-    _validate_args_(layer_name, layer_idx, layer,
-                    input_data, labels, mode, norm, data)
-
+    _validate_args_(name, idx, layer, input_data, labels, mode, norm, data)
     if layer is None:
-        layer = get_layer(model, layer_name, layer_idx)
+        layer = get_layer(model, name, idx)
     rnn_type = _validate_rnn_type(layer, return_value=True)
 
     gate_names = _rnn_gate_names(rnn_type)
-    num_gates  = len(gate_names)
+    n_gates  = len(gate_names)
     is_bidir   = hasattr(layer, 'backward_layer')
     rnn_dim    = layer.layer.units if is_bidir else layer.units
     direction_names = ['FORWARD', 'BACKWARD'] if is_bidir else [[]]
@@ -78,14 +91,14 @@ def _process_rnn_args(model, layer_name, layer_idx, layer, input_data, labels,
 
     if data is None:
         if mode=='weights':
-            data = get_rnn_weights(model, layer_name, layer_idx,
-                                   as_tensors=False, concat_gates=True)
+            data = get_rnn_weights(model, name, idx, as_tensors=False,
+                                   concat_gates=True)
         else:
             data = get_gradients(model, input_data, labels,
-                                       layer=layer, mode='weights')
+                                 layer=layer, mode='weights')
 
     rnn_info = dict(rnn_type=rnn_type, gate_names=gate_names,
-                    num_gates=num_gates, is_bidir=is_bidir,
+                    n_gates=n_gates, is_bidir=is_bidir,
                     rnn_dim=rnn_dim, uses_bias=uses_bias,
                     direction_names=direction_names)
     return data, rnn_info
@@ -124,3 +137,29 @@ def K_eval(x, backend=K):
     except Exception as e:
         eval_fn = K.function([], [x])
         return eval_fn([])[0]
+
+
+def _filter_duplicates_by_keys(keys, *data):
+    collected = []
+    for k in keys:
+        if k in collected:
+            for i in range(len(data)):
+                data[i].pop(keys.index(k))
+            keys.pop(keys.index(k))
+            collected.append(k)
+    if isinstance(data, tuple) and len(data) == 1:
+        data = data[0]
+    return keys, data
+
+def _save_rnn_fig(figs, savepath, kwargs):
+    if len(figs) == 1:
+        figs[0].savefig(savepath)
+        return
+
+    _dir = str(Path(savepath).parent)
+    ext = Path(savepath).suffix
+    basename = Path(savepath).stem
+    names = [basename + '_0', basename + '_1']
+
+    for fig, name in zip(figs, names):
+        fig.savefig(Path(_dir).joinpath(name, ext), **kwargs)

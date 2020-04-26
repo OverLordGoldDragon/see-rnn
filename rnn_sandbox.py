@@ -67,42 +67,42 @@ def train_model(model, iterations):
         if i % 40 == 0:
             x, y = make_data(batch_shape, units)
 
-def viz_outs(model, layer_idx=1):
+def viz_outs(model, idx=1):
     x, y = make_data(K.int_shape(model.input), model.layers[2].units)
-    outs = get_outputs(model, x, layer_idx=layer_idx)
+    outs = get_outputs(model, x, idx=idx)
 
     features_1D(outs[:1], n_rows=8, show_borders=False)
     features_2D(outs,     n_rows=8, norm=(-1,1))
 
-def viz_weights(model, layer_idx=1):
-    rnn_histogram(model, layer_idx=layer_idx, mode='weights', bins=400)
+def viz_weights(model, idx=1):
+    rnn_histogram(model, idx=idx, mode='weights', bins=400)
     print('\n')
-    rnn_heatmap(model,   layer_idx=layer_idx, mode='weights', norm='auto')
+    rnn_heatmap(model,   idx=idx, mode='weights', norm='auto')
 
-def viz_outs_grads(model, layer_idx=1):
+def viz_outs_grads(model, idx=1):
     x, y = make_data(K.int_shape(model.input), model.layers[2].units)
-    grads = get_gradients(model, x, y, layer_idx=layer_idx)
+    grads = get_gradients(model, x, y, idx=idx)
     kws = dict(n_rows=8, title_mode='grads')
 
     features_1D(grads[0], show_borders=False, **kws)
     features_2D(grads,    norm=(-1e-4, 1e-4), **kws)
 
-def viz_outs_grads_last(model, layer_idx=2):  # return_sequences=False layer
+def viz_outs_grads_last(model, idx=2):  # return_sequences=False layer
     x, y = make_data(K.int_shape(model.input), model.layers[2].units)
-    grads = get_gradients(model, x, y, layer_idx=layer_idx)
+    grads = get_gradients(model, x, y, idx=idx)
     features_0D(grads)
 
-def viz_weights_grads(model, layer_idx=1):
+def viz_weights_grads(model, idx=1):
     x, y = make_data(K.int_shape(model.input), model.layers[2].units)
-    kws = dict(layer_idx=layer_idx, input_data=x, labels=y)
+    kws = dict(idx=idx, input_data=x, labels=y)
 
     rnn_histogram(model, mode='grads', bins=400, **kws)
     print('\n')
     rnn_heatmap(model,   mode='grads', cmap=None, absolute_value=True, **kws)
 
-def viz_prefetched_data(model, data, layer_idx=1):
-    rnn_histogram(model, layer_idx=layer_idx, data=data)
-    rnn_heatmap(model,   layer_idx=layer_idx, data=data)
+def viz_prefetched_data(model, data, idx=1):
+    rnn_histogram(model, idx=idx, data=data)
+    rnn_heatmap(model,   idx=idx, data=data)
 
 ###############################################################################
 units = 64
@@ -117,5 +117,5 @@ viz_outs_grads_last(model, 2)
 viz_weights(model, 1)
 viz_weights_grads(model, 1)
 
-data = get_rnn_weights(model, layer_idx=1)
+data = get_rnn_weights(model, idx=1)
 viz_prefetched_data(model, data, 1)
