@@ -50,6 +50,7 @@ def rnn_histogram(model, name=None, idx=None, layer=None, input_data=None,
     w, h          = kwargs.get('w', 1), kwargs.get('h', 1)
     show_borders  = kwargs.get('show_borders', False)
     show_xy_ticks = kwargs.get('show_xy_ticks', [1, 1])
+    show_bias     = kwargs.get('show_bias', True)
     bins          = kwargs.get('bins', 150)
     savepath      = kwargs.get('savepath', None)
 
@@ -176,6 +177,31 @@ def rnn_histogram(model, name=None, idx=None, layer=None, input_data=None,
             matrix_data = matrix_data[:, start:end]
         return matrix_data.ravel()
 
+    def _make_subplots(show_bias, direction_name, d, kw):
+        if not (d['uses_bias'] and show_bias):
+            fig, axes = plt.subplots(d['n_gates'], 2, **kw['subplot'])
+            axes = np.atleast_2d(axes)
+            return fig, axes
+
+        n_rows = 2 * d['n_gates'] + 1
+        fig, axes = plt.subplots(n_rows, 2, **kw['subplot'])
+
+        # merge upper axes pairs to increase height ratio w.r.t. bias plot window
+        gs = axes[0, 0].get_gridspec()
+        for ax in axes[:(n_rows - 1)].flat:
+            ax.remove()
+        axbigs1, axbigs2 = [], []
+        for row in range(n_rows // 2):
+            start = 2 * row
+            end = start + 2
+            axbigs1.append(fig.add_subplot(gs[start:end, 0]))
+            axbigs2.append(fig.add_subplot(gs[start:end, 1]))
+        axes = np.vstack([np.array([axbigs1, axbigs2]).T, [*axes.flat[-2:]]])
+
+        if direction_name != []:
+            fig.suptitle(direction_name + ' LAYER', **kw['title'])
+        return fig, axes
+
     kw = _process_configs(configs, w, h, equate_axes)
     _catch_unknown_kwargs(kwargs)
     data, rnn_info = _process_rnn_args(model, name, idx, layer, input_data,
@@ -188,14 +214,9 @@ def rnn_histogram(model, name=None, idx=None, layer=None, input_data=None,
     subplots_axes = []
     subplots_figs = []
     for direction_idx, direction_name in enumerate(d['direction_names']):
-        n_rows = d['n_gates'] + d['uses_bias']
-        fig, axes = plt.subplots(n_rows, 2, **kw['subplot'])
-        axes = np.atleast_2d(axes)
+        fig, axes = _make_subplots(show_bias, direction_name, d, kw)
         subplots_axes.append(axes)
         subplots_figs.append(fig)
-
-        if direction_name != []:
-            plt.suptitle(direction_name + ' LAYER', **kw['title'])
 
         for type_idx, kernel_type in enumerate(kernel_types):
             for gate_idx in range(d['n_gates']):
@@ -208,7 +229,7 @@ def rnn_histogram(model, name=None, idx=None, layer=None, input_data=None,
 
                 _style_axis(ax, gate_idx, kernel_type, nan_txt, show_borders,
                             d, kw)
-        if d['uses_bias']:
+        if d['uses_bias'] and show_bias:
             _plot_bias(data, axes, direction_idx, bins, d, kw)
 
         if kw['tight']:
@@ -404,8 +425,7 @@ def rnn_heatmap(model, name=None, idx=None, layer=None, input_data=None,
     def _make_subplots(show_bias, direction_name, d, kw):
         if not (d['uses_bias'] and show_bias):
             fig, axes = plt.subplots(1, 2, **kw['subplot'])
-            if axes.ndim == 1:
-                axes = np.expand_dims(axes, -1)
+            axes = np.atleast_2d(axes)
             return fig, axes
 
         fig, axes = plt.subplots(12, 2, **kw['subplot'])
@@ -417,8 +437,7 @@ def rnn_heatmap(model, name=None, idx=None, layer=None, input_data=None,
         axbig1 = fig.add_subplot(gs[:10, 0])
         axbig2 = fig.add_subplot(gs[:10, 1])
         axes = np.array([[axbig1, axbig2], [*axes.flat[-2:]]])
-        if axes.ndim == 1:
-            axes = np.expand_dims(axes, -1)
+        axes = np.atleast_2d(axes)
 
         if direction_name != []:
             fig.suptitle(direction_name + ' LAYER', **kw['title'])
@@ -461,6 +480,8 @@ def rnn_heatmap(model, name=None, idx=None, layer=None, input_data=None,
         if is_vector:
             plt.subplots_adjust(right=.7, wspace=-.4)
         if show_colorbar:
+            print(axes.shape)
+            print(axes[0, :])
             fig.colorbar(img, ax=axes[0, :], **kw['colorbar'])
 
         if d['uses_bias'] and show_bias:
