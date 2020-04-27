@@ -7,6 +7,7 @@ from termcolor import cprint, colored
 from . import K
 from . import Input, LSTM, GRU, SimpleRNN, Bidirectional
 from . import Model
+from . import tempdir
 from see_rnn import get_gradients, get_outputs, get_weights, get_rnn_weights
 from see_rnn import weights_norm
 from see_rnn import features_0D, features_1D, features_2D
@@ -285,20 +286,34 @@ def test_misc():  # test miscellaneous functionalities
 
     features_1D(grads, subplot_samples=True, tight=True, borderwidth=2,
                 equate_axes=False)
-    features_1D(grads[0], subplot_samples=True)
+    with tempdir() as dirpath:
+        features_0D(grads[0], savepath=os.path.join(dirpath, 'img.png'))
+    with tempdir() as dirpath:
+        features_1D(grads[0], subplot_samples=True,
+                    savepath=os.path.join(dirpath, 'img.png'))
     features_2D(grads.T, n_rows=1.5, tight=True, borderwidth=2)
-    features_2D(grads.T[:, :, 0], norm='auto')
-    features_hist(grads, show_borders=False, borderwidth=1,
-                  show_xy_ticks=[0, 0], title="grads")
-    features_hist_v2(list(grads[:, :4, :3]), colnames=list('abcd'),
-                     show_borders=False, xlims=(-.01, .01), ylim=100,
-                     borderwidth=1, show_xy_ticks=[0, 0], side_annot='row',
-                     title="Grads")
-    rnn_histogram(model, idx=1, show_xy_ticks=[0, 0], equate_axes=2)
+    with tempdir() as dirpath:
+        features_2D(grads.T[:, :, 0], norm='auto',
+                    savepath=os.path.join(dirpath, 'img.png'))
+    with tempdir() as dirpath:
+        features_hist(grads, show_borders=False, borderwidth=1,
+                      show_xy_ticks=[0, 0], title="grads",
+                      savepath=os.path.join(dirpath, 'img.png'))
+    with tempdir() as dirpath:
+        features_hist_v2(list(grads[:, :4, :3]), colnames=list('abcd'),
+                         show_borders=False, xlims=(-.01, .01), ylim=100,
+                         borderwidth=1, show_xy_ticks=[0, 0], side_annot='row',
+                         title="Grads",
+                         savepath=os.path.join(dirpath, 'img.png'))
+    with tempdir() as dirpath:
+        rnn_histogram(model, idx=1, show_xy_ticks=[0, 0], equate_axes=2,
+                      savepath=os.path.join(dirpath, 'img.png'))
     rnn_heatmap(model, idx=1, cmap=None, normalize=True, show_borders=False)
     rnn_heatmap(model, idx=1, cmap=None, norm='auto', absolute_value=True)
     rnn_heatmap(model, idx=1, norm=None)
-    rnn_heatmap(model, idx=1, norm=(-.004, .004))
+    with tempdir() as dirpath:
+        rnn_heatmap(model, idx=1, norm=(-.004, .004),
+                    savepath=os.path.join(dirpath, 'img.png'))
 
     get_full_name(model, name='gru')
     get_full_name(model, idx=1)
@@ -309,9 +324,10 @@ def test_misc():  # test miscellaneous functionalities
     get_weights(model, name='gru/bias')
     pass_on_error(get_weights, model, name='gru/goo')
 
+    from see_rnn.utils import _filter_duplicates_by_keys
+    _filter_duplicates_by_keys(list('abbc'), tuple(np.random.randn(4, 20)))
 
     from see_rnn.inspect_gen import get_layer, _detect_nans
-
     get_layer(model, name='gru')
     get_rnn_weights(model, idx=1, concat_gates=False, as_tensors=True)
     rnn_heatmap(model, idx=1, input_data=x, labels=y, mode='weights')

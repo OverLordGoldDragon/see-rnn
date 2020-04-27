@@ -78,7 +78,8 @@ def rnn_histogram(model, name=None, idx=None, layer=None, input_data=None,
         return kw
 
     def _catch_unknown_kwargs(kwargs):
-        allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks', 'bins')
+        allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks', 'bins',
+                          'savepath')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
@@ -315,7 +316,7 @@ def rnn_heatmap(model, name=None, idx=None, layer=None, input_data=None,
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('w', 'h', 'show_borders', 'show_colorbar',
                           'show_bias', 'gate_sep_width', 'normalize',
-                          'absolute_value')
+                          'absolute_value', 'savepath')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)

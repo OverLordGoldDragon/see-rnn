@@ -62,7 +62,7 @@ def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs
 
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('w', 'h', 'show_borders', 'title_mode', 'show_y_zero',
-                          'ylims')
+                          'ylims', 'savepath')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
@@ -196,7 +196,7 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks',
                           'title_mode', 'show_y_zero', 'tight',
-                          'borderwidth', 'color')
+                          'borderwidth', 'color', 'savepath')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
@@ -378,7 +378,7 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks',
                           'show_colorbar', 'title_mode', 'tight',
-                          'channel_axis', 'borderwidth')
+                          'channel_axis', 'borderwidth', 'savepath')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
@@ -538,7 +538,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             'tight':   dict(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0),
             'annot':   dict(weight='bold', fontsize=14, xy=(.02, .7),
                             xycoords='axes fraction', color='g'),
-            'sasve':   dict(),
+            'save':   dict(),
             }
         configs = configs or {}
         # override defaults, but keep those not in `configs`
@@ -552,7 +552,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
 
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks', 'title',
-                          'borderwidth', 'annotations')
+                          'borderwidth', 'annotations', 'savepath')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
@@ -678,7 +678,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
 
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks', 'title',
-                          'borderwidth')
+                          'borderwidth', 'savepath')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)

@@ -1,4 +1,7 @@
 import os
+import tempfile
+import contextlib
+import shutil
 import tensorflow as tf
 
 
@@ -19,3 +22,18 @@ else:
     from keras.models import Model
     if USING_GPU:
         from keras.layers import CuDNNLSTM, CuDNNGRU
+
+
+@contextlib.contextmanager
+def tempdir(dirpath=None):
+    if dirpath is not None and os.path.isdir(dirpath):
+        shutil.rmtree(dirpath)
+        os.mkdir(dirpath)
+    elif dirpath is None:
+        dirpath = tempfile.mkdtemp()
+    else:
+        os.mkdir(dirpath)
+    try:
+        yield dirpath
+    finally:
+        shutil.rmtree(dirpath)
