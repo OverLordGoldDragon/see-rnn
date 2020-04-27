@@ -27,7 +27,7 @@ def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
     """
     def _get_outs_tensors(model, names, idxs, layers):
         if layers is None:
-            _id = [x for v in (names, idxs) if v for x in v] or None
+            _id = [x for var in (names, idxs) if var for x in var] or None
             layers = get_layer(model, _id)
         if not isinstance(layers, list):
             layers = [layers]
@@ -84,7 +84,7 @@ def get_gradients(model, _id, input_data, labels, layer=None, mode='outputs',
         return _validate_args(_id, layer)
 
     names, idxs, layers, one_requested = _validate_args_(_id, layer, mode)
-    _id = [x for v in (names, idxs) if v for x in v] or None
+    _id = [x for var in (names, idxs) if var for x in var] or None
 
     if layers is None:
         layers = get_layer(model, _id)
@@ -98,8 +98,6 @@ def get_gradients(model, _id, input_data, labels, layer=None, mode='outputs',
 
     if as_dict:
         return {get_full_name(model, i): x for i, x in zip(names or idxs, grads)}
-
-    print("len(grads)", len(grads))
     return grads[0] if (one_requested and len(grads) == 1) else grads
 
 
@@ -201,7 +199,7 @@ def get_weights(model, _id, as_dict=False):
     """
     def _get_weights_tensors(model, _id):
         def _get_by_idx(model, idx):
-            if len(idx) == 2:
+            if isinstance(idx, tuple) and len(idx) == 2:
                 layer_idx, weight_idxs = idx
             else:
                 layer_idx, weight_idxs = idx, None
@@ -292,7 +290,8 @@ def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
     """
     def _process_args(model, _id, _dict, omit_weight_names):
         _ids = _id if isinstance(_id, list) else [_id]
-        names = [get_full_name(model, _id) for _id in _ids]
+        names = [get_full_name(model, _id if isinstance(_id, int) else _id[0])
+                 for _id in _ids]
 
         if omit_weight_names is None:
             omit_weight_names = []

@@ -273,7 +273,7 @@ def test_errors():  # test Exception cases
 
 def test_misc():  # test miscellaneous functionalities
     units = 6
-    batch_shape = (8, 100, 2*units)
+    batch_shape = (8, 100, 2 * units)
 
     reset_seeds(reset_graph_with_backend=K)
     model = make_model(GRU, batch_shape, activation='relu',
@@ -282,11 +282,14 @@ def test_misc():  # test miscellaneous functionalities
     model.train_on_batch(x, y)
 
     weights_norm(model, 'gru', omit_weight_names='bias', verbose=1)
+    weights_norm(model, ['gru', 1, (1, 1)])
     stats = weights_norm(model, 'gru')
     weights_norm(model, 'gru', _dict=stats)
 
     grads = get_gradients(model, 1, x, y)
     get_gradients(model, 1, x, y, as_dict=True)
+    get_gradients(model, ['gru', 1], x, y)
+    get_outputs(model, ['gru', 1], x)
 
     features_1D(grads, subplot_samples=True, tight=True, borderwidth=2,
                 equate_axes=False)
@@ -328,6 +331,7 @@ def test_misc():  # test miscellaneous functionalities
     get_weights(model, 'gru', as_dict=False)
     get_weights(model, 'gru', as_dict=True)
     get_weights(model, 'gru/bias')
+    get_weights(model, ['gru', 1, (1, 1)])
     pass_on_error(get_weights, model, 'gru/goo')
 
     from see_rnn.utils import _filter_duplicates_by_keys

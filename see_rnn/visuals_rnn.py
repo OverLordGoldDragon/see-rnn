@@ -7,7 +7,6 @@ from .utils import _process_rnn_args, _save_rnn_fig
 from .inspect_gen import _detect_nans
 
 
-# TODO: deprecate `name` & `idx` for `identifier`? (i.e. both)
 def rnn_histogram(model, _id, layer=None, input_data=None, labels=None,
                   mode='weights', equate_axes=1, data=None, configs=None,
                   **kwargs):
@@ -316,10 +315,6 @@ def rnn_heatmap(model, _id, layer=None, input_data=None, labels=None,
             'subtitle':  dict(weight='bold', fontsize=14),
             'xlabel':    dict(fontsize=12, weight='bold'),
             'ylabel':    dict(fontsize=12, weight='bold'),
-            'annot':     dict(fontsize=12, weight='bold',
-                              xy=(.90, .93), xycoords='axes fraction'),
-            'annot-nan': dict(fontsize=12, weight='bold', color='red',
-                              xy=(.05, .63), xycoords='axes fraction'),
             'colorbar':  dict(fraction=.03),
             'save':      dict(),
             }
