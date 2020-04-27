@@ -44,6 +44,12 @@ def rnn_histogram(model, _id, layer=None, input_data=None, labels=None,
               Ex: [1, 1] -> show both x- and y-ticks (and their labels).
                   [0, 0] -> hide both.
         bins: int. Pyplot `hist` kwarg: number of histogram bins per subplot.
+        savepath: str/None. Path to save resulting figure to. Also see `configs`.
+               If None, doesn't save.
+
+    Returns:
+        (subplots_figs, subplots_axes) of generated subplots. If layer is
+            bidirectional, len(subplots_figs) == 2, and latter's is also doubled.
     """
 
     w, h          = kwargs.get('w', 1), kwargs.get('h', 1)
@@ -296,6 +302,12 @@ def rnn_heatmap(model, _id, layer=None, input_data=None, labels=None,
         absolute_value: bool. If True, takes absolute value of all data before
               plotting. Works well with a greyscale `cmap` (e.g. None). Applied
               before `normalize`.
+        savepath: str/None. Path to save resulting figure to. Also see `configs`.
+               If None, doesn't save.
+
+    Returns:
+        (subplots_figs, subplots_axes) of generated subplots. If layer is
+            bidirectional, len(subplots_figs) == 2, and latter's is also doubled.
     """
 
     w, h           = kwargs.get('w', 1), kwargs.get('h', 1)

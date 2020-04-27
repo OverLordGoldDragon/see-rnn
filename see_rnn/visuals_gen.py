@@ -28,8 +28,8 @@ def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs
     kwargs:
         w: float. Scale width  of resulting plot by a factor.
         h: float. Scale height of resulting plot by a factor.
-        show_borders:  bool.  If True, shows boxes around plot(s).
-        title_mode:    bool/str. If True, shows generic supertitle.
+        show_borders: bool.  If True, shows boxes around plot(s).
+        title_mode:   bool/str. If True, shows generic supertitle.
               If str in ('grads', 'outputs'), shows supertitle tailored to
               `data` dim (2D/3D). If other str, shows `title_mode` as supertitle.
               If False, no title is shown.
@@ -38,6 +38,9 @@ def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs
                sets both lims to max of abs(`data`) (such that y=0 is centered).
         savepath: str/None. Path to save resulting figure to. Also see `configs`.
                If None, doesn't save.
+
+    Returns:
+        (figs, axes) of generated plots.
     """
 
     w, h         = kwargs.get('w', 1), kwargs.get('h', 1)
@@ -108,11 +111,12 @@ def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs
     if not show_borders:
         plt.box(None)
 
-    fig = plt.gcf()
+    fig, axes = plt.gcf(), plt.gca()
     fig.set_size_inches(12 * w, 4 * h)
     plt.show()
     if savepath is not None:
         fig.savefig(savepath, **kw['save'])
+    return fig, axes
 
 
 def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
@@ -139,6 +143,7 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
             'title':   passed to plt.suptitle()
             'tight':   passed to plt.subplots_adjust()
             'annot':   passed to ax.annotate(); ax = subplots axis
+            'save':    passed to fig.savefig() if `savepath` is not None.
 
     iter == list/tuple (both work)
     kwargs:
@@ -159,6 +164,11 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
               specifying curve colors in order of drawing. If str/ float iter,
               draws all curves in one color. If None, default coloring is used.
               Ex: ['red', 'blue']; [[0., .8, 1.], [.2, .5, 0.]] (RGB)
+        savepath: str/None. Path to save resulting figure to. Also see `configs`.
+               If None, doesn't save.
+
+    Returns:
+        (figs, axes) of generated plots.
     """
 
     w, h          = kwargs.get('w', 1), kwargs.get('h', 1)
@@ -269,7 +279,7 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
 
     if title_mode:
         title = _get_title(data, title_mode, subplot_samples)
-        plt.suptitle(title, **kw['title'])
+        fig.suptitle(title, **kw['title'])
 
     for ax_idx, ax in enumerate(axes.flat):
         if show_y_zero:
@@ -283,7 +293,7 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
                     xmax=len(feature_outputs[0]))
 
     if tight:
-        plt.subplots_adjust(**kw['tight'])
+        fig.subplots_adjust(**kw['tight'])
     if borderwidth is not None:
         for ax in axes.flat:
             [s.set_linewidth(borderwidth) for s in ax.spines.values()]
@@ -291,11 +301,11 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
     plt.show()
     if savepath is not None:
         fig.savefig(savepath, **kw['save'])
+    return fig, axes
 
 
 def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
-                timesteps_xaxis=True, max_timesteps=None,
-                configs=None, **kwargs):
+                timesteps_xaxis=True, max_timesteps=None, configs=None, **kwargs):
     """Plots 2D heatmaps in a standalone graph or subplot grid.
 
     iter == list/tuple (both work)
@@ -326,6 +336,7 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
             'title':    passed to plt.suptitle()
             'tight':    passed to plt.subplots_adjust()
             'colorbar': passed to fig.colorbar(); fig = subplots figure
+            'save':     passed to fig.savefig() if `savepath` is not None.
 
     kwargs:
         w: float. Scale width  of resulting plot by a factor.
@@ -344,17 +355,22 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
               -1 --> (samples,  timesteps, channels)
               0  --> (channels, timesteps, samples)
         borderwidth: float / None. Width of subplot borders.
+        savepath: str/None. Path to save resulting figure to. Also see `configs`.
+               If None, doesn't save.
+
+    Returns:
+        (figs, axes) of generated plots.
     """
 
-    w, h           = kwargs.get('w', 1), kwargs.get('h', 1)
-    show_borders   = kwargs.get('show_borders', True)
-    show_xy_ticks  = kwargs.get('show_xy_ticks', [1, 1])
-    show_colorbar  = kwargs.get('show_colorbar', False)
-    title_mode     = kwargs.get('title_mode', 'outputs')
-    tight          = kwargs.get('tight', False)
-    channel_axis   = kwargs.get('channel_axis', -1)
-    borderwidth    = kwargs.get('borderwidth', None)
-    savepath       = kwargs.get('savepath', None)
+    w, h          = kwargs.get('w', 1), kwargs.get('h', 1)
+    show_borders  = kwargs.get('show_borders', True)
+    show_xy_ticks = kwargs.get('show_xy_ticks', [1, 1])
+    show_colorbar = kwargs.get('show_colorbar', False)
+    title_mode    = kwargs.get('title_mode', 'outputs')
+    tight         = kwargs.get('tight', False)
+    channel_axis  = kwargs.get('channel_axis', -1)
+    borderwidth   = kwargs.get('borderwidth', None)
+    savepath      = kwargs.get('savepath', None)
 
     def _process_configs(configs, w, h, tight):
         defaults = {
@@ -453,7 +469,7 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
 
     if title_mode:
         title = _get_title(data, title_mode, timesteps_xaxis, vmin, vmax)
-        plt.suptitle(title, **kw['title'])
+        fig.suptitle(title, **kw['title'])
 
     for ax_idx, ax in enumerate(axes.flat):
         img = ax.imshow(data[ax_idx], cmap=cmap, vmin=vmin, vmax=vmax,
@@ -463,7 +479,7 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
     if show_colorbar:
         fig.colorbar(img, ax=axes.ravel().tolist(), **kw['colorbar'])
     if tight:
-        plt.subplots_adjust(**kw['tight'])
+        fig.subplots_adjust(**kw['tight'])
     if borderwidth is not None:
         for ax in axes.flat:
             [s.set_linewidth(borderwidth) for s in ax.spines.values()]
@@ -471,6 +487,7 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
     plt.show()
     if savepath is not None:
         fig.savefig(savepath, **kw['save'])
+    return fig, axes
 
 
 def _get_nrows_and_ncols(n_rows, n_subplots):
@@ -506,6 +523,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             'title':   passed to plt.suptitle()
             'tight':   passed to plt.subplots_adjust()
             'annot':   passed to ax.annotate(); ax = subplots axis
+            'save':    passed to fig.savefig() if `savepath` is not None.
 
     kwargs:
         w: float. Scale width  of resulting plot by a factor.
@@ -521,6 +539,11 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
              list of str: annotate by indexing into the list.
                           If len(list) < len(data), won't annotate remainder.
              None: don't annotate.
+        savepath: str/None. Path to save resulting figure to. Also see `configs`.
+               If None, doesn't save.
+
+    Returns:
+        (figs, axes) of generated plots.
     """
     w, h          = kwargs.get('w', 1), kwargs.get('h', 1)
     show_borders  = kwargs.get('show_borders', True)
@@ -538,7 +561,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             'tight':   dict(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0),
             'annot':   dict(weight='bold', fontsize=14, xy=(.02, .7),
                             xycoords='axes fraction', color='g'),
-            'save':   dict(),
+            'save': dict(),
             }
         configs = configs or {}
         # override defaults, but keep those not in `configs`
@@ -586,7 +609,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
     fig, axes = plt.subplots(n_rows, n_cols, **kw['subplot'])
     axes = np.asarray(axes)
     if title is not None:
-        plt.suptitle(title, **kw['title'])
+        fig.suptitle(title, **kw['title'])
 
     for ax_idx, ax in enumerate(axes.flat):
         ax.hist(np.asarray(data[ax_idx]).ravel(), bins=bins, **kw['plot'])
@@ -596,7 +619,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
         ax.set_xlim(*xlims)
 
     if tight:
-        plt.subplots_adjust(**kw['tight'])
+        fig.subplots_adjust(**kw['tight'])
     if borderwidth is not None:
         for ax in axes.flat:
             [s.set_linewidth(borderwidth) for s in ax.spines.values()]
@@ -604,6 +627,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
     plt.show()
     if savepath is not None:
         fig.savefig(savepath, **kw['save'])
+    return fig, axes
 
 
 def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
@@ -635,6 +659,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
             'tight':      passed to plt.subplots_adjust()
             'colnames':   passed to ax.set_title(); ax = subplots axis
             'side_annot': passed to ax.annotate();  ax = subplots axis
+            'save':       passed to fig.savefig() if `savepath` is not None.
 
     kwargs:
         w: float. Scale width  of resulting plot by a factor.
@@ -645,6 +670,11 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
         show_xy_ticks: int/bool iter. Slot 0 -> x, Slot 1 -> y.
         title: str/None. If not None, show `title` as plt.suptitle.
         borderwidth: float / None. Width of subplot borders.
+        savepath: str/None. Path to save resulting figure to. Also see `configs`.
+               If None, doesn't save.
+
+    Returns:
+        (figs, axes) of generated plots.
     """
     w, h          = kwargs.get('w', 1), kwargs.get('h', 1)
     show_borders  = kwargs.get('show_borders', True)
@@ -656,8 +686,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
     def _process_configs(configs, w, h):
         defaults = {
             'plot':    dict(),
-            'subplot': dict(sharex='col', sharey=True, dpi=76,
-                            figsize=(10, 10)),
+            'subplot': dict(sharex='col', sharey=True, dpi=76, figsize=(10, 10)),
             'title':   dict(weight='bold', fontsize=15, y=1.06),
             'tight':   dict(left=0, right=1, bottom=0, top=1,
                             wspace=.05, hspace=.05),
@@ -713,7 +742,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
 
     fig, axes = plt.subplots(len(data), len(data[0]), **kw['subplot'])
     if title is not None:
-        plt.suptitle(title, **kw['title'])
+        fig.suptitle(title, **kw['title'])
 
     for row in range(n_rows):
         for col in range(n_cols):
@@ -726,7 +755,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
     if ylim is not None:
         ax.set_ylim(0, ylim)
     if tight:
-        plt.subplots_adjust(**kw['tight'])
+        fig.subplots_adjust(**kw['tight'])
     if borderwidth is not None:
         for ax in axes.flat:
             [s.set_linewidth(borderwidth) for s in ax.spines.values()]
@@ -734,3 +763,4 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
     plt.show()
     if savepath is not None:
         fig.savefig(savepath, **kw['save'])
+    return fig, axes

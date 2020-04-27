@@ -11,17 +11,23 @@ def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
 
     Arguments:
         model: keras.Model/tf.keras.Model.
+        _id: str/int/(list of str/int). int -> idx; str -> name
+            idx: int. Index of layer to fetch, via model.layers[idx].
+            name: str. Name of layer (full or substring) to be fetched.
+                       Returns earliest match if multiple found.
+            list of str/int -> treat each str element as name, int as idx.
         input_data: np.ndarray & supported formats(1). Data w.r.t. which loss is
                to be computed for the gradient. Only for mode=='grads'.
-        labels: np.ndarray & supported formats. Labels w.r.t. which loss is
-               to be computed for the gradient. Only for mode=='grads'
-        idx: int. Index of layer to fetch, via model.layers[idx].
-        name: str / str list. Name(s) of layer(s) (can be substring) to be
-              fetched. If str, returns earliest match if multiple found.
-              If list of str, repeats 'str' case for each element (so
-              duplicates may be returned).
-        layer: keras.Layer/tf.keras.Layer. Layer whose gradients to return.
-               Overrides `idx` and `name`
+        layer: keras.Layer/tf.keras.Layer. Layer whose outputs to return.
+               Overrides `_id`.
+        learning_phase: bool. 1: use model in train mode
+                              0: use model in inference mode
+        as_dict: bool. True:  return output fullname-value pairs in a dict
+                       False: return output values as list in order fetched
+
+    Returns:
+        Layer output values or name-value pairs (see `as_dict`).
+
     (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
          input data formats
     """
@@ -54,21 +60,28 @@ def get_gradients(model, _id, input_data, labels, layer=None, mode='outputs',
 
     Arguments:
         model: keras.Model/tf.keras.Model.
+        _id: str/int/(list of str/int). int -> idx; str -> name
+            idx: int. Index of layer to fetch, via model.layers[idx].
+            name: str. Name of layer (full or substring) to be fetched.
+                       Returns earliest match if multiple found.
+            list of str/int -> treat each str element as name, int as idx.
         input_data: np.ndarray & supported formats(1). Data w.r.t. which loss is
                to be computed for the gradient.
         labels: np.ndarray & supported formats. Labels w.r.t. which loss is
                to be computed for the gradient.
-        idx: int. Index of layer to fetch, via model.layers[idx].
-        name: str. Name of layer (can be substring) to be fetched. Returns
-              earliest match if multiple found.
         layer: keras.Layer/tf.keras.Layer. Layer whose gradients to return.
                Overrides `idx` and `name`.
         mode: str. One of: 'outputs', 'weights'. If former, returns grads
                w.r.t. layer outputs(2) - else, w.r.t. layer trainable weights.
         sample_weights: np.ndarray & supported formats. `sample_weight` kwarg
                to model.fit(), etc., weighting individual sample losses.
-        learning_phase: int/bool. If 1, uses model in train model - else,
-               in inference mode.
+        learning_phase: bool. 1: use model in train mode
+                              0: use model in inference mode
+        as_dict: bool. True:  return gradient fullname-value pairs in a dict
+                       False: return gradient values as list in order fetched
+
+    Returns:
+        Layer weight gradients or gradient-value pairs (see `as_dict`).
 
     (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
          input data formats
@@ -128,7 +141,6 @@ def _make_grads_fn(model, layers, mode='outputs'):
     return K.function(inputs=inputs, outputs=grads)
 
 
-# TODO: let `_id` pack both, names & idxs - for all methods
 def get_layer(model, _id):
     """Returns layer by index or name.
     If multiple matches are found, returns earliest.
@@ -161,8 +173,14 @@ def get_full_name(model, _id):
 
     Arguments:
         model: keras.Model / tf.keras.Model.
-        name: str/None. Layer name. Returns earliest match.
-        idx: int/None. Layer index. Returns model.layers[idx].name
+        _id: str/int/(list of str/int). int -> idx; str -> name
+            idx: int. Index of layer to fetch, via model.layers[idx].
+            name: str. Name of layer (full or substring) to be fetched.
+                       Returns earliest match if multiple found.
+            list of str/int -> treat each str element as name, int as idx.
+
+    Returns:
+        Full name of layer specified by `_id`.
     """
     names, idxs, _, one_requested = _validate_args(_id, layer=None)
 
@@ -191,11 +209,23 @@ def get_weights(model, _id, as_dict=False):
 
     Arguments:
         model: keras.Model / tf.keras.Model
-        names: str. If substring, returns earliest match. Can be layer names or
-                   include a weight (full or substring) in format
-                   {name/weight_name}.
-        as_dict: bool. True:  return weight name-value pairs in a dict
+        _id: str/int/tuple of int/(list of str/int/tuple of int).
+                      int/tuple of int -> idx; str -> name
+            idx: int/tuple of int. Index of layer weights to fetch.
+                       int -> all weights of model.layer[idx]
+                       tuple of int -> e.g. (idx, wi0, wi1) -> weights indexed
+                       wi0, wi1, of model.layer[idx].
+            name: str. Name of layer (full or substring) to be fetched.
+                       Returns earliest match if multiple found.
+                       Can specify a weight (full or substring) in format
+                       {name/weight_name}.
+            list of str/int/tuple of int -> treat each str element as name,
+                       int/tuple of int as idx.
+        as_dict: bool. True:  return weight fullname-value pairs in a dict
                        False: return weight values as list in order fetched
+
+    Returns:
+        Layer weight values or name-value pairs (see `as_dict`).
     """
     def _get_weights_tensors(model, _id):
         def _get_by_idx(model, idx):
@@ -264,15 +294,24 @@ def _detect_nans(data):
     return txt
 
 
-# TODO omit_weight_ids?
 def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
                  norm_fn=np.square, omit_weight_names=None, axis=-1, verbose=0):
     """Retrieves model layer weight matrix norms, as specified by `norm_fn`.
 
     Arguments:
         model: keras.Model/tf.keras.Model.
-        names: str list. List of names (can be substring) of layers to fetch
-               weights from.
+        _id: str/int/tuple of int/(list of str/int/tuple of int).
+                      int/tuple of int -> idx; str -> name
+            idx: int/tuple of int. Index of layer weights to fetch.
+                       int -> all weights of model.layer[idx]
+                       tuple of int -> e.g. (idx, wi0, wi1) -> weights indexed
+                       wi0, wi1, of model.layer[idx].
+            name: str. Name of layer (full or substring) to be fetched.
+                       Returns earliest match if multiple found.
+                       Can specify a weight (full or substring) in format
+                       {name/weight_name}.
+            list of str/int/tuple of int -> treat each str element as name,
+                       int/tuple of int as idx.
         _dict: dict/None. If None, returns new dict. If dict, appends to it.
         stat_fns: functions list/tuple. Aggregate statistic to compute from
                normed weights.
