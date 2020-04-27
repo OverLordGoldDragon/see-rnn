@@ -42,16 +42,16 @@ from see_rnn import rnn_heatmap, rnn_histogram
 ###############################################################################
 def make_model(rnn_layer, batch_shape, units=8, bidirectional=False):
     ipt = Input(batch_shape=batch_shape)
-    if bidirectional: 
+    if bidirectional:
         x = Bidirectional(rnn_layer(units, return_sequences=True,))(ipt)
     else:
         x = rnn_layer(units, return_sequences=True)(ipt)
-    out = rnn_layer(units, return_sequences=False)(x)  
+    out = rnn_layer(units, return_sequences=False)(x)
 
     model = Model(ipt, out)
     model.compile(Adam(lr=1e-2), 'mse')
     return model
-    
+
 def make_data(batch_shape, units):
     return (np.random.randn(*batch_shape),
             np.random.uniform(-1, 1, (batch_shape[0], units)))
@@ -81,7 +81,7 @@ def viz_weights(model, idx=1):
 
 def viz_outs_grads(model, idx=1):
     x, y = make_data(K.int_shape(model.input), model.layers[2].units)
-    grads = get_gradients(model, x, y, idx=idx)
+    grads = get_gradients(model, idx, x, y)
     kws = dict(n_rows=8, title_mode='grads')
 
     features_1D(grads[0], show_borders=False, **kws)
@@ -89,20 +89,20 @@ def viz_outs_grads(model, idx=1):
 
 def viz_outs_grads_last(model, idx=2):  # return_sequences=False layer
     x, y = make_data(K.int_shape(model.input), model.layers[2].units)
-    grads = get_gradients(model, x, y, idx=idx)
+    grads = get_gradients(model, idx, x, y)
     features_0D(grads)
 
 def viz_weights_grads(model, idx=1):
     x, y = make_data(K.int_shape(model.input), model.layers[2].units)
-    kws = dict(idx=idx, input_data=x, labels=y)
+    kws = dict(_id=idx, input_data=x, labels=y)
 
     rnn_histogram(model, mode='grads', bins=400, **kws)
     print('\n')
     rnn_heatmap(model,   mode='grads', cmap=None, absolute_value=True, **kws)
 
 def viz_prefetched_data(model, data, idx=1):
-    rnn_histogram(model, idx=idx, data=data)
-    rnn_heatmap(model,   idx=idx, data=data)
+    rnn_histogram(model, idx, data=data)
+    rnn_heatmap(model,   idx, data=data)
 
 ###############################################################################
 units = 64

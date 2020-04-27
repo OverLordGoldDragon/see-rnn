@@ -3,35 +3,33 @@ from pathlib import Path
 from ._backend import K, WARN, NOTE
 
 
-def _validate_args(name, idx, layer):
-    def _ensure_list(name, idx, layer):
+def _validate_args(_id, layer):
+    def _ensure_list(_id, layer):
         # if None, leave as-is
-        name, idx, layer = [[x] if not isinstance(x, (list, type(None))) else x
-                            for x in (name, idx, layer)]
+        _id, layer = [[x] if not isinstance(x, (list, type(None))) else x
+                      for x in (_id, layer)]
         # ensure external lists unaffected
-        name, idx, layer = [x.copy() if isinstance(x, list) else x
-                            for x in (name, idx, layer)]
-        return name, idx, layer
+        _id, layer = [x.copy() if isinstance(x, list) else x
+                      for x in (_id, layer)]
+        return _id, layer
 
-    def _one_requested(name, idx, layer):
-        return len(layer or name or idx) == 1  # give `layer` precedence
+    def _one_requested(_ids, layer):
+        return len(layer or _ids) == 1  # give `layer` precedence
 
-    find_layer = idx is not None or name is not None
-    if find_layer and layer is not None:
-        print(WARN, "`layer` will override `idx` & `name`")
+    if (_id is not None and layer is not None):
+        print(WARN, "`layer` will override `_id`")
 
-    if layer is None:
-        no_info  = idx is None and name is None
-        too_much_info = idx is not None and name is not None
-        if no_info or too_much_info:
-            raise Exception("supply one (and only one) of `idx`, `name`")
-
-    name, idx, layer = _ensure_list(name, idx, layer)
-    return name, idx, layer, _one_requested(name, idx, layer)
+    _ids, layer = _ensure_list(_id, layer)
+    if _ids is None:
+        names, idxs = None, None
+    else:
+        names = _ids if isinstance(_ids[0], str) else None
+        idxs  = _ids if isinstance(_ids[0], int) else None
+    return names, idxs, layer, _one_requested(_ids, layer)
 
 
-def _process_rnn_args(model, name, idx, layer, input_data, labels,
-                      mode, data=None, norm=None):
+def _process_rnn_args(model, _id, layer, input_data, labels, mode,
+                      data=None, norm=None):
     """Helper method to validate `input_data` & `labels` dims, layer info args,
        `mode` arg, and fetch various pertinent RNN attributes.
     """
@@ -39,9 +37,8 @@ def _process_rnn_args(model, name, idx, layer, input_data, labels,
     from .inspect_gen import get_layer, get_gradients
     from .inspect_rnn import get_rnn_weights
 
-    def _validate_args_(name, idx, layer, input_data, labels,
-                        mode, norm, data):
-        _validate_args(name, idx, layer)
+    def _validate_args_(_id, layer, input_data, labels, mode, norm, data):
+        _validate_args(_id, layer)
 
         if data is not None:
             got_inputs = (input_data is not None) or (labels is not None)
@@ -74,15 +71,15 @@ def _process_rnn_args(model, name, idx, layer, input_data, labels,
             raise Exception("`norm` must be None, 'auto' or iterable ( "
                             + "list, tuple, np.ndarray) of length 2")
 
-    _validate_args_(name, idx, layer, input_data, labels, mode, norm, data)
+    _validate_args_(_id, layer, input_data, labels, mode, norm, data)
     if layer is None:
-        layer = get_layer(model, name, idx)
+        layer = get_layer(model, _id)
     rnn_type = _validate_rnn_type(layer, return_value=True)
 
     gate_names = _rnn_gate_names(rnn_type)
     n_gates  = len(gate_names)
-    is_bidir   = hasattr(layer, 'backward_layer')
-    rnn_dim    = layer.layer.units if is_bidir else layer.units
+    is_bidir = hasattr(layer, 'backward_layer')
+    rnn_dim  = layer.layer.units if is_bidir else layer.units
     direction_names = ['FORWARD', 'BACKWARD'] if is_bidir else [[]]
     if 'CuDNN' in rnn_type:
         uses_bias = True
@@ -91,10 +88,10 @@ def _process_rnn_args(model, name, idx, layer, input_data, labels,
 
     if data is None:
         if mode=='weights':
-            data = get_rnn_weights(model, name, idx, as_tensors=False,
+            data = get_rnn_weights(model, _id, as_tensors=False,
                                    concat_gates=True)
         else:
-            data = get_gradients(model, input_data, labels,
+            data = get_gradients(model, None, input_data, labels,
                                  layer=layer, mode='weights')
 
     rnn_info = dict(rnn_type=rnn_type, gate_names=gate_names,

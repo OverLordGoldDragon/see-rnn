@@ -5,8 +5,9 @@ from .utils import _validate_args, K_eval
 from ._backend import K, TF_KERAS
 
 
-def get_outputs(model, input_data, name=None, idx=None, layer=None,
-                learning_phase=0, as_dict=False):
+# TODO check used fns, _id was moved
+def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
+                as_dict=False):
     """Retrieves layer outputs given input data and layer info.
 
     Arguments:
@@ -26,12 +27,12 @@ def get_outputs(model, input_data, name=None, idx=None, layer=None,
          input data formats
     """
     def _get_outs_tensors(model, names, idxs, layers):
-        layers = layers or get_layer(model, names, idxs)
+        layers = layers or get_layer(model, names or idxs)
         if not isinstance(layers, list):
             layers = [layers]
         return [l.output for l in layers]
 
-    names, idxs, layers, one_requested = _validate_args(name, idx, layer)
+    names, idxs, layers, one_requested = _validate_args(_id, layer)
     layer_outs = _get_outs_tensors(model, names, idxs, layers)
 
     if TF_KERAS:
@@ -41,16 +42,13 @@ def get_outputs(model, input_data, name=None, idx=None, layer=None,
 
     outs = outs_fn([input_data, learning_phase])
     if as_dict:
-        if names:
-            return {get_full_name(model, n): o for n, o in zip(names, outs)}
-        else:
-            return {get_full_name(model, idx=i): o for i, o in zip(idxs, outs)}
+        return {get_full_name(model, i): x for i, x in zip(names or idxs, outs)}
     return outs[0] if (one_requested and len(outs) == 1) else outs
 
 
-def get_gradients(model, input_data, labels, name=None, idx=None, layer=None,
-                  mode='outputs', sample_weights=None, learning_phase=0,
-                  as_dict=False):
+# TODO check used fns, _id was moved
+def get_gradients(model, _id, input_data, labels, layer=None, mode='outputs',
+                  sample_weights=None, learning_phase=0, as_dict=False):
     """Retrieves layer gradients w.r.t. outputs or weights.
     NOTE: gradients will be clipped if `clipvalue` or `clipnorm` were set.
 
@@ -80,14 +78,15 @@ def get_gradients(model, input_data, labels, name=None, idx=None, layer=None,
          Activation layer.
     """
 
-    def _validate_args_(name, idx, layer, mode):
+    def _validate_args_(_id, layer, mode):
         if mode not in ['outputs', 'weights']:
             raise Exception("`mode` must be one of: 'outputs', 'weights'")
-        return _validate_args(name, idx, layer)
+        return _validate_args(_id, layer)
 
-    names, idxs, layers, one_requested = _validate_args_(name, idx, layer, mode)
+    names, idxs, layers, one_requested = _validate_args_(_id, layer, mode)
+
     if layers is None:
-        layers = get_layer(model, names, idxs)
+        layers = get_layer(model, names or idxs)
 
     grads_fn = _make_grads_fn(model, layers, mode)
     if TF_KERAS:
@@ -97,10 +96,7 @@ def get_gradients(model, input_data, labels, name=None, idx=None, layer=None,
         grads = grads_fn([input_data, sample_weights, labels, 1])
 
     if as_dict:
-        if names:
-            return {get_full_name(model, n): g for n, g in zip(names, grads)}
-        else:
-            return {get_full_name(model, idx=i): g for i, g in zip(idxs, grads)}
+        return {get_full_name(model, i): x for i, x in zip(names or idxs, grads)}
     return grads[0] if (one_requested and len(grads) == 1) else grads
 
 
@@ -131,11 +127,11 @@ def _make_grads_fn(model, layers, mode='outputs'):
     return K.function(inputs=inputs, outputs=grads)
 
 
-def get_layer(model, name=None, idx=None):
+def get_layer(model, _id):
     """Returns layer by index or name.
     If multiple matches are found, returns earliest.
     """
-    names, idxs, _, one_requested = _validate_args(name, idx, layer=None)
+    names, idxs, _, one_requested = _validate_args(_id, layer=None)
 
     if idxs is not None:
         layers = [model.layers[i] for i in idxs]
@@ -155,7 +151,7 @@ def get_layer(model, name=None, idx=None):
     return layers[0] if one_requested else layers
 
 
-def get_full_name(model, name=None, idx=None):
+def get_full_name(model, _id):
     """Given full or partial (substring) layer name, or layer index,
     return complete layer name.
 
@@ -164,7 +160,8 @@ def get_full_name(model, name=None, idx=None):
         name: str/None. Layer name. Returns earliest match.
         idx: int/None. Layer index. Returns model.layers[idx].name
     """
-    names, idxs, _, one_requested = _validate_args(name, idx, layer=None)
+    names, idxs, _, one_requested = _validate_args(_id, layer=None)
+
     if idxs is not None:
         fullnames = [model.layers[i].name for i in idxs]
         return fullnames[0] if one_requested else fullnames
@@ -178,23 +175,24 @@ def get_full_name(model, name=None, idx=None):
                 break
 
     if len(fullnames) == 0:
-        raise Exception(f"layer w/ name substring '{name}' not found")
+        raise Exception(f"layer w/ name substring '{_id}' not found")
     print("fullnames", fullnames)
     return fullnames[0] if one_requested else fullnames
 
 
-def get_weights(model, name, as_dict=False):
-    """Given full or partial (substring) weight name, return weight values
+def get_weights(model, names, as_dict=False):
+    """Given full or partial (substring) weight name(s), return weight values
     (and corresponding names if as_list=False).
 
     Arguments:
         model: keras.Model / tf.keras.Model
-        name: str. If substring, returns earliest match. Can be layer name or
+        names: str. If substring, returns earliest match. Can be layer names or
                    include a weight (full or substring) in format
                    {name/weight_name}.
         as_dict: bool. True:  return weight name-value pairs in a dict
                        False: return weight values as list in order fetched
     """
+    # TODO enable idxs arg as tuple of indices: (layer_idx, weight_idx)
     def _get_weights(model, name):
         # weight_name == weight part of the full weight name
         if len(name.split('/')) == 2:
@@ -216,7 +214,6 @@ def get_weights(model, name, as_dict=False):
         return _weights
 
     weights = {}
-    names = name
     if not isinstance(names, list):
         names = [names]
     for name in names:

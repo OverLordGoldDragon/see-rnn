@@ -3,8 +3,7 @@ from .utils import _validate_args, _validate_rnn_type
 from ._backend import K, TF_KERAS, WARN
 
 
-def get_rnn_weights(model, name=None, idx=None, layer=None, as_tensors=False,
-                    concat_gates=True):
+def get_rnn_weights(model, _id, layer=None, as_tensors=False, concat_gates=True):
     """Retrievers RNN layer weights.
 
     Arguments:
@@ -20,9 +19,12 @@ def get_rnn_weights(model, name=None, idx=None, layer=None, as_tensors=False,
                matrices, instead of individual per-gate weight lists.
     """
 
-    _validate_args(name, idx, layer)
+    names, idxs, *_ = _validate_args(_id, layer)
+    name = names[0] if names is not None else None
+    idx  = idxs[0]  if idxs  is not None else None
+
     if layer is None:
-        layer = get_layer(model, name, idx)
+        layer = get_layer(model, name or idx)
     rnn_type = _validate_rnn_type(layer, return_value=True)
     IS_CUDNN = 'CuDNN' in rnn_type
 

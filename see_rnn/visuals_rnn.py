@@ -8,9 +8,9 @@ from .inspect_gen import _detect_nans
 
 
 # TODO: deprecate `name` & `idx` for `identifier`? (i.e. both)
-def rnn_histogram(model, name=None, idx=None, layer=None, input_data=None,
-                  labels=None, mode='weights', equate_axes=1, data=None,
-                  configs=None, **kwargs):
+def rnn_histogram(model, _id, layer=None, input_data=None, labels=None,
+                  mode='weights', equate_axes=1, data=None, configs=None,
+                  **kwargs):
     """Plots histogram grid of RNN weights/gradients by kernel, gate (if gated),
        and direction (if bidirectional). Also detects NaNs and shows on plots.
 
@@ -204,8 +204,8 @@ def rnn_histogram(model, name=None, idx=None, layer=None, input_data=None,
 
     kw = _process_configs(configs, w, h, equate_axes)
     _catch_unknown_kwargs(kwargs)
-    data, rnn_info = _process_rnn_args(model, name, idx, layer, input_data,
-                                       labels, mode, data)
+    data, rnn_info = _process_rnn_args(model, _id, layer, input_data, labels,
+                                       mode, data)
     d = rnn_info
     gated_types  = ('LSTM', 'GRU', 'CuDNNLSTM', 'CuDNNGRU')
     kernel_types = ('KERNEL', 'RECURRENT')
@@ -247,9 +247,9 @@ def rnn_histogram(model, name=None, idx=None, layer=None, input_data=None,
     return subplots_figs, subplots_axes
 
 
-def rnn_heatmap(model, name=None, idx=None, layer=None, input_data=None,
-                labels=None, mode='weights', cmap='bwr',
-                norm='auto', data=None, configs=None, **kwargs):
+def rnn_heatmap(model, _id, layer=None, input_data=None, labels=None,
+                mode='weights', cmap='bwr', norm='auto', data=None,
+                configs=None, **kwargs):
     """Plots histogram grid of RNN weights/gradients by kernel, gate (if gated),
        and direction (if bidirectional). Also detects NaNs and prints in console.
 
@@ -444,8 +444,8 @@ def rnn_heatmap(model, name=None, idx=None, layer=None, input_data=None,
 
     _catch_unknown_kwargs(kwargs)
     kw = _process_configs(configs, w, h)
-    data, rnn_info = _process_rnn_args(model, name, idx, layer,
-                                       input_data, labels, mode, data, norm)
+    data, rnn_info = _process_rnn_args(model, _id, layer, input_data, labels,
+                                       mode, data, norm)
     d = rnn_info
     d['gate_sep_width'] = gate_sep_width
 

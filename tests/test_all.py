@@ -87,7 +87,7 @@ def test_main():
 
 def _test_outputs(model):
     x, _ = make_data(K.int_shape(model.input), model.layers[2].units)
-    outs = get_outputs(model, x, idx=1)
+    outs = get_outputs(model, 1, x)
     features_1D(outs[:1], show_y_zero=True)
     features_1D(outs[0])
     features_2D(outs)
@@ -96,8 +96,8 @@ def _test_outputs(model):
 def _test_outputs_gradients(model):
     x, y = make_data(K.int_shape(model.input), model.layers[2].units)
     name = model.layers[1].name
-    grads_all  = get_gradients(model, x, y, name=name, mode='outputs')
-    grads_last = get_gradients(model, x, y, idx=2,     mode='outputs')
+    grads_all  = get_gradients(model, name, x, y, mode='outputs')
+    grads_last = get_gradients(model, 2,    x, y, mode='outputs')
 
     kwargs1 = dict(n_rows=None, show_xy_ticks=[0, 0], show_borders=True,
                    max_timesteps=50, title_mode='grads')
@@ -125,20 +125,20 @@ def _test_weights_gradients(model):
         if hasattr(model.layers[1], 'backward_layer'):
             kws['savepath'] = dirpath
 
-        rnn_histogram(model, name=name, bins=100, **kws)
-        rnn_heatmap(model,   name=name,           **kws)
+        rnn_histogram(model, name, bins=100, **kws)
+        rnn_heatmap(model,   name,           **kws)
 
 
 def _test_weights(model):
     name = model.layers[1].name
-    rnn_histogram(model, name=name, mode='weights', bins=100)
-    rnn_heatmap(model,   name=name, mode='weights')
+    rnn_histogram(model, name, mode='weights', bins=100)
+    rnn_heatmap(model,   name, mode='weights')
 
 
 def _test_prefetched_data(model):
-    weights = get_rnn_weights(model, idx=1)
-    rnn_histogram(model, idx=1, data=weights)
-    rnn_heatmap(model,   idx=1, data=weights)
+    weights = get_rnn_weights(model, 1)
+    rnn_histogram(model, 1, data=weights)
+    rnn_heatmap(model,   1, data=weights)
 
 
 def make_model(rnn_layer, batch_shape, units=6, bidirectional=False,
@@ -235,7 +235,7 @@ def test_errors():  # test Exception cases
     x, y = make_data(batch_shape, units)
     model.train_on_batch(x, y)
 
-    grads = get_gradients(model, x, y, idx=1)
+    grads = get_gradients(model, 1, x, y)
     grads_4D = np.expand_dims(grads, -1)
 
     from see_rnn.inspect_gen import get_layer, _make_grads_fn
@@ -245,27 +245,26 @@ def test_errors():  # test Exception cases
     pass_on_error(features_1D, grads_4D)
     pass_on_error(features_2D, grads_4D)
     pass_on_error(features_2D, grads)
-    pass_on_error(get_gradients, model, x, y, idx=1, mode='cactus')
-    pass_on_error(get_gradients, model, x, y, idx=1,
-                   name='gru', layer=model.layers[1])
+    pass_on_error(get_gradients, model, 1, x, y, mode='cactus')
+    pass_on_error(get_gradients, model, 1, x, y, layer=model.layers[1])
     pass_on_error(_make_grads_fn, model, model.layers[1], mode='banana')
     pass_on_error(features_hist, grads[:, :4, :3], po='tato')
     pass_on_error(features_hist_v2, grads[:, :4, :3], po='tato')
     pass_on_error(get_layer, model)
-    pass_on_error(get_layer, model, name='capsule')
-    pass_on_error(rnn_heatmap, model, idx=1, input_data=x, labels=y,
+    pass_on_error(get_layer, model, 'capsule')
+    pass_on_error(rnn_heatmap, model, 1, input_data=x, labels=y,
                    mode='coffee')
-    pass_on_error(rnn_heatmap, model, idx=1, norm=(0, 1, 2))
-    pass_on_error(rnn_heatmap, model, idx=1, mode='grads')
-    pass_on_error(rnn_histogram, model, idx=1, norm=None)
+    pass_on_error(rnn_heatmap, model, 1, norm=(0, 1, 2))
+    pass_on_error(rnn_heatmap, model, 1, mode='grads')
+    pass_on_error(rnn_histogram, model, 1, norm=None)
     pass_on_error(rnn_heatmap, model, layer_index=9001)
     pass_on_error(features_0D, grads, cake='lie')
     pass_on_error(features_1D, grads, pup='not just any')
     pass_on_error(features_2D, grads, true=False)
-    outs = list(get_outputs(model, x, idx=1, as_dict=True).values())
-    pass_on_error(rnn_histogram, model, idx=1, data=outs)
-    pass_on_error(rnn_histogram, model, idx=1, data=[1])
-    pass_on_error(rnn_histogram, model, idx=1, data=[[1]])
+    outs = list(get_outputs(model, 1, x, as_dict=True).values())
+    pass_on_error(rnn_histogram, model, 1, data=outs)
+    pass_on_error(rnn_histogram, model, 1, data=[1])
+    pass_on_error(rnn_histogram, model, 1, data=[[1]])
     pass_on_error(features_hist, grads, co='vid')
 
     cprint("\n<< EXCEPTION TESTS PASSED >>\n", 'green')
@@ -286,8 +285,8 @@ def test_misc():  # test miscellaneous functionalities
     stats = weights_norm(model, 'gru')
     weights_norm(model, 'gru', _dict=stats)
 
-    grads = get_gradients(model, x, y, idx=1)
-    get_gradients(model, x, y, idx=1, as_dict=True)
+    grads = get_gradients(model, 1, x, y)
+    get_gradients(model, 1, x, y, as_dict=True)
 
     features_1D(grads, subplot_samples=True, tight=True, borderwidth=2,
                 equate_axes=False)
@@ -311,25 +310,25 @@ def test_misc():  # test miscellaneous functionalities
                          title="Grads",
                          savepath=os.path.join(dirpath, 'img.png'))
     with tempdir() as dirpath:
-        rnn_histogram(model, idx=1, show_xy_ticks=[0, 0], equate_axes=2,
+        rnn_histogram(model, 1, show_xy_ticks=[0, 0], equate_axes=2,
                       savepath=os.path.join(dirpath, 'img.png'))
-    rnn_histogram(model, idx=1, equate_axes=False,
+    rnn_histogram(model, 1, equate_axes=False,
                   configs={'tight': dict(left=0, right=1)})
-    rnn_heatmap(model, idx=1, cmap=None, normalize=True, show_borders=False)
-    rnn_heatmap(model, idx=1, cmap=None, norm='auto', absolute_value=True)
-    rnn_heatmap(model, idx=1, norm=None)
+    rnn_heatmap(model, 1, cmap=None, normalize=True, show_borders=False)
+    rnn_heatmap(model, 1, cmap=None, norm='auto', absolute_value=True)
+    rnn_heatmap(model, 1, norm=None)
     with tempdir() as dirpath:
-        rnn_heatmap(model, idx=1, norm=(-.004, .004),
+        rnn_heatmap(model, 1, norm=(-.004, .004),
                     savepath=os.path.join(dirpath, 'img.png'))
 
-    get_full_name(model, name='gru')
-    get_full_name(model, idx=1)
-    pass_on_error(get_full_name, model, name='croc')
+    get_full_name(model, 'gru')
+    get_full_name(model, 1)
+    pass_on_error(get_full_name, model, 'croc')
 
-    get_weights(model, name='gru', as_dict=False)
-    get_weights(model, name='gru', as_dict=True)
-    get_weights(model, name='gru/bias')
-    pass_on_error(get_weights, model, name='gru/goo')
+    get_weights(model, 'gru', as_dict=False)
+    get_weights(model, 'gru', as_dict=True)
+    get_weights(model, 'gru/bias')
+    pass_on_error(get_weights, model, 'gru/goo')
 
     from see_rnn.utils import _filter_duplicates_by_keys
     keys, data = _filter_duplicates_by_keys(list('abbc'), [1, 2, 3, 4])
@@ -341,9 +340,9 @@ def test_misc():  # test miscellaneous functionalities
     assert data[0] == [1, 2, 4] and data[1] == [5, 6, 8]
 
     from see_rnn.inspect_gen import get_layer, _detect_nans
-    get_layer(model, name='gru')
-    get_rnn_weights(model, idx=1, concat_gates=False, as_tensors=True)
-    rnn_heatmap(model, idx=1, input_data=x, labels=y, mode='weights')
+    get_layer(model, 'gru')
+    get_rnn_weights(model, 1, concat_gates=False, as_tensors=True)
+    rnn_heatmap(model, 1, input_data=x, labels=y, mode='weights')
     _test_prefetched_data(model)
 
     # test NaN detection
@@ -352,8 +351,8 @@ def test_misc():  # test miscellaneous functionalities
 
     K.set_value(model.optimizer.lr, 1e12)
     train_model(model, iterations=10)
-    rnn_histogram(model, idx=1)
-    rnn_heatmap(model, idx=1)
+    rnn_histogram(model, 1)
+    rnn_heatmap(model, 1)
 
     del model
     reset_seeds(reset_graph_with_backend=K)
@@ -361,14 +360,14 @@ def test_misc():  # test miscellaneous functionalities
     # test SimpleRNN & other
     _model = make_model(SimpleRNN, batch_shape, units=128, use_bias=False)
     train_model(_model, iterations=1)  # TF2-Keras-Graph bug workaround
-    rnn_histogram(_model, idx=1)  # test _pretty_hist
+    rnn_histogram(_model, 1)  # test _pretty_hist
     K.set_value(_model.optimizer.lr, 1e50)  # SimpleRNNs seem ridiculously robust
     train_model(_model, iterations=20)
-    rnn_heatmap(_model, idx=1)
-    data = get_rnn_weights(_model, idx=1)
-    rnn_heatmap(_model, idx=1, input_data=x, labels=y, data=data)
+    rnn_heatmap(_model, 1)
+    data = get_rnn_weights(_model, 1)
+    rnn_heatmap(_model, 1, input_data=x, labels=y, data=data)
     os.environ["TF_KERAS"] = '0'
-    get_rnn_weights(_model, idx=1, concat_gates=False)
+    get_rnn_weights(_model, 1, concat_gates=False)
     del _model
 
     assert True
@@ -412,16 +411,16 @@ def test_envs():  # pseudo-tests for coverage for different env flags
                            Model=Model)
         model = make_model(_GRU, batch_shape, new_imports=new_imports)
 
-        pass_on_error(model, x, y, idx=1)  # possibly _backend-induced err
+        pass_on_error(model, x, y, 1)  # possibly _backend-induced err
         pass_on_error(glg, model, x, y, 1)
         rs(model.layers[1])
 
         from see_rnn.inspect_rnn import get_rnn_weights as grw
-        grw(model, idx=1, concat_gates=False, as_tensors=True)
-        grw(model, idx=1, concat_gates=False, as_tensors=False)
+        grw(model, 1, concat_gates=False, as_tensors=True)
+        grw(model, 1, concat_gates=False, as_tensors=False)
         _test_outputs(model)
         setattr(model.layers[2].cell, 'get_weights', None)
-        get_rnn_weights(model, idx=2, concat_gates=True, as_tensors=False)
+        get_rnn_weights(model, 2, concat_gates=True, as_tensors=False)
 
         _model = _make_nonrnn_model()
         pass_on_error(_vrt, _model.layers[1])
