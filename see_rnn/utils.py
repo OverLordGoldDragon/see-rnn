@@ -3,7 +3,7 @@ from pathlib import Path
 from ._backend import WARN, NOTE
 
 
-def _validate_args(_id, layer):
+def _validate_args(_id, layer=None):
     def _ensure_list(_id, layer):
         # if None, leave as-is
         _ids, layer = [[x] if not isinstance(x, (list, type(None))) else x

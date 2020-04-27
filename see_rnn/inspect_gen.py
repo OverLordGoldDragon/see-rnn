@@ -145,7 +145,7 @@ def get_layer(model, _id):
     """Returns layer by index or name.
     If multiple matches are found, returns earliest.
     """
-    names, idxs, _, one_requested = _validate_args(_id, layer=None)
+    names, idxs, _, one_requested = _validate_args(_id)
 
     layers = []
     if idxs is not None:
@@ -182,7 +182,7 @@ def get_full_name(model, _id):
     Returns:
         Full name of layer specified by `_id`.
     """
-    names, idxs, _, one_requested = _validate_args(_id, layer=None)
+    names, idxs, _, one_requested = _validate_args(_id)
 
     fullnames = []
     if idxs is not None:
@@ -269,7 +269,9 @@ def get_weights(model, _id, as_dict=False):
             return _get_by_idx(model, _id)
 
     weights = {}
-    _ids = _id if isinstance(_id, list) else [_id]
+    names, idxs, *_ = _validate_args(_id)
+    _ids = [x for var in (names, idxs) if var for x in var] or None
+
     for _id in _ids:
         weights.update(_get_weights_tensors(model, _id))
 
