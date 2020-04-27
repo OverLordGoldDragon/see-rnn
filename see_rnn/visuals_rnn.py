@@ -480,8 +480,6 @@ def rnn_heatmap(model, name=None, idx=None, layer=None, input_data=None,
         if is_vector:
             plt.subplots_adjust(right=.7, wspace=-.4)
         if show_colorbar:
-            print(axes.shape)
-            print(axes[0, :])
             fig.colorbar(img, ax=axes[0, :], **kw['colorbar'])
 
         if d['uses_bias'] and show_bias:

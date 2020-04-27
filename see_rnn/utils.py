@@ -140,13 +140,16 @@ def K_eval(x, backend=K):
 
 
 def _filter_duplicates_by_keys(keys, *data):
+    def _second_index(ls, k):
+        return [i for i, x in enumerate(ls) if x == k][1]
+
     collected = []
     for k in keys:
         if k in collected:
             for i in range(len(data)):
-                data[i].pop(keys.index(k))
+                data[i].pop(_second_index(keys, k))
             keys.pop(keys.index(k))
-            collected.append(k)
+        collected.append(k)
     if isinstance(data, tuple) and len(data) == 1:
         data = data[0]
     return keys, data

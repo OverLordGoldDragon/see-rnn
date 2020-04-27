@@ -119,10 +119,14 @@ def _test_outputs_gradients(model):
 def _test_weights_gradients(model):
     x, y = make_data(K.int_shape(model.input), model.layers[2].units)
     name = model.layers[1].name
-    kws = dict(input_data=x, labels=y, mode='grads')
 
-    rnn_histogram(model, name=name, bins=100, **kws)
-    rnn_heatmap(model,   name=name,           **kws)
+    with tempdir() as dirpath:
+        kws = dict(input_data=x, labels=y, mode='grads')
+        if hasattr(model.layers[1], 'backward_layer'):
+            kws['savepath'] = dirpath
+
+        rnn_histogram(model, name=name, bins=100, **kws)
+        rnn_heatmap(model,   name=name,           **kws)
 
 
 def _test_weights(model):
@@ -325,7 +329,13 @@ def test_misc():  # test miscellaneous functionalities
     pass_on_error(get_weights, model, name='gru/goo')
 
     from see_rnn.utils import _filter_duplicates_by_keys
-    _filter_duplicates_by_keys(list('abbc'), tuple(np.random.randn(4, 20)))
+    keys, data = _filter_duplicates_by_keys(list('abbc'), [1, 2, 3, 4])
+    assert keys == ['a', 'b', 'c']
+    assert data == [1, 2, 4]
+    keys, data = _filter_duplicates_by_keys(list('abbc'),
+                                            [1, 2, 3, 4], [5, 6, 7, 8])
+    assert keys == ['a', 'b', 'c']
+    assert data[0] == [1, 2, 4] and data[1] == [5, 6, 8]
 
     from see_rnn.inspect_gen import get_layer, _detect_nans
     get_layer(model, name='gru')
