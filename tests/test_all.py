@@ -254,6 +254,7 @@ def test_errors():  # test Exception cases
     pass_on_error(get_layer, model, 'capsule')
     pass_on_error(rnn_heatmap, model, 1, input_data=x, labels=y,
                    mode='coffee')
+    pass_on_error(rnn_heatmap, model, 1, co='vid')
     pass_on_error(rnn_heatmap, model, 1, norm=(0, 1, 2))
     pass_on_error(rnn_heatmap, model, 1, mode='grads')
     pass_on_error(rnn_histogram, model, 1, norm=None)

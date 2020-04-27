@@ -1,6 +1,6 @@
 import numpy as np
 from pathlib import Path
-from ._backend import K, WARN, NOTE
+from ._backend import WARN, NOTE
 
 
 def _validate_args(_id, layer):
@@ -142,16 +142,6 @@ def _rnn_gate_names(rnn_type):
             }[rnn_type]
 
 
-def K_eval(x, backend=K):
-    """Workaround to TF2.0/2.1-Graph's buggy tensor evaluation"""
-    K = backend
-    try:
-        return K.get_value(K.to_dense(x))
-    except Exception as e:
-        eval_fn = K.function([], [x])
-        return eval_fn([])[0]
-
-
 def _filter_duplicates_by_keys(keys, *data):
     def _second_index(ls, k):
         return [i for i, x in enumerate(ls) if x == k][1]
@@ -166,6 +156,7 @@ def _filter_duplicates_by_keys(keys, *data):
     if isinstance(data, tuple) and len(data) == 1:
         data = data[0]
     return keys, data
+
 
 def _save_rnn_fig(figs, savepath, kwargs):
     if len(figs) == 1:
