@@ -6,12 +6,29 @@ from ._backend import K, WARN, NOTE
 def _validate_args(_id, layer):
     def _ensure_list(_id, layer):
         # if None, leave as-is
-        _id, layer = [[x] if not isinstance(x, (list, type(None))) else x
-                      for x in (_id, layer)]
+        _ids, layer = [[x] if not isinstance(x, (list, type(None))) else x
+                       for x in (_id, layer)]
         # ensure external lists unaffected
-        _id, layer = [x.copy() if isinstance(x, list) else x
-                      for x in (_id, layer)]
-        return _id, layer
+        _ids, layer = [x.copy() if isinstance(x, list) else x
+                       for x in (_ids, layer)]
+        return _ids, layer
+
+    def _ids_to_names_and_idxs(_ids):
+        names, idxs = [], []
+        for _id in _ids:
+            if not isinstance(_id, (str, int, tuple)):
+                tp = type(_id).__name__
+                raise ValueError("unsupported _id list element type: %s" % tp
+                                 + "; supported are: str, int, tuple")
+            if isinstance(_id, str):
+                names.append(_id)
+            else:
+                if isinstance(_id, int):
+                    idxs.append(_id)
+                else:
+                    assert all(isinstance(x, int) for x in _id)
+                    idxs.append(_id)
+        return names or None, idxs or None
 
     def _one_requested(_ids, layer):
         return len(layer or _ids) == 1  # give `layer` precedence
@@ -23,8 +40,7 @@ def _validate_args(_id, layer):
     if _ids is None:
         names, idxs = None, None
     else:
-        names = _ids if isinstance(_ids[0], str) else None
-        idxs  = _ids if isinstance(_ids[0], int) else None
+        names, idxs = _ids_to_names_and_idxs(_ids)
     return names, idxs, layer, _one_requested(_ids, layer)
 
 

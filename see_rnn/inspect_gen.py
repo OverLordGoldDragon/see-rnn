@@ -1,11 +1,10 @@
 import numpy as np
 
 from copy import deepcopy
-from .utils import _validate_args, K_eval
+from .utils import _validate_args
 from ._backend import K, TF_KERAS
 
 
-# TODO check used fns, _id was moved
 def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
                 as_dict=False):
     """Retrieves layer outputs given input data and layer info.
@@ -27,7 +26,9 @@ def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
          input data formats
     """
     def _get_outs_tensors(model, names, idxs, layers):
-        layers = layers or get_layer(model, names or idxs)
+        if layers is None:
+            _id = [x for v in (names, idxs) if v for x in v] or None
+            layers = get_layer(model, _id)
         if not isinstance(layers, list):
             layers = [layers]
         return [l.output for l in layers]
@@ -46,7 +47,6 @@ def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
     return outs[0] if (one_requested and len(outs) == 1) else outs
 
 
-# TODO check used fns, _id was moved
 def get_gradients(model, _id, input_data, labels, layer=None, mode='outputs',
                   sample_weights=None, learning_phase=0, as_dict=False):
     """Retrieves layer gradients w.r.t. outputs or weights.
@@ -84,9 +84,10 @@ def get_gradients(model, _id, input_data, labels, layer=None, mode='outputs',
         return _validate_args(_id, layer)
 
     names, idxs, layers, one_requested = _validate_args_(_id, layer, mode)
+    _id = [x for v in (names, idxs) if v for x in v] or None
 
     if layers is None:
-        layers = get_layer(model, names or idxs)
+        layers = get_layer(model, _id)
 
     grads_fn = _make_grads_fn(model, layers, mode)
     if TF_KERAS:
@@ -97,6 +98,8 @@ def get_gradients(model, _id, input_data, labels, layer=None, mode='outputs',
 
     if as_dict:
         return {get_full_name(model, i): x for i, x in zip(names or idxs, grads)}
+
+    print("len(grads)", len(grads))
     return grads[0] if (one_requested and len(grads) == 1) else grads
 
 
@@ -127,23 +130,26 @@ def _make_grads_fn(model, layers, mode='outputs'):
     return K.function(inputs=inputs, outputs=grads)
 
 
+# TODO: let `_id` pack both, names & idxs - for all methods
 def get_layer(model, _id):
     """Returns layer by index or name.
     If multiple matches are found, returns earliest.
     """
     names, idxs, _, one_requested = _validate_args(_id, layer=None)
 
+    layers = []
     if idxs is not None:
         layers = [model.layers[i] for i in idxs]
-        return layers if len(layers) > 1 else layers[0]
+        if names is None:
+            return layers if len(layers) > 1 else layers[0]
 
-    layers = []
     for layer in model.layers:
         for n in names:
-            if n in layer.name:
+            if (n in layer.name):
                 layers.append(layer)
                 _ = names.pop(names.index(n))  # get at most one per match
                 break
+            # note that above doesn't avoid duplicates, since `names` doesn't
 
     if len(layers) == 0:
         raise Exception("no layers found w/ names matching substring(s):",
@@ -152,8 +158,8 @@ def get_layer(model, _id):
 
 
 def get_full_name(model, _id):
-    """Given full or partial (substring) layer name, or layer index,
-    return complete layer name.
+    """Given full or partial (substring) layer name, or layer index, or list
+    containing either, return complete layer name(s).
 
     Arguments:
         model: keras.Model / tf.keras.Model.
@@ -162,25 +168,26 @@ def get_full_name(model, _id):
     """
     names, idxs, _, one_requested = _validate_args(_id, layer=None)
 
+    fullnames = []
     if idxs is not None:
         fullnames = [model.layers[i].name for i in idxs]
-        return fullnames[0] if one_requested else fullnames
+        if names is None:
+            return fullnames[0] if one_requested else fullnames
 
-    fullnames = []
     for layer in model.layers:
         for n in names:
             if n in layer.name:
                 fullnames.append(layer.name)
                 _ = names.pop(names.index(n))  # get at most one per match
                 break
+            # note that above doesn't avoid duplicates, since `names` doesn't
 
     if len(fullnames) == 0:
-        raise Exception(f"layer w/ name substring '{_id}' not found")
-    print("fullnames", fullnames)
+        raise Exception(f"layer w/ identifier '{_id}' not found")
     return fullnames[0] if one_requested else fullnames
 
 
-def get_weights(model, names, as_dict=False):
+def get_weights(model, _id, as_dict=False):
     """Given full or partial (substring) weight name(s), return weight values
     (and corresponding names if as_list=False).
 
@@ -192,39 +199,58 @@ def get_weights(model, names, as_dict=False):
         as_dict: bool. True:  return weight name-value pairs in a dict
                        False: return weight values as list in order fetched
     """
-    # TODO enable idxs arg as tuple of indices: (layer_idx, weight_idx)
-    def _get_weights(model, name):
-        # weight_name == weight part of the full weight name
-        if len(name.split('/')) == 2:
-            layer_name, weight_name = name.split('/')
-        else:
-            layer_name, weight_name = name.split('/')[0], None
-        layer_name = get_full_name(model, layer_name)
-        layer = model.get_layer(name=layer_name)
+    def _get_weights_tensors(model, _id):
+        def _get_by_idx(model, idx):
+            if len(idx) == 2:
+                layer_idx, weight_idxs = idx
+            else:
+                layer_idx, weight_idxs = idx, None
 
-        _weights = {}
-        if weight_name is not None:
-            for w in layer.weights:
-                if weight_name in w.name:
-                    _weights[w.name] = w
+            layer = model.get_layer(index=layer_idx)
+            if weight_idxs is None:
+                weight_idxs = list(range(len(layer.weights)))  # get all
+            if not isinstance(weight_idxs, (tuple, list)):
+                weight_idxs = [weight_idxs]
+
+            return {w.name: w for i, w in enumerate(layer.weights)
+                    if i in weight_idxs}
+
+        def _get_by_name(model, name):
+            # weight_name == weight part of the full weight name
+            if len(name.split('/')) == 2:
+                layer_name, weight_name = name.split('/')
+            else:
+                layer_name, weight_name = name.split('/')[0], None
+            layer_name = get_full_name(model, layer_name)
+            layer = model.get_layer(name=layer_name)
+
+            if weight_name is not None:
+                _weights = {}
+                for w in layer.weights:
+                    if weight_name in w.name:
+                        _weights[w.name] = w
+            else:
+                _weights = {w.name: w for w in layer.weights}
+            if len(_weights) == 0:
+                raise Exception(f"weight w/ name '{name}' not found")
+            return _weights
+
+        if isinstance(_id, str):
+            return _get_by_name(model, _id)
         else:
-            _weights = {w.name: w for w in layer.weights}
-        if len(_weights) == 0:
-            raise Exception(f"weight w/ name '{name}' not found")
-        return _weights
+            return _get_by_idx(model, _id)
 
     weights = {}
-    if not isinstance(names, list):
-        names = [names]
-    for name in names:
-        weights.update(_get_weights(model, name))
+    _ids = _id if isinstance(_id, list) else [_id]
+    for _id in _ids:
+        weights.update(_get_weights_tensors(model, _id))
 
     weights = {name: value for name, value in
                zip(weights, K.batch_get_value(list(weights.values())))}
     if as_dict:
         return weights
     weights = list(weights.values())
-    return weights[0] if (len(names) == 1 and len(weights) == 1) else weights
+    return weights[0] if (len(_ids) == 1 and len(_ids) == 1) else weights
 
 
 def _detect_nans(data):
@@ -240,7 +266,8 @@ def _detect_nans(data):
     return txt
 
 
-def weights_norm(model, names, _dict=None, stat_fns=(np.max, np.mean),
+# TODO omit_weight_ids?
+def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
                  norm_fn=np.square, omit_weight_names=None, axis=-1, verbose=0):
     """Retrieves model layer weight matrix norms, as specified by `norm_fn`.
 
@@ -263,17 +290,9 @@ def weights_norm(model, names, _dict=None, stat_fns=(np.max, np.mean),
     Returns:
         stats_all: dict. dict of lists containing layer weight norm statistics.
     """
-    def _process_args(model, names, _dict, omit_weight_names):
-        def _process_names(names, model):
-            if isinstance(names, str):
-                names = [names]
-            fullnames = []
-            for layer in model.layers:
-                if any([name in layer.name.lower() for name in names]):
-                    fullnames.append(layer.name)
-            return fullnames
-
-        names = _process_names(names, model)
+    def _process_args(model, _id, _dict, omit_weight_names):
+        _ids = _id if isinstance(_id, list) else [_id]
+        names = [get_full_name(model, _id) for _id in _ids]
 
         if omit_weight_names is None:
             omit_weight_names = []
@@ -284,8 +303,7 @@ def weights_norm(model, names, _dict=None, stat_fns=(np.max, np.mean),
             stats_all = deepcopy(_dict)  # do not mutate original dict
         else:
             stats_all = {name: [[]] for name in names}
-        return stats_all, names, omit_weight_names
-
+        return _ids, stats_all, names, omit_weight_names
 
     def _print_stats(stats_all, l_idx, l_name):
         def _unpack_layer_stats(stats_all, l_name):
@@ -307,8 +325,7 @@ def weights_norm(model, names, _dict=None, stat_fns=(np.max, np.mean),
         stats_flat = _unpack_layer_stats(stats_all, l_name)
         print(txt.format(l_idx, *stats_flat))
 
-
-    def _get_layer_norm(stats_all, layer, norm_fn, stat_fns, axis=-1):
+    def _get_layer_norm(stats_all, _id, model, l_name, norm_fn, stat_fns, axis):
         def _compute_norm(w, norm_fn, axis=-1):
             axis = axis if axis != -1 else len(w.shape) - 1
             reduction_axes = tuple([ax for ax in range(len(w.shape))
@@ -324,9 +341,8 @@ def weights_norm(model, names, _dict=None, stat_fns=(np.max, np.mean),
             for stat_idx, stat in enumerate(l2_stats):
                 stats_all[l_name][w_idx][stat_idx].append(stat)
 
-        W = [K_eval(w, K) for w in layer.weights]
-        w_names = [w.name for w in layer.weights]
-        l_name = layer.name
+        weights = get_weights(model, _id, as_dict=True)
+        w_names, W = zip(*weights.items())
 
         for w_idx, (w, w_name) in enumerate(zip(W, w_names)):
             if any([to_omit in w_name for to_omit in omit_weight_names]):
@@ -336,13 +352,13 @@ def weights_norm(model, names, _dict=None, stat_fns=(np.max, np.mean),
             _append(stats_all, l2_stats, w_idx, l_name)
         return stats_all
 
-    stats_all, names, omit_weight_names = _process_args(
-        model, names, _dict, omit_weight_names)
-
+    _ids, stats_all, names, omit_weight_names = _process_args(model, _id, _dict,
+                                                              omit_weight_names)
     for l_idx, layer in enumerate(model.layers):
         if layer.name in names:
-            stats_all = _get_layer_norm(stats_all, layer, norm_fn,
-                                        stat_fns, axis)
+            _id = _ids[names.index(layer.name)]
+            stats_all = _get_layer_norm(stats_all, _id, model, layer.name,
+                                        norm_fn, stat_fns, axis)
             if verbose:
                 _print_stats(stats_all, l_idx, layer.name)
     return stats_all
