@@ -316,7 +316,6 @@ def rnn_heatmap(model, name=None, idx=None, layer=None, input_data=None,
             'subtitle':  dict(weight='bold', fontsize=14),
             'xlabel':    dict(fontsize=12, weight='bold'),
             'ylabel':    dict(fontsize=12, weight='bold'),
-            'tight':     dict(),
             'annot':     dict(fontsize=12, weight='bold',
                               xy=(.90, .93), xycoords='axes fraction'),
             'annot-nan': dict(fontsize=12, weight='bold', color='red',
@@ -467,7 +466,7 @@ def rnn_heatmap(model, name=None, idx=None, layer=None, input_data=None,
             matrix_data = data[w_idx]
             _detect_and_print_nans(matrix_data, kernel_type, d)
 
-            is_vector = (len(matrix_data.shape) == 1)
+            is_vector = matrix_data.ndim == 1
             if is_vector:
                 matrix_data = np.expand_dims(matrix_data, -1)
 

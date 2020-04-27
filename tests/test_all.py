@@ -262,7 +262,7 @@ def test_errors():  # test Exception cases
     pass_on_error(features_0D, grads, cake='lie')
     pass_on_error(features_1D, grads, pup='not just any')
     pass_on_error(features_2D, grads, true=False)
-    outs = get_outputs(model, x, idx=1)
+    outs = list(get_outputs(model, x, idx=1, as_dict=True).values())
     pass_on_error(rnn_histogram, model, idx=1, data=outs)
     pass_on_error(rnn_histogram, model, idx=1, data=[1])
     pass_on_error(rnn_histogram, model, idx=1, data=[[1]])
@@ -287,6 +287,7 @@ def test_misc():  # test miscellaneous functionalities
     weights_norm(model, 'gru', _dict=stats)
 
     grads = get_gradients(model, x, y, idx=1)
+    get_gradients(model, x, y, idx=1, as_dict=True)
 
     features_1D(grads, subplot_samples=True, tight=True, borderwidth=2,
                 equate_axes=False)
@@ -312,6 +313,8 @@ def test_misc():  # test miscellaneous functionalities
     with tempdir() as dirpath:
         rnn_histogram(model, idx=1, show_xy_ticks=[0, 0], equate_axes=2,
                       savepath=os.path.join(dirpath, 'img.png'))
+    rnn_histogram(model, idx=1, equate_axes=False,
+                  configs={'tight': dict(left=0, right=1)})
     rnn_heatmap(model, idx=1, cmap=None, normalize=True, show_borders=False)
     rnn_heatmap(model, idx=1, cmap=None, norm='auto', absolute_value=True)
     rnn_heatmap(model, idx=1, norm=None)

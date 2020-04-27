@@ -41,8 +41,10 @@ def get_outputs(model, input_data, name=None, idx=None, layer=None,
 
     outs = outs_fn([input_data, learning_phase])
     if as_dict:
-        return {get_full_name(model, name): out
-                for name, out in zip(names, outs)}
+        if names:
+            return {get_full_name(model, n): o for n, o in zip(names, outs)}
+        else:
+            return {get_full_name(model, idx=i): o for i, o in zip(idxs, outs)}
     return outs[0] if (one_requested and len(outs) == 1) else outs
 
 
@@ -95,7 +97,10 @@ def get_gradients(model, input_data, labels, name=None, idx=None, layer=None,
         grads = grads_fn([input_data, sample_weights, labels, 1])
 
     if as_dict:
-        return {get_full_name(model, n): g for n, g in zip(names, grads)}
+        if names:
+            return {get_full_name(model, n): g for n, g in zip(names, grads)}
+        else:
+            return {get_full_name(model, idx=i): g for i, g in zip(idxs, grads)}
     return grads[0] if (one_requested and len(grads) == 1) else grads
 
 
@@ -161,7 +166,8 @@ def get_full_name(model, name=None, idx=None):
     """
     names, idxs, _, one_requested = _validate_args(name, idx, layer=None)
     if idxs is not None:
-        return [model.layers[i].name for i in idxs]
+        fullnames = [model.layers[i].name for i in idxs]
+        return fullnames[0] if one_requested else fullnames
 
     fullnames = []
     for layer in model.layers:
@@ -173,6 +179,7 @@ def get_full_name(model, name=None, idx=None):
 
     if len(fullnames) == 0:
         raise Exception(f"layer w/ name substring '{name}' not found")
+    print("fullnames", fullnames)
     return fullnames[0] if one_requested else fullnames
 
 
