@@ -34,6 +34,14 @@ def rnn_histogram(model, _id, layer=None, input_data=None, labels=None,
         data: np.ndarray. Pre-fetched data to plot directly - e.g., returned by
               `get_rnn_weights`. Overrides `input_data`, `labels` and `mode`.
               `model` and layer args are still needed to fetch RNN-specific info.
+        configs: dict. kwargs to customize various plot schemes:
+            'plot':      passed to ax.imshow();    ax  = subplots axis
+            'subplot':   passed to plt.subplots()
+            'tight':     passed to fig.subplots_adjust(); fig = subplots figure
+            'title':     passed to fig.suptitle()
+            'annot':     passed to ax.annotate()
+            'annot-nan': passed to ax.annotate() for `nan_txt`
+            'save':      passed to fig.savefig() if `savepath` is not None.
     (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
          input data formats
 
@@ -64,8 +72,8 @@ def rnn_histogram(model, _id, layer=None, input_data=None, labels=None,
         defaults = {
             'plot':    dict(),
             'subplot': dict(sharex=True, sharey=True, dpi=76, figsize=(9, 9)),
-            'title':   dict(weight='bold', fontsize=13, y=1.05),
             'tight':   dict(),
+            'title':   dict(weight='bold', fontsize=13, y=1.05),
             'annot':     dict(fontsize=12, weight='bold',
                               xy=(.90, .93), xycoords='axes fraction'),
             'annot-nan': dict(fontsize=12, weight='bold', color='red',
@@ -287,6 +295,17 @@ def rnn_heatmap(model, _id, layer=None, input_data=None, labels=None,
         data: np.ndarray. Pre-fetched data to plot directly - e.g., returned by
               `get_rnn_weights`. Overrides `input_data`, `labels` and `mode`.
               `model` and layer args are still needed to fetch RNN-specific info.
+        configs: dict. kwargs to customize various plot schemes:
+            'plot':      passed to ax.imshow(); ax = subplots axis
+            'plot-bias': passed to ax.imshow() for bias
+            'subplot':   passed to fig.subplots(); fig = subplots figure
+            'tight':     passed to fig.subplots_adjust()
+            'title':     passed to fig.suptitle()
+            'subtitle':  passed to ax.set_title()  of each subplot
+            'xlabel':    passed to ax.set_xlabel() of each non-bias subplot
+            'ylabel':    passed to ax.set_ylabel() of each non-bias subplot
+            'colorbar':  passed to fig.colorbar()
+            'save':      passed to fig.savefig() if `savepath` is not None.
     (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
          input data formats
 
@@ -323,8 +342,10 @@ def rnn_heatmap(model, _id, layer=None, input_data=None, labels=None,
 
     def _process_configs(configs, w, h):
         defaults = {
-            'plot':      dict(),
+            'plot':      dict(interpolation='nearest'),
+            'plot-bias': dict(interpolation='nearest'),
             'subplot':   dict(dpi=76, figsize=(14, 8)),
+            'tight':     dict(),
             'title':     dict(weight='bold', fontsize=14, y=.98),
             'subtitle':  dict(weight='bold', fontsize=14),
             'xlabel':    dict(fontsize=12, weight='bold'),
@@ -436,14 +457,14 @@ def rnn_heatmap(model, _id, layer=None, input_data=None, labels=None,
             axes = np.atleast_2d(axes)
             return fig, axes
 
-        fig, axes = plt.subplots(12, 2, **kw['subplot'])
+        fig, axes = plt.subplots(10, 2, **kw['subplot'])
 
         # merge upper 11 axes to increase height ratio w.r.t. bias plot window
         gs = axes[0, 0].get_gridspec()
-        for ax in axes.flat[:22]:
+        for ax in axes.flat[:18]:
             ax.remove()
-        axbig1 = fig.add_subplot(gs[:10, 0])
-        axbig2 = fig.add_subplot(gs[:10, 1])
+        axbig1 = fig.add_subplot(gs[:8, 0])
+        axbig2 = fig.add_subplot(gs[:8, 1])
         axes = np.array([[axbig1, axbig2], [*axes.flat[-2:]]])
         axes = np.atleast_2d(axes)
 
@@ -479,9 +500,11 @@ def rnn_heatmap(model, _id, layer=None, input_data=None, labels=None,
             if is_vector:
                 matrix_data = np.expand_dims(matrix_data, -1)
 
-            aspect = 20 / len(matrix_data) if is_vector else 'auto'
-            img = ax.imshow(matrix_data, cmap=cmap, interpolation='nearest',
-                            aspect=aspect, vmin=vmin, vmax=vmax)
+            if 'aspect' not in kw['plot']:
+                aspect = 20 / len(matrix_data) if is_vector else 'auto'
+                kw['plot']['aspect'] = aspect
+            img = ax.imshow(matrix_data, cmap=cmap, vmin=vmin, vmax=vmax,
+                            **kw['plot'])
             _style_axis(ax, type_idx, kernel_type, show_borders, is_vector,
                         d, kw)
 
@@ -499,8 +522,11 @@ def rnn_heatmap(model, _id, layer=None, input_data=None, labels=None,
             data_idx = 2 + direction_idx * (2 + d['uses_bias'])
             weights_viz = np.atleast_2d(data[data_idx])
 
-            axbig.imshow(weights_viz, cmap=cmap, interpolation='nearest',
-                         aspect=1/5, vmin=vmin, vmax=vmax)
+            if 'aspect' not in kw['plot-bias']:
+                dim = weights_viz.shape[1]
+                kw['plot-bias']['aspect'] = dim / 100 if dim > 100 else .5
+            axbig.imshow(weights_viz, cmap=cmap, vmin=vmin, vmax=vmax,
+                         **kw['plot-bias'])
             # Styling
             if d['gate_sep_width'] != 0:
                 lw = d['gate_sep_width']
@@ -509,6 +535,9 @@ def rnn_heatmap(model, _id, layer=None, input_data=None, labels=None,
             axbig.set_frame_on(False)
             axbig.set_title('BIAS', **kw['subtitle'])
             axbig.get_yaxis().set_ticks([])
+
+        if kw['tight']:
+            fig.subplots_adjust(**kw['tight'])
 
     plt.show()
     if savepath is not None:

@@ -142,11 +142,11 @@ def features_1D(data, n_rows=None, annotations='auto', equate_axes=True,
         subplot_samples: bool. If True, generates a subplot per dim 0 of `data`
               instead of dim 2 - i.e. (Channels vs. Timesteps) vs. Samples.
         configs: dict. kwargs to customize various plot schemes:
-            'plot':    passed to ax.plot(); ax = subplots axis
-            'subplot': passed to plt.subplots()
-            'title':   passed to plt.suptitle()
-            'tight':   passed to plt.subplots_adjust()
-            'annot':   passed to ax.annotate(); ax = subplots axis
+            'plot':    passed to ax.plot();      ax  = subplots axis
+            'subplot': passed to fig.subplots(); fig = subplots figure
+            'title':   passed to fig.suptitle()
+            'tight':   passed to fig.subplots_adjust()
+            'annot':   passed to ax.annotate()
             'save':    passed to fig.savefig() if `savepath` is not None.
 
     iter == list/tuple (both work)
@@ -340,11 +340,11 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
         max_timesteps:  int/None. Max number of timesteps to show per plot.
               If None, keeps original.
         configs: dict. kwargs to customize various plot schemes:
-            'plot':     passed to plt.hist()
+            'plot':     passed to fig.hist(); fig = subplots figure
             'subplot':  passed to plt.subplots()
-            'title':    passed to plt.suptitle()
-            'tight':    passed to plt.subplots_adjust()
-            'colorbar': passed to fig.colorbar(); fig = subplots figure
+            'title':    passed to fig.suptitle()
+            'tight':    passed to fig.subplots_adjust()
+            'colorbar': passed to fig.colorbar()
             'save':     passed to fig.savefig() if `savepath` is not None.
 
     kwargs:
@@ -532,11 +532,11 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
                           If len(list) < len(data), won't annotate remainder.
              None: don't annotate.
         configs: dict. kwargs to customize various plot schemes:
-            'plot':    passed to plt.hist()
+            'plot':    passed to ax.hist(); ax = subplots axis
             'subplot': passed to plt.subplots()
-            'title':   passed to plt.suptitle()
-            'tight':   passed to plt.subplots_adjust()
-            'annot':   passed to ax.annotate(); ax = subplots axis
+            'title':   passed to fig.suptitle(); fig = subplots figure
+            'tight':   passed to fig.subplots_adjust()
+            'annot':   passed to ax.annotate()
             'save':    passed to fig.savefig() if `savepath` is not None.
 
     kwargs:
@@ -663,12 +663,12 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
         side_annot: str. Text to display to the right side of rightmost subplot
               boxes, enumerated by row number ({side_annot}{row})
         configs: dict. kwargs to customize various plot schemes:
-            'plot':       passed to plt.hist()
+            'plot':       passed to ax.hist(); ax = subplots axis
             'subplot':    passed to plt.subplots()
-            'title':      passed to plt.suptitle()
-            'tight':      passed to plt.subplots_adjust()
-            'colnames':   passed to ax.set_title(); ax = subplots axis
-            'side_annot': passed to ax.annotate();  ax = subplots axis
+            'title':      passed to fig.suptitle(); fig = subplots figure
+            'tight':      passed to fig.subplots_adjust()
+            'colnames':   passed to ax.set_title()
+            'side_annot': passed to ax.annotate()
             'save':       passed to fig.savefig() if `savepath` is not None.
 
     kwargs:

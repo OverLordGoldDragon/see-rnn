@@ -69,15 +69,15 @@ def train_model(model, iterations):
 
 def viz_outs(model, idx=1):
     x, y = make_data(K.int_shape(model.input), model.layers[2].units)
-    outs = get_outputs(model, x, idx=idx)
+    outs = get_outputs(model, idx, x)
 
     features_1D(outs[:1], n_rows=8, show_borders=False)
     features_2D(outs,     n_rows=8, norm=(-1,1))
 
 def viz_weights(model, idx=1):
-    rnn_histogram(model, idx=idx, mode='weights', bins=400)
+    rnn_histogram(model, idx, mode='weights', bins=400)
     print('\n')
-    rnn_heatmap(model,   idx=idx, mode='weights', norm='auto')
+    rnn_heatmap(model,   idx, mode='weights', norm='auto')
 
 def viz_outs_grads(model, idx=1):
     x, y = make_data(K.int_shape(model.input), model.layers[2].units)
@@ -117,5 +117,5 @@ viz_outs_grads_last(model, 2)
 viz_weights(model, 1)
 viz_weights_grads(model, 1)
 
-data = get_rnn_weights(model, idx=1)
+data = get_rnn_weights(model, 1)
 viz_prefetched_data(model, data, 1)
