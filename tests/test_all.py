@@ -297,14 +297,14 @@ def test_misc():  # test miscellaneous functionalities
     with tempdir() as dirpath:
         features_0D(grads[0], savepath=os.path.join(dirpath, 'img.png'))
     with tempdir() as dirpath:
-        features_1D(grads[0], subplot_samples=True,
+        features_1D(grads[0], subplot_samples=True, annotations=[1, 'pi'],
                     savepath=os.path.join(dirpath, 'img.png'))
     features_2D(grads.T, n_rows=1.5, tight=True, borderwidth=2)
     with tempdir() as dirpath:
         features_2D(grads.T[:, :, 0], norm='auto',
                     savepath=os.path.join(dirpath, 'img.png'))
     with tempdir() as dirpath:
-        features_hist(grads, show_borders=False, borderwidth=1,
+        features_hist(grads, show_borders=False, borderwidth=1, annotations=[0],
                       show_xy_ticks=[0, 0], title="grads",
                       savepath=os.path.join(dirpath, 'img.png'))
     with tempdir() as dirpath:
