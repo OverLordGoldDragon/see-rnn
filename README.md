@@ -3,6 +3,7 @@
 [![Build Status](https://travis-ci.com/OverLordGoldDragon/see-rnn.svg?token=dGKzzAxzJjaRLzddNsCd&branch=master)](https://travis-ci.com/OverLordGoldDragon/see-rnn)
 [![Coverage Status](https://coveralls.io/repos/github/OverLordGoldDragon/see-rnn/badge.svg?branch=master&service=github&kill_cache=1)](https://coveralls.io/github/OverLordGoldDragon/see-rnn?branch=master)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/e15b1b772c3f4dc9ba7988784a2b9bf6)](https://www.codacy.com/manual/OverLordGoldDragon/see-rnn?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=OverLordGoldDragon/see-rnn&amp;utm_campaign=Badge_Grade)
+[![PyPI version](https://badge.fury.io/py/see-rnn.svg)](https://badge.fury.io/py/see-rnn)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 ![](https://img.shields.io/badge/keras-tensorflow-blue.svg)
