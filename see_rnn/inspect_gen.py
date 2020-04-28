@@ -322,7 +322,10 @@ def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
                        Can specify a weight (full or substring) in format
                        {name/weight_name}.
             list of str/int/tuple of int -> treat each str element as name,
-                       int/tuple of int as idx.
+                       int/tuple of int as idx.  Ex: ['gru', 2, (3, 1, 2)] gets
+                       weights of first layer with name substring 'gru', then all
+                       weights of layer w/ idx 2, then weights w/ idxs 1 and 2 of
+                       layer w/ idx 3.
         _dict: dict/None. If None, returns new dict. If dict, appends to it.
         stat_fns: functions list/tuple. Aggregate statistic to compute from
                normed weights.
@@ -336,12 +339,21 @@ def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
                indices. If `_dict` is not None, print last computed results.
 
     Returns:
-        stats_all: dict. dict of lists containing layer weight norm statistics.
+        stats_all: dict. dict of lists containing layer weight norm statistics,
+               structured: stats_all[layer_fullname][weight_index][stat_index].
     """
     def _process_args(model, _id, _dict, omit_weight_names):
+        def _get_names(model, _ids):
+            _ids_normalized = []
+            for _id in _ids:
+                _ids_normalized.append(_id[0] if isinstance(_id, tuple) else _id)
+            names = get_full_name(model, _ids_normalized)
+            if not isinstance(names, list):
+                names = [names]
+            return names
+
         _ids = _id if isinstance(_id, list) else [_id]
-        names = [get_full_name(model, _id if isinstance(_id, int) else _id[0])
-                 for _id in _ids]
+        names = _get_names(model, _ids)
 
         if omit_weight_names is None:
             omit_weight_names = []
@@ -360,7 +372,7 @@ def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
             stats_flat = []
             for w_stats in l_stats:
                 if isinstance(w_stats, list):
-                    _ = [stats_flat.extend(s) for s in w_stats]
+                    _ = [stats_flat.append(stat[-1]) for stat in w_stats]
                 else:
                     stats_flat.append(w_stats)
             return stats_flat
