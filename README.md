@@ -236,8 +236,7 @@ import numpy as np
 from keras.layers import Input, LSTM
 from keras.models import Model
 from keras.optimizers import Adam
-from see_rnn import get_gradients, features_1D, features_2D
-from see_rnn import features_0D
+from see_rnn import get_gradients, features_0D, features_1D, features_2D
 
 def make_model(rnn_layer, batch_shape, units):
     ipt = Input(batch_shape=batch_shape)
