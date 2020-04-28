@@ -15,9 +15,10 @@ def rnn_histogram(model, _id, layer=None, input_data=None, labels=None,
 
     Arguments:
         model: keras.Model/tf.keras.Model.
-        idx: int. Index of layer to fetch, via model.layers[idx].
-        name: str. Name of layer (can be substring) to be fetched. Returns
-              earliest match if multiple found.
+        _id: str/int. int -> idx; str -> name
+            idx: int. Index of layer to fetch, via model.layers[idx].
+            name: str. Name of layer (full or substring) to be fetched.
+                       Returns earliest match if multiple found.
         layer: keras.Layer/tf.keras.Layer. Layer whose gradients to return.
                Overrides `idx` and `name`
         input_data: np.ndarray & supported formats(1). Data w.r.t. which loss is
@@ -260,9 +261,10 @@ def rnn_heatmap(model, _id, layer=None, input_data=None, labels=None,
 
     Arguments:
         model: keras.Model/tf.keras.Model.
-        idx: int. Index of layer to fetch, via model.layers[idx].
-        name: str. Name of layer (can be substring) to be fetched. Returns
-              earliest match if multiple found.
+        _id: str/int. int -> idx; str -> name
+            idx: int. Index of layer to fetch, via model.layers[idx].
+            name: str. Name of layer (full or substring) to be fetched.
+                       Returns earliest match if multiple found.
         layer: keras.Layer/tf.keras.Layer. Layer whose gradients to return.
                Overrides `idx` and `name`
         input_data: np.ndarray & supported formats(1). Data w.r.t. which loss is

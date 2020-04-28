@@ -16,6 +16,8 @@ def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
             name: str. Name of layer (full or substring) to be fetched.
                        Returns earliest match if multiple found.
             list of str/int -> treat each str element as name, int as idx.
+                      Ex: ['gru', 2] gets outputs of first layer with name
+                      substring 'gru', then of layer w/ idx 2
         input_data: np.ndarray & supported formats(1). Data w.r.t. which loss is
                to be computed for the gradient. Only for mode=='grads'.
         layer: keras.Layer/tf.keras.Layer. Layer whose outputs to return.
@@ -65,6 +67,8 @@ def get_gradients(model, _id, input_data, labels, layer=None, mode='outputs',
             name: str. Name of layer (full or substring) to be fetched.
                        Returns earliest match if multiple found.
             list of str/int -> treat each str element as name, int as idx.
+                      Ex: ['gru', 2] gets gradients of first layer with name
+                      substring 'gru', then of layer w/ idx 2
         input_data: np.ndarray & supported formats(1). Data w.r.t. which loss is
                to be computed for the gradient.
         labels: np.ndarray & supported formats. Labels w.r.t. which loss is
@@ -178,6 +182,8 @@ def get_full_name(model, _id):
             name: str. Name of layer (full or substring) to be fetched.
                        Returns earliest match if multiple found.
             list of str/int -> treat each str element as name, int as idx.
+                      Ex: ['gru', 2] gets full names of first layer w/ name
+                      substring 'gru', and of layer w/ idx 2.
 
     Returns:
         Full name of layer specified by `_id`.
@@ -220,7 +226,10 @@ def get_weights(model, _id, as_dict=False):
                        Can specify a weight (full or substring) in format
                        {name/weight_name}.
             list of str/int/tuple of int -> treat each str element as name,
-                       int/tuple of int as idx.
+                       int/tuple of int as idx. Ex: ['gru', 2, (3, 1, 2)] gets
+                       weights of first layer with name substring 'gru', then all
+                       weights of layer w/ idx 2, then weights w/ idxs 1 and 2 of
+                       layer w/ idx 3.
         as_dict: bool. True:  return weight fullname-value pairs in a dict
                        False: return weight values as list in order fetched
 
