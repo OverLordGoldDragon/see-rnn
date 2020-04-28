@@ -21,6 +21,7 @@ RNN weights, gradients, &amp; activations visualization in Keras &amp; TensorFlo
   - **Gate visuals**: gates in gated architectures (LSTM, GRU) shown explicitly
   - **Channel visuals**: cell units (feature extractors) shown explicitly
   - **General visuals**: methods also applicable to CNNs & others
+  - **Weight norm tracking**: useful for analyzing weight decay
 
 
 ## Why use?
@@ -30,11 +31,13 @@ Introspection is a powerful tool for debugging, regularizing, and understanding 
  - Monitoring **weights & activations progression** - how each changes epoch-to-epoch, iteration-to-iteration
  - Evaluating **learning effectiveness** - how well gradient backpropagates layer-to-layer, timestep-to-timestep
  - Assessing **layer health** - what percentage of neurons are "dead" or "exploding"
+ - Tracking **weight decay** - how various schemes (e.g. l2 penalty) affect weight norms
  
 It enables answering questions such as:
  - Is my RNN learning **long-term dependencies**? >> Monitor gradients: if a non-zero gradient flows through every timestep, then _every timestep contributes to learning_ - i.e., resultant gradients stem from accounting for every input timestep, so the _entire sequence influences weight updates_. Hence, an RNN _no longer ignores portions of long sequences_, and is forced to _learn from them_
  - Is my RNN learning **independent representations**? >> Monitor activations: if each channel's outputs are distinct and decorrelated, then the RNN extracts richly diverse features.
  - Why do I have **validation loss spikes**? >> Monitor all: val. spikes may stem from sharp changes in layer weights due to large gradients, which will visibly alter activation patterns; seeing the details can help inform a correction
+ - Is my **weight decay excessive** or insufficient? >> Monitor weight norms: if values slash to many times less their usual values, decay might be excessive - or, if no effect is seen, increase decay
  
 For further info on potential uses, see [this SO](https://stackoverflow.com/questions/48714407/rnn-regularization-which-component-to-regularize/58868383#58868383).
 
@@ -42,7 +45,7 @@ For further info on potential uses, see [this SO](https://stackoverflow.com/ques
 
 Will possibly implement:
 
- - [ ] Weight norm inspection (all layers); see [here](https://github.com/OverLordGoldDragon/see-rnn/issues/10#issuecomment-590537205)
+ - [x] Weight norm inspection (all layers); see [here](https://github.com/OverLordGoldDragon/see-rnn/issues/10#issuecomment-590537205)
  - [ ] Interpretability visuals (e.g. saliency maps, adversarial attacks)
  - [ ] Tools for better probing backprop of `return_sequences=False`
  
@@ -50,9 +53,9 @@ Will possibly implement:
 
 ```python
 # for all examples
-grads = get_layer_gradients(model, x, y, layer_idx=1)  # return_sequences=True
-grads = get_layer_gradients(model, x, y, layer_idx=2)  # return_sequences=False
-outs  = get_layer_outputs(model, x,      layer_idx=1)  # return_sequences=True
+grads = get_gradients(model, 1, x, y)  # return_sequences=True,  layer index 1
+grads = get_gradients(model, 2, x, y)  # return_sequences=False, layer index 2
+outs  = get_outputs(model, 1, x)       # return_sequences=True,  layer index 1
 # all examples use timesteps=100
 # NOTE: `title_mode` kwarg below was omitted for simplicity; for Gradient visuals, would set to 'grads'
 ```
@@ -60,8 +63,8 @@ outs  = get_layer_outputs(model, x,      layer_idx=1)  # return_sequences=True
 <hr>
 
 **EX 1: bi-LSTM, 32 units** - activations, `activation='relu'`<br>
-`show_features_1D(outs[:1], equate_axes=False)`<br>
-`show-features_1D(outs[:1], equate_axes=True, show_y_zero=True)`
+`features_1D(outs[:1], equate_axes=False)`<br>
+`features_1D(outs[:1], equate_axes=True, y_zero=True)`
 
  - Each subplot is an independent RNN channel's output (`return_sequences=True`)
  - In this example, each channel/filter appears to extract complex independent features of varying bias, frequency, and probabilistic distribution
@@ -74,7 +77,7 @@ outs  = get_layer_outputs(model, x,      layer_idx=1)  # return_sequences=True
 <hr>
 
 **EX 2: one sample, uni-LSTM, 6 units** - gradients, `return_sequences=True`, trained for 20 iterations <br>
-`show_features_1D(grads[:1], n_rows=2)`
+`features_1D(grads[:1], n_rows=2)`
 
  - _Note_: gradients are to be read _right-to-left_, as they're computed (from last timestep to first)
  - Rightmost (latest) timesteps consistently have a higher gradient
@@ -85,8 +88,8 @@ outs  = get_layer_outputs(model, x,      layer_idx=1)  # return_sequences=True
 <hr>
 
 **EX 3: all (16) samples, uni-LSTM, 6 units** -- `return_sequences=True`, trained for 20 iterations <br>
-`show_features_1D(grads, n_rows=2)`<br>
-`show_features_2D(grads, n_rows=4, norm=(-.01, .01))`
+`features_1D(grads, n_rows=2)`<br>
+`features_2D(grads, n_rows=4, norm=(-.01, .01))`
 
  - Each sample shown in a different color (but same color per sample across channels)
  - Some samples perform better than one shown above, but not by much
@@ -98,8 +101,8 @@ outs  = get_layer_outputs(model, x,      layer_idx=1)  # return_sequences=True
 <hr>
 
 **EX 4: all (16) samples, uni-LSTM, 6 units** -- `return_sequences=True`, trained for 200 iterations <br>
-`show_features_1D(grads, n_rows=2)`<br>
-`show_features_2D(grads, n_rows=4, norm=(-.01, .01))`
+`features_1D(grads, n_rows=2)`<br>
+`features_2D(grads, n_rows=4, norm=(-.01, .01))`
 
  - Both plots show the LSTM performing clearly better after 180 additional iterations
  - Gradient still vanishes for about half the timesteps
@@ -111,8 +114,8 @@ outs  = get_layer_outputs(model, x,      layer_idx=1)  # return_sequences=True
 <hr>
 
 **EX 5: 2D vs. 1D, uni-LSTM**: 256 units, `return_sequences=True`, trained for 200 iterations <br>
-`show_features_1D(grads[0, :, :])`<br>
-`show_features_2D(grads[:, :, 0], norm=(-.0001, .0001))`
+`features_1D(grads[0, :, :])`<br>
+`features_2D(grads[:, :, 0], norm=(-.0001, .0001))`
 
  - 2D is better suited for comparing many channels across few samples
  - 1D is better suited for comparing many samples across a few channels
@@ -122,7 +125,7 @@ outs  = get_layer_outputs(model, x,      layer_idx=1)  # return_sequences=True
 <hr>
 
 **EX 6: bi-GRU, 256 units (512 total)** -- `return_sequences=True`, trained for 400 iterations <br>
-`show_features_2D(grads[0], norm=(-.0001, .0001), reflect_half=True)`
+`features_2D(grads[0], norm=(-.0001, .0001), reflect_half=True)`
 
  - Backward layer's gradients are flipped for consistency w.r.t. time axis
  - Plot reveals a lesser-known advantage of Bi-RNNs - _information utility_: the collective gradient covers about twice the data. _However_, this isn't free lunch: each layer is an independent feature extractor, so learning isn't really complemented
@@ -133,7 +136,7 @@ outs  = get_layer_outputs(model, x,      layer_idx=1)  # return_sequences=True
 <hr>
 
 **EX 7: 0D, all (16) samples, uni-LSTM, 6 units** -- `return_sequences=False`, trained for 200 iterations<br>
-`show_features_0D(grads)`
+`features_0D(grads)`
 
  - `return_sequences=False` utilizes only the last timestep's gradient (which is still derived from all timesteps, unless using truncated BPTT), requiring a new approach
  - Plot color-codes each RNN unit consistently across samples for comparison (can use one color instead)
@@ -144,7 +147,7 @@ outs  = get_layer_outputs(model, x,      layer_idx=1)  # return_sequences=True
 <hr>
 
 **EX 8: LSTM vs. GRU vs. SimpleRNN, unidir, 256 units** -- `return_sequences=True`, trained for 250 iterations<br>
-`show_features_2D(grads, n_rows=8, norm=(-.0001, .0001), show_xy_ticks=[0,0], title_mode=False)`
+`features_2D(grads, n_rows=8, norm=(-.0001, .0001), xy_ticks=[0,0], title_mode=False)`
 
  - _Note_: the comparison isn't very meaningful; each network thrives w/ different hyperparameters, whereas same ones were used for all. LSTM, for one, bears the most parameters per unit, drowning out SimpleRNN
  - In this setup, LSTM definitively stomps GRU and SimpleRNN
@@ -155,8 +158,8 @@ outs  = get_layer_outputs(model, x,      layer_idx=1)  # return_sequences=True
 
 
 **EX 9: uni-LSTM, 256 units, weights** -- `batch_shape = (16, 100, 20)` (input)<br>
-`rnn_histogram(model, 'lstm', equate_axes=False, show_bias=False)`<br>
-`rnn_histogram(model, 'lstm', equate_axes=True,  show_bias=False)`<br>
+`rnn_histogram(model, 'lstm', equate_axes=False, bias=False)`<br>
+`rnn_histogram(model, 'lstm', equate_axes=True,  bias=False)`<br>
 `rnn_heatmap(model, 'lstm')`
 
  - Top plot is a histogram subplot grid, showing weight distributions per kernel, and within each kernel, per gate
@@ -212,7 +215,7 @@ outs  = get_layer_outputs(model, x,      layer_idx=1)  # return_sequences=True
 <hr>
 
 **EX 13: Sparse Conv1D autoencoder weights** -- `w = layer.get_weights()[0]; w.shape == (16, 64, 128)`<br>
-`show_features_2D(w, n_rows=16, norm=(-.1, .1), tight=True, borderwidth=1, title_mode=title)`<br>
+`features_2D(w, n_rows=16, norm=(-.1, .1), tight=True, borderwidth=1, title_mode=title)`<br>
 `# title = "((Layer Channels vs. Kernels) vs. Weights) vs. Input Channels -- norm = (-0.1, 0.1)"`
 
  - One of stacked `Conv1D` sparse autoencoder layers; network trained with `Dropout(0.5, noise_shape=(batch_size, 1, channels))` (Spatial Dropout), encouraging sparse features which may benefit classification
@@ -233,8 +236,7 @@ import numpy as np
 from keras.layers import Input, LSTM
 from keras.models import Model
 from keras.optimizers import Adam
-from see_rnn import get_layer_gradients, show_features_1D, show_features_2D
-from see_rnn import show_features_0D
+from see_rnn import get_gradients, features_0D, features_1D, features_2D
 
 def make_model(rnn_layer, batch_shape, units):
     ipt = Input(batch_shape=batch_shape)
@@ -263,12 +265,12 @@ model = make_model(LSTM, batch_shape, units)
 train_model(model, 300, batch_shape)
 
 x, y  = make_data(batch_shape)
-grads_all  = get_layer_gradients(model, x, y, layer_idx=1)  # return_sequences=True
-grads_last = get_layer_gradients(model, x, y, layer_idx=2)  # return_sequences=False
+grads_all  = get_gradients(model, 1, x, y)  # return_sequences=True,  layer index 1
+grads_last = get_gradients(model, 2, x, y)  # return_sequences=False, layer index 2
 
-show_features_1D(grads_all, n_rows=2, show_xy_ticks=[1,1])
-show_features_2D(grads_all, n_rows=8, show_xy_ticks=[1,1], norm=(-.01, .01))
-show_features_0D(grads_last)
+features_1D(grads_all, n_rows=2, xy_ticks=[1,1])
+features_2D(grads_all, n_rows=8, xy_ticks=[1,1], norm=(-.01, .01))
+features_0D(grads_last)
 ```
 
 
