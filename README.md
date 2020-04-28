@@ -225,7 +225,7 @@ outs  = get_outputs(model, 1, x)       # return_sequences=True,  layer index 1
  
 ## Usage 
 
-**QUICKSTART**: run [rnn_sandbox.py](https://github.com/OverLordGoldDragon/see-rnn/blob/master/rnn_sandbox.py), which includes all major examples and allows easy exploration of various plot configs.
+**QUICKSTART**: run [sandbox.py](https://github.com/OverLordGoldDragon/see-rnn/blob/master/sandbox.py), which includes all major examples and allows easy exploration of various plot configs.
 
 _Note_: if using `tensorflow.keras` imports, set `import os; os.environ["TF_KERAS"]='1'`. Minimal example below.
 
