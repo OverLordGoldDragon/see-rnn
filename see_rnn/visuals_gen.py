@@ -23,30 +23,38 @@ def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs
         configs: dict. kwargs to customize various plot schemes:
             'plot':  passed to plt.scatter()
             'title': passed to plt.suptitle()
+            'save':  passed to fig.savefig() if `savepath` is not None.
 
     kwargs:
         w: float. Scale width  of resulting plot by a factor.
         h: float. Scale height of resulting plot by a factor.
-        show_borders:  bool.  If True, shows boxes around plot(s).
-        title_mode:    bool/str. If True, shows generic supertitle.
+        show_borders: bool.  If True, shows boxes around plot(s).
+        title_mode:   bool/str. If True, shows generic supertitle.
               If str in ('grads', 'outputs'), shows supertitle tailored to
               `data` dim (2D/3D). If other str, shows `title_mode` as supertitle.
               If False, no title is shown.
         show_y_zero: bool. If True, draws y=0.
         ylims: str ('auto'); float list/tuple. Plot y-limits; if 'auto',
                sets both lims to max of abs(`data`) (such that y=0 is centered).
+        savepath: str/None. Path to save resulting figure to. Also see `configs`.
+               If None, doesn't save.
+
+    Returns:
+        (figs, axes) of generated plots.
     """
 
     w, h         = kwargs.get('w', 1), kwargs.get('h', 1)
     show_borders = kwargs.get('show_borders', False)
-    title_mode   = kwargs.get('title_mode',   'outputs')
-    show_y_zero  = kwargs.get('show_y_zero',  True)
+    title_mode   = kwargs.get('title_mode', 'outputs')
+    show_y_zero  = kwargs.get('show_y_zero', True)
     ylims        = kwargs.get('ylims', 'auto')
+    savepath     = kwargs.get('savepath', None)
 
     def _process_configs(configs, w, h):
         defaults = {
             'plot':  dict(s=15, linewidth=2),
             'title': dict(weight='bold', fontsize=14),
+            'save':  dict(),
             }
         configs = configs or {}
         # override defaults, but keep those not in `configs`
@@ -57,7 +65,7 @@ def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs
 
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('w', 'h', 'show_borders', 'title_mode', 'show_y_zero',
-                          'ylims')
+                          'ylims', 'savepath')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
@@ -102,13 +110,18 @@ def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs
         plt.title(title, **kw['title'])
     if not show_borders:
         plt.box(None)
-    plt.gcf().set_size_inches(12 * w, 4 * h)
+
+    fig, axes = plt.gcf(), plt.gca()
+    fig.set_size_inches(12 * w, 4 * h)
     plt.show()
+    if savepath is not None:
+        fig.savefig(savepath, **kw['save'])
+    return fig, axes
 
 
-def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
-                max_timesteps=None, subplot_samples=False,
-                configs=None, **kwargs):
+def features_1D(data, n_rows=None, annotations='auto', equate_axes=True,
+                max_timesteps=None, subplot_samples=False, configs=None,
+                **kwargs):
     """Plots 1D curves in a standalone graph or subplot grid.
 
     Arguments:
@@ -118,7 +131,11 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
               2D: (timesteps, channels) or (timesteps, samples)
         n_rows: int/None. Number of rows in subplot grid. If None,
               determines automatically, closest to n_rows == n_cols.
-        label_channels: bool. If True, labels subplot grid chronologically.
+        annotations: str list/'auto'/None.
+            'auto': annotate each subplot with its index.
+             list of str: annotate by indexing into the list.
+                          If len(list) < len(data), won't annotate remainder.
+             None: don't annotate.
         equate_axes:    bool. If True, subplots will share x- and y-axes limits.
         max_timesteps:  int/None. Max number of timesteps to show per plot.
               If None, keeps original.
@@ -130,6 +147,7 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
             'title':   passed to plt.suptitle()
             'tight':   passed to plt.subplots_adjust()
             'annot':   passed to ax.annotate(); ax = subplots axis
+            'save':    passed to fig.savefig() if `savepath` is not None.
 
     iter == list/tuple (both work)
     kwargs:
@@ -150,6 +168,11 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
               specifying curve colors in order of drawing. If str/ float iter,
               draws all curves in one color. If None, default coloring is used.
               Ex: ['red', 'blue']; [[0., .8, 1.], [.2, .5, 0.]] (RGB)
+        savepath: str/None. Path to save resulting figure to. Also see `configs`.
+               If None, doesn't save.
+
+    Returns:
+        (figs, axes) of generated plots.
     """
 
     w, h          = kwargs.get('w', 1), kwargs.get('h', 1)
@@ -160,6 +183,7 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
     tight         = kwargs.get('tight', False)
     borderwidth   = kwargs.get('borderwidth', None)
     color         = kwargs.get('color', None)
+    savepath      = kwargs.get('savepath', None)
 
     def _process_configs(configs, w, h, tight, equate_axes):
         defaults = {
@@ -168,7 +192,8 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
             'title':   dict(weight='bold', fontsize=14, y=.93 + .12 * tight),
             'tight':   dict(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0),
             'annot':   dict(weight='bold', fontsize=16, color='g',
-                            xy=(.03, .9), xycoords='axes fraction')
+                            xy=(.03, .9), xycoords='axes fraction'),
+            'save':    dict(),
             }
         configs = configs or {}
         # override defaults, but keep those not in `configs`
@@ -185,7 +210,7 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks',
                           'title_mode', 'show_y_zero', 'tight',
-                          'borderwidth', 'color')
+                          'borderwidth', 'color', 'savepath')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
@@ -215,14 +240,19 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
             feature_outputs.append(sample[:max_timesteps, ax_idx - 1])
         return feature_outputs
 
-    def _get_style_info(data, n_rows, color):
+    def _get_style_info(data, n_rows, color, annotations):
         n_subplots = data.shape[-1]
         n_rows, n_cols = _get_nrows_and_ncols(n_rows, n_subplots)
 
         if color is None:
             n_colors = len(data) if data.ndim == 3 else 1
             color = [None] * n_colors
-        return n_rows, n_cols, color
+        if annotations == 'auto':
+            annotations = list(map(str, range(n_subplots)))
+        elif annotations is not None:
+            # ensure external list is unaffected
+            annotations = annotations.copy()
+        return n_rows, n_cols, color, annotations
 
     def _process_data(data):
         if data.ndim not in (2, 3):
@@ -237,28 +267,28 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
             data = np.expand_dims(data, -1)
         return data
 
-    def _style_axis(ax, kw, show_borders, show_xy_ticks, xmax):
+    def _style_axis(ax, kw, show_borders, show_xy_ticks, annotations, xmax):
         ax.axis(xmin=0, xmax=xmax)
         if not show_xy_ticks[0]:
             ax.set_xticks([])
         if not show_xy_ticks[1]:
             ax.set_yticks([])
-        if label_channels:
-            ax.annotate(str(ax_idx), **kw['annot'])
+        if annotations:
+            ax.annotate(annotations.pop(0), **kw['annot'])
         if not show_borders:
             ax.set_frame_on(False)
 
     kw = _process_configs(configs, w, h, tight, equate_axes)
     _catch_unknown_kwargs(kwargs)
     data = _process_data(data)
-    n_rows, n_cols, color = _get_style_info(data, n_rows, color)
-
+    n_rows, n_cols, color, annotations = _get_style_info(data, n_rows, color,
+                                                         annotations)
     fig, axes = plt.subplots(n_rows, n_cols, **kw['subplot'])
     axes = np.asarray(axes)
 
     if title_mode:
         title = _get_title(data, title_mode, subplot_samples)
-        plt.suptitle(title, **kw['title'])
+        fig.suptitle(title, **kw['title'])
 
     for ax_idx, ax in enumerate(axes.flat):
         if show_y_zero:
@@ -268,20 +298,23 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
         for idx, out in enumerate(feature_outputs):
             ax.plot(out, color=color[idx], **kw['plot'])
 
-        _style_axis(ax, kw, show_borders, show_xy_ticks,
+        _style_axis(ax, kw, show_borders, show_xy_ticks, annotations,
                     xmax=len(feature_outputs[0]))
 
     if tight:
-        plt.subplots_adjust(**kw['tight'])
+        fig.subplots_adjust(**kw['tight'])
     if borderwidth is not None:
         for ax in axes.flat:
             [s.set_linewidth(borderwidth) for s in ax.spines.values()]
+
     plt.show()
+    if savepath is not None:
+        fig.savefig(savepath, **kw['save'])
+    return fig, axes
 
 
 def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
-                timesteps_xaxis=True, max_timesteps=None,
-                configs=None, **kwargs):
+                timesteps_xaxis=True, max_timesteps=None, configs=None, **kwargs):
     """Plots 2D heatmaps in a standalone graph or subplot grid.
 
     iter == list/tuple (both work)
@@ -312,6 +345,7 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
             'title':    passed to plt.suptitle()
             'tight':    passed to plt.subplots_adjust()
             'colorbar': passed to fig.colorbar(); fig = subplots figure
+            'save':     passed to fig.savefig() if `savepath` is not None.
 
     kwargs:
         w: float. Scale width  of resulting plot by a factor.
@@ -330,16 +364,22 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
               -1 --> (samples,  timesteps, channels)
               0  --> (channels, timesteps, samples)
         borderwidth: float / None. Width of subplot borders.
+        savepath: str/None. Path to save resulting figure to. Also see `configs`.
+               If None, doesn't save.
+
+    Returns:
+        (figs, axes) of generated plots.
     """
 
-    w, h           = kwargs.get('w', 1), kwargs.get('h', 1)
-    show_borders   = kwargs.get('show_borders', True)
-    show_xy_ticks  = kwargs.get('show_xy_ticks', [1, 1])
-    show_colorbar  = kwargs.get('show_colorbar', False)
-    title_mode     = kwargs.get('title_mode', 'outputs')
-    tight          = kwargs.get('tight', False)
-    channel_axis   = kwargs.get('channel_axis', -1)
-    borderwidth    = kwargs.get('borderwidth', None)
+    w, h          = kwargs.get('w', 1), kwargs.get('h', 1)
+    show_borders  = kwargs.get('show_borders', True)
+    show_xy_ticks = kwargs.get('show_xy_ticks', [1, 1])
+    show_colorbar = kwargs.get('show_colorbar', False)
+    title_mode    = kwargs.get('title_mode', 'outputs')
+    tight         = kwargs.get('tight', False)
+    channel_axis  = kwargs.get('channel_axis', -1)
+    borderwidth   = kwargs.get('borderwidth', None)
+    savepath      = kwargs.get('savepath', None)
 
     def _process_configs(configs, w, h, tight):
         defaults = {
@@ -348,6 +388,7 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
             'title':   dict(weight='bold', fontsize=14, y=.93 + .12 * tight),
             'tight':   dict(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0),
             'colorbar': dict(),
+            'save':     dict(),
             }
         configs = configs or {}
         # override defaults, but keep those not in `configs`
@@ -362,7 +403,7 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks',
                           'show_colorbar', 'title_mode', 'tight',
-                          'channel_axis', 'borderwidth')
+                          'channel_axis', 'borderwidth', 'savepath')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
@@ -437,7 +478,7 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
 
     if title_mode:
         title = _get_title(data, title_mode, timesteps_xaxis, vmin, vmax)
-        plt.suptitle(title, **kw['title'])
+        fig.suptitle(title, **kw['title'])
 
     for ax_idx, ax in enumerate(axes.flat):
         img = ax.imshow(data[ax_idx], cmap=cmap, vmin=vmin, vmax=vmax,
@@ -447,11 +488,15 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
     if show_colorbar:
         fig.colorbar(img, ax=axes.ravel().tolist(), **kw['colorbar'])
     if tight:
-        plt.subplots_adjust(**kw['tight'])
+        fig.subplots_adjust(**kw['tight'])
     if borderwidth is not None:
         for ax in axes.flat:
             [s.set_linewidth(borderwidth) for s in ax.spines.values()]
+
     plt.show()
+    if savepath is not None:
+        fig.savefig(savepath, **kw['save'])
+    return fig, axes
 
 
 def _get_nrows_and_ncols(n_rows, n_subplots):
@@ -468,7 +513,7 @@ def _get_nrows_and_ncols(n_rows, n_subplots):
 
 
 def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
-                  configs=None, **kwargs):
+                  annotations='auto', configs=None, **kwargs):
     """Plots histograms in a subplot grid.
 
     Arguments:
@@ -481,12 +526,18 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
         xlims: float tuple. x limits to apply to all subplots.
         tight: bool. If True, plt.subplots_adjust (spacing) according to
               configs['tight'], defaulted to minimize intermediate padding.
+        annotations: str list/'auto'/None.
+            'auto': annotate each subplot with its index.
+             list of str: annotate by indexing into the list.
+                          If len(list) < len(data), won't annotate remainder.
+             None: don't annotate.
         configs: dict. kwargs to customize various plot schemes:
             'plot':    passed to plt.hist()
             'subplot': passed to plt.subplots()
             'title':   passed to plt.suptitle()
             'tight':   passed to plt.subplots_adjust()
             'annot':   passed to ax.annotate(); ax = subplots axis
+            'save':    passed to fig.savefig() if `savepath` is not None.
 
     kwargs:
         w: float. Scale width  of resulting plot by a factor.
@@ -497,18 +548,18 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
         show_xy_ticks: int/bool iter. Slot 0 -> x, Slot 1 -> y.
         title: str/None. If not None, show `title` as plt.suptitle.
         borderwidth: float / None. Width of subplot borders.
-        annotations: str list/'auto'/None.
-            'auto': annotate each subplot with its index.
-             list of str: annotate by indexing into the list.
-                          If len(list) < len(data), won't annotate remainder.
-             None: don't annotate.
+        savepath: str/None. Path to save resulting figure to. Also see `configs`.
+               If None, doesn't save.
+
+    Returns:
+        (figs, axes) of generated plots.
     """
     w, h          = kwargs.get('w', 1), kwargs.get('h', 1)
     show_borders  = kwargs.get('show_borders', True)
     show_xy_ticks = kwargs.get('show_xy_ticks', [1, 1])
     title         = kwargs.get('title', None)
     borderwidth   = kwargs.get('borderwidth', None)
-    annotations   = kwargs.get('annotations', 'auto')
+    savepath      = kwargs.get('savepath', None)
 
     def _process_configs(configs, w, h, tight):
         defaults = {
@@ -518,6 +569,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             'tight':   dict(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0),
             'annot':   dict(weight='bold', fontsize=14, xy=(.02, .7),
                             xycoords='axes fraction', color='g'),
+            'save': dict(),
             }
         configs = configs or {}
         # override defaults, but keep those not in `configs`
@@ -531,7 +583,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
 
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks', 'title',
-                          'borderwidth', 'annotations')
+                          'borderwidth', 'savepath')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
@@ -544,8 +596,10 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             n_rows, n_cols = _get_nrows_and_ncols(n_rows, n_subplots)
 
         if annotations == 'auto':
-            annotations = list(map(str, range(len(data))))
-        annotations = annotations.copy()  # ensure external list is unaffected
+            annotations = list(map(str, range(n_subplots)))
+        elif annotations is not None:
+            # ensure external list is unaffected
+            annotations = annotations.copy()
         return n_rows, n_cols, annotations
 
     def _style_axis(ax, kw, show_borders, show_xy_ticks, annotations):
@@ -565,7 +619,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
     fig, axes = plt.subplots(n_rows, n_cols, **kw['subplot'])
     axes = np.asarray(axes)
     if title is not None:
-        plt.suptitle(title, **kw['title'])
+        fig.suptitle(title, **kw['title'])
 
     for ax_idx, ax in enumerate(axes.flat):
         ax.hist(np.asarray(data[ax_idx]).ravel(), bins=bins, **kw['plot'])
@@ -575,11 +629,15 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
         ax.set_xlim(*xlims)
 
     if tight:
-        plt.subplots_adjust(**kw['tight'])
+        fig.subplots_adjust(**kw['tight'])
     if borderwidth is not None:
         for ax in axes.flat:
             [s.set_linewidth(borderwidth) for s in ax.spines.values()]
+
     plt.show()
+    if savepath is not None:
+        fig.savefig(savepath, **kw['save'])
+    return fig, axes
 
 
 def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
@@ -611,6 +669,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
             'tight':      passed to plt.subplots_adjust()
             'colnames':   passed to ax.set_title(); ax = subplots axis
             'side_annot': passed to ax.annotate();  ax = subplots axis
+            'save':       passed to fig.savefig() if `savepath` is not None.
 
     kwargs:
         w: float. Scale width  of resulting plot by a factor.
@@ -621,24 +680,30 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
         show_xy_ticks: int/bool iter. Slot 0 -> x, Slot 1 -> y.
         title: str/None. If not None, show `title` as plt.suptitle.
         borderwidth: float / None. Width of subplot borders.
+        savepath: str/None. Path to save resulting figure to. Also see `configs`.
+               If None, doesn't save.
+
+    Returns:
+        (figs, axes) of generated plots.
     """
     w, h          = kwargs.get('w', 1), kwargs.get('h', 1)
     show_borders  = kwargs.get('show_borders', True)
     show_xy_ticks = kwargs.get('show_xy_ticks', [1, 1])
     title         = kwargs.get('title', None)
     borderwidth   = kwargs.get('borderwidth', None)
+    savepath      = kwargs.get('savepath', None)
 
     def _process_configs(configs, w, h):
         defaults = {
             'plot':    dict(),
-            'subplot': dict(sharex='col', sharey=True, dpi=76,
-                            figsize=(10, 10)),
+            'subplot': dict(sharex='col', sharey=True, dpi=76, figsize=(10, 10)),
             'title':   dict(weight='bold', fontsize=15, y=1.06),
             'tight':   dict(left=0, right=1, bottom=0, top=1,
                             wspace=.05, hspace=.05),
             'colnames':   dict(weight='bold', fontsize=14),
             'side_annot': dict(weight='bold', fontsize=14,
                                xy=(1.02, .5), xycoords='axes fraction'),
+            'save': dict(),
             }
         configs = configs or {}
         # override defaults, but keep those not in `configs`
@@ -652,7 +717,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
 
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks', 'title',
-                          'borderwidth')
+                          'borderwidth', 'savepath')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
@@ -687,7 +752,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
 
     fig, axes = plt.subplots(len(data), len(data[0]), **kw['subplot'])
     if title is not None:
-        plt.suptitle(title, **kw['title'])
+        fig.suptitle(title, **kw['title'])
 
     for row in range(n_rows):
         for col in range(n_cols):
@@ -700,8 +765,12 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
     if ylim is not None:
         ax.set_ylim(0, ylim)
     if tight:
-        plt.subplots_adjust(**kw['tight'])
+        fig.subplots_adjust(**kw['tight'])
     if borderwidth is not None:
         for ax in axes.flat:
             [s.set_linewidth(borderwidth) for s in ax.spines.values()]
+
     plt.show()
+    if savepath is not None:
+        fig.savefig(savepath, **kw['save'])
+    return fig, axes

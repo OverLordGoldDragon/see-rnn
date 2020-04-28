@@ -3,26 +3,28 @@ from .utils import _validate_args, _validate_rnn_type
 from ._backend import K, TF_KERAS, WARN
 
 
-def get_rnn_weights(model, layer_name=None, layer_idx=None, layer=None,
-                    as_tensors=False, concat_gates=True):
+def get_rnn_weights(model, _id, layer=None, as_tensors=False, concat_gates=True):
     """Retrievers RNN layer weights.
 
     Arguments:
         model: keras.Model/tf.keras.Model.
-        layer_idx: int. Index of layer to fetch, via model.layers[layer_idx].
-        layer_name: str. Substring of name of layer to be fetched. Returns
-               earliest match if multiple found.
+        idx: int. Index of layer to fetch, via model.layers[idx].
+        name: str. Name of layer (can be substring) to be fetched. Returns
+              earliest match if multiple found.
         layer: keras.Layer/tf.keras.Layer. Layer whose gradients to return.
-               Overrides `layer_idx` and `layer_name`.
+               Overrides `idx` and `name`.
         as_tensors: If True, returns weight tensors instead of array values.
                NOTE: in Eager, both are returned.
         concat_gates: If True, returns kernel weights are signle concatenated
                matrices, instead of individual per-gate weight lists.
     """
 
-    _validate_args(layer_name, layer_idx, layer)
+    names, idxs, *_ = _validate_args(_id, layer)
+    name = names[0] if names is not None else None
+    idx  = idxs[0]  if idxs  is not None else None
+
     if layer is None:
-        layer = get_layer(model, layer_name, layer_idx)
+        layer = get_layer(model, name or idx)
     rnn_type = _validate_rnn_type(layer, return_value=True)
     IS_CUDNN = 'CuDNN' in rnn_type
 
