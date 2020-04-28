@@ -248,7 +248,7 @@ def features_1D(data, n_rows=None, annotations='auto', equate_axes=True,
             n_colors = len(data) if data.ndim == 3 else 1
             color = [None] * n_colors
         if annotations == 'auto':
-            annotations = list(map(str, range(len(data))))
+            annotations = list(map(str, range(n_subplots)))
         elif annotations is not None:
             # ensure external list is unaffected
             annotations = annotations.copy()
@@ -596,7 +596,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             n_rows, n_cols = _get_nrows_and_ncols(n_rows, n_subplots)
 
         if annotations == 'auto':
-            annotations = list(map(str, range(len(data))))
+            annotations = list(map(str, range(n_subplots)))
         elif annotations is not None:
             # ensure external list is unaffected
             annotations = annotations.copy()
