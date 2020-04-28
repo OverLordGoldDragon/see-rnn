@@ -41,6 +41,10 @@ It enables answering questions such as:
  
 For further info on potential uses, see [this SO](https://stackoverflow.com/questions/48714407/rnn-regularization-which-component-to-regularize/58868383#58868383).
 
+## Installation
+
+`pip install see-rnn` or clone repository
+
 ## To-do
 
 Will possibly implement:

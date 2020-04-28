@@ -341,6 +341,8 @@ def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
     Returns:
         stats_all: dict. dict of lists containing layer weight norm statistics,
                structured: stats_all[layer_fullname][weight_index][stat_index].
+
+    Applied example: https://stackoverflow.com/q/61481921/10133797
     """
     def _process_args(model, _id, _dict, omit_weight_names):
         def _get_names(model, _ids):
