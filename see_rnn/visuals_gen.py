@@ -119,9 +119,9 @@ def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs
     return fig, axes
 
 
-def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
-                max_timesteps=None, subplot_samples=False,
-                configs=None, **kwargs):
+def features_1D(data, n_rows=None, annotations='auto', equate_axes=True,
+                max_timesteps=None, subplot_samples=False, configs=None,
+                **kwargs):
     """Plots 1D curves in a standalone graph or subplot grid.
 
     Arguments:
@@ -131,7 +131,11 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
               2D: (timesteps, channels) or (timesteps, samples)
         n_rows: int/None. Number of rows in subplot grid. If None,
               determines automatically, closest to n_rows == n_cols.
-        label_channels: bool. If True, labels subplot grid chronologically.
+        annotations: str list/'auto'/None.
+            'auto': annotate each subplot with its index.
+             list of str: annotate by indexing into the list.
+                          If len(list) < len(data), won't annotate remainder.
+             None: don't annotate.
         equate_axes:    bool. If True, subplots will share x- and y-axes limits.
         max_timesteps:  int/None. Max number of timesteps to show per plot.
               If None, keeps original.
@@ -236,14 +240,19 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
             feature_outputs.append(sample[:max_timesteps, ax_idx - 1])
         return feature_outputs
 
-    def _get_style_info(data, n_rows, color):
+    def _get_style_info(data, n_rows, color, annotations):
         n_subplots = data.shape[-1]
         n_rows, n_cols = _get_nrows_and_ncols(n_rows, n_subplots)
 
         if color is None:
             n_colors = len(data) if data.ndim == 3 else 1
             color = [None] * n_colors
-        return n_rows, n_cols, color
+        if annotations == 'auto':
+            annotations = list(map(str, range(len(data))))
+        elif annotations is not None:
+            # ensure external list is unaffected
+            annotations = annotations.copy()
+        return n_rows, n_cols, color, annotations
 
     def _process_data(data):
         if data.ndim not in (2, 3):
@@ -258,22 +267,22 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
             data = np.expand_dims(data, -1)
         return data
 
-    def _style_axis(ax, kw, show_borders, show_xy_ticks, xmax):
+    def _style_axis(ax, kw, show_borders, show_xy_ticks, annotations, xmax):
         ax.axis(xmin=0, xmax=xmax)
         if not show_xy_ticks[0]:
             ax.set_xticks([])
         if not show_xy_ticks[1]:
             ax.set_yticks([])
-        if label_channels:
-            ax.annotate(str(ax_idx), **kw['annot'])
+        if annotations:
+            ax.annotate(annotations.pop(0), **kw['annot'])
         if not show_borders:
             ax.set_frame_on(False)
 
     kw = _process_configs(configs, w, h, tight, equate_axes)
     _catch_unknown_kwargs(kwargs)
     data = _process_data(data)
-    n_rows, n_cols, color = _get_style_info(data, n_rows, color)
-
+    n_rows, n_cols, color, annotations = _get_style_info(data, n_rows, color,
+                                                         annotations)
     fig, axes = plt.subplots(n_rows, n_cols, **kw['subplot'])
     axes = np.asarray(axes)
 
@@ -289,7 +298,7 @@ def features_1D(data, n_rows=None, label_channels=True, equate_axes=True,
         for idx, out in enumerate(feature_outputs):
             ax.plot(out, color=color[idx], **kw['plot'])
 
-        _style_axis(ax, kw, show_borders, show_xy_ticks,
+        _style_axis(ax, kw, show_borders, show_xy_ticks, annotations,
                     xmax=len(feature_outputs[0]))
 
     if tight:
@@ -504,7 +513,7 @@ def _get_nrows_and_ncols(n_rows, n_subplots):
 
 
 def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
-                  configs=None, **kwargs):
+                  annotations='auto', configs=None, **kwargs):
     """Plots histograms in a subplot grid.
 
     Arguments:
@@ -517,6 +526,11 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
         xlims: float tuple. x limits to apply to all subplots.
         tight: bool. If True, plt.subplots_adjust (spacing) according to
               configs['tight'], defaulted to minimize intermediate padding.
+        annotations: str list/'auto'/None.
+            'auto': annotate each subplot with its index.
+             list of str: annotate by indexing into the list.
+                          If len(list) < len(data), won't annotate remainder.
+             None: don't annotate.
         configs: dict. kwargs to customize various plot schemes:
             'plot':    passed to plt.hist()
             'subplot': passed to plt.subplots()
@@ -534,11 +548,6 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
         show_xy_ticks: int/bool iter. Slot 0 -> x, Slot 1 -> y.
         title: str/None. If not None, show `title` as plt.suptitle.
         borderwidth: float / None. Width of subplot borders.
-        annotations: str list/'auto'/None.
-            'auto': annotate each subplot with its index.
-             list of str: annotate by indexing into the list.
-                          If len(list) < len(data), won't annotate remainder.
-             None: don't annotate.
         savepath: str/None. Path to save resulting figure to. Also see `configs`.
                If None, doesn't save.
 
@@ -550,7 +559,6 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
     show_xy_ticks = kwargs.get('show_xy_ticks', [1, 1])
     title         = kwargs.get('title', None)
     borderwidth   = kwargs.get('borderwidth', None)
-    annotations   = kwargs.get('annotations', 'auto')
     savepath      = kwargs.get('savepath', None)
 
     def _process_configs(configs, w, h, tight):
@@ -575,7 +583,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
 
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks', 'title',
-                          'borderwidth', 'annotations', 'savepath')
+                          'borderwidth', 'savepath')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
@@ -589,7 +597,9 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
 
         if annotations == 'auto':
             annotations = list(map(str, range(len(data))))
-        annotations = annotations.copy()  # ensure external list is unaffected
+        elif annotations is not None:
+            # ensure external list is unaffected
+            annotations = annotations.copy()
         return n_rows, n_cols, annotations
 
     def _style_axis(ax, kw, show_borders, show_xy_ticks, annotations):
