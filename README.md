@@ -50,7 +50,7 @@ For further info on potential uses, see [this SO](https://stackoverflow.com/ques
 
 Will possibly implement:
 
- - [x] Weight norm inspection (all layers); see [here](https://github.com/OverLordGoldDragon/see-rnn/issues/10#issuecomment-590537205)
+ - [x] Weight norm inspection (all layers); see [here](https://stackoverflow.com/q/61481921/10133797)
  - [ ] Interpretability visuals (e.g. saliency maps, adversarial attacks)
  - [ ] Tools for better probing backprop of `return_sequences=False`
  
