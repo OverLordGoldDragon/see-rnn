@@ -617,7 +617,10 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
     n_rows, n_cols, annotations = _get_style_info(data, n_rows, annotations)
 
     fig, axes = plt.subplots(n_rows, n_cols, **kw['subplot'])
-    axes = np.asarray(axes)
+    if n_cols == 1:
+        axes = np.expand_dims(axes, -1)
+    elif n_rows == 1:
+        axes = np.expand_dims(axes, 0)
     if title is not None:
         fig.suptitle(title, **kw['title'])
 
@@ -750,7 +753,11 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
     kw = _process_configs(configs, w, h)
     n_rows, n_cols = _get_data_info(data)
 
-    fig, axes = plt.subplots(len(data), len(data[0]), **kw['subplot'])
+    fig, axes = plt.subplots(n_rows, n_cols, **kw['subplot'])
+    if n_cols == 1:
+        axes = np.expand_dims(axes, -1)
+    elif n_rows == 1:
+        axes = np.expand_dims(axes, 0)
     if title is not None:
         fig.suptitle(title, **kw['title'])
 
