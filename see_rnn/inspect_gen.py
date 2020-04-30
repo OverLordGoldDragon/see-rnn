@@ -45,11 +45,11 @@ def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
 
     if _id != '*':
         names, idxs, layers, one_requested = _validate_args(_id, layer)
-        _id = [x for var in (names, idxs) if var for x in var] or None
     else:
         # exclude input layer & non-output layers
-        _id = [l.name for l in model.layers[1:] if getattr(l, 'output')]
-        layers = None
+        names = [l.name for l in model.layers[1:]
+                 if getattr(l, 'output', None) not in (None, [])]
+        idxs, layers = None, None
         one_requested = len(_id) == 1
 
     layer_outs = _get_outs_tensors(model, names, idxs, layers)
@@ -120,8 +120,10 @@ def get_gradients(model, _id, input_data, labels, layer=None, mode='outputs',
     else:
         # exclude input layer & non-output/weightless layers (`mode`-dependent)
         attr = 'output' if mode == 'outputs' else 'weights'
-        _id = [l.name for l in model.layers[1:] if getattr(l, attr)]
-        layers = None
+        _id = [l.name for l in model.layers[1:]
+               if getattr(l, attr, None) not in (None, [])]
+        names = _id
+        idxs, layers = None, None
         one_requested = len(_id) == 1
 
     if layers is None:
@@ -312,7 +314,8 @@ def get_weights(model, _id, omit_names=None, as_dict=False):
         _ids = [x for var in (names, idxs) if var for x in var] or None
     else:
         # exclude input layer & non-weight layers
-        _ids = [l.name for l in model.layers[1:] if getattr(l, 'weights')]
+        _ids = [l.name for l in model.layers[1:]
+                if getattr(l, 'weights', None) not in (None, [])]
     if not isinstance(omit_names, list):
         omit_names = [omit_names] if omit_names else []
 
