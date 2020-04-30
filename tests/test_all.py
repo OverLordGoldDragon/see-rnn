@@ -336,6 +336,10 @@ def test_misc():  # test miscellaneous functionalities
     get_weights(model, ['gru', 1, (1, 1)])
     pass_on_error(get_weights, model, 'gru/goo')
 
+    get_weights(model, '*')
+    get_gradients(model, '*')
+    get_outputs(model, '*')
+
     from see_rnn.utils import _filter_duplicates_by_keys
     keys, data = _filter_duplicates_by_keys(list('abbc'), [1, 2, 3, 4])
     assert keys == ['a', 'b', 'c']
