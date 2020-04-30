@@ -411,10 +411,9 @@ def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
             for stat_idx, stat in enumerate(l2_stats):
                 stats_all[l_name][w_idx][stat_idx].append(stat)
 
-        weights = get_weights(model, _id, omit_names, as_dict=True)
-        w_names, W = zip(*weights.items())
+        weights = get_weights(model, _id, omit_names)
 
-        for w_idx, (w, w_name) in enumerate(zip(W, w_names)):
+        for w_idx, w in enumerate(weights):
             l2 = _compute_norm(w, norm_fn, axis)
             l2_stats = [fn(l2) for fn in stat_fns]
             _append(stats_all, l2_stats, w_idx, l_name)
