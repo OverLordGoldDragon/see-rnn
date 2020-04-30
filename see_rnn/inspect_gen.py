@@ -209,7 +209,7 @@ def get_full_name(model, _id):
     return fullnames[0] if one_requested else fullnames
 
 
-def get_weights(model, _id, as_dict=False):
+def get_weights(model, _id, omit_names=None, as_dict=False):
     """Given full or partial (substring) weight name(s), return weight values
     (and corresponding names if as_list=False).
 
@@ -230,6 +230,8 @@ def get_weights(model, _id, as_dict=False):
                        weights of first layer with name substring 'gru', then all
                        weights of layer w/ idx 2, then weights w/ idxs 1 and 2 of
                        layer w/ idx 3.
+        omit_names: str/str list. List of names (can be substring) of weights
+                                  to omit from fetching.
         as_dict: bool. True:  return weight fullname-value pairs in a dict
                        False: return weight values as list in order fetched
 
@@ -273,13 +275,22 @@ def get_weights(model, _id, as_dict=False):
             return _weights
 
         if isinstance(_id, str):
-            return _get_by_name(model, _id)
+            _weights = _get_by_name(model, _id)
         else:
-            return _get_by_idx(model, _id)
+            _weights = _get_by_idx(model, _id)
+
+        w_names = list(_weights)
+        for w_name in w_names:
+            if any(to_omit in w_name for to_omit in omit_names):
+                del _weights[w_name]
+        return _weights
 
     weights = {}
     names, idxs, *_ = _validate_args(_id)
     _ids = [x for var in (names, idxs) if var for x in var] or None
+
+    if not isinstance(omit_names, list):
+        omit_names = [omit_names] if omit_names else []
 
     for _id in _ids:
         weights.update(_get_weights_tensors(model, _id))
@@ -306,7 +317,7 @@ def _detect_nans(data):
 
 
 def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
-                 norm_fn=np.square, omit_weight_names=None, axis=-1, verbose=0):
+                 norm_fn=np.square, omit_names=None, axis=-1, verbose=0):
     """Retrieves model layer weight matrix norms, as specified by `norm_fn`.
 
     Arguments:
@@ -332,8 +343,8 @@ def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
         norm_fn: function. Norm transform to apply to weights. Ex:
               - np.square (l2 norm)
               - np.abs    (l1 norm)
-        omit_weight_names: str list. List of names (can be substring) of weights
-               to omit from fetching.
+        omit_names: str/str list. List of names (can be substring) of weights
+                                  to omit from fetching.
         axis: int. Axis w.r.t. which compute the norm (collapsing all others).
         verbose: int/bool, 0/1. 1/True: print norm stats, enumerated by layer
                indices. If `_dict` is not None, print last computed results.
@@ -344,7 +355,7 @@ def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
 
     Applied example: https://stackoverflow.com/q/61481921/10133797
     """
-    def _process_args(model, _id, _dict, omit_weight_names):
+    def _process_args(model, _id, _dict):
         def _get_names(model, _ids):
             _ids_normalized = []
             for _id in _ids:
@@ -357,16 +368,11 @@ def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
         _ids = _id if isinstance(_id, list) else [_id]
         names = _get_names(model, _ids)
 
-        if omit_weight_names is None:
-            omit_weight_names = []
-        elif isinstance(omit_weight_names, str):
-            omit_weight_names = [omit_weight_names]
-
         if _dict:
             stats_all = deepcopy(_dict)  # do not mutate original dict
         else:
             stats_all = {name: [[]] for name in names}
-        return _ids, stats_all, names, omit_weight_names
+        return _ids, stats_all, names
 
     def _print_stats(stats_all, l_idx, l_name):
         def _unpack_layer_stats(stats_all, l_name):
@@ -388,7 +394,8 @@ def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
         stats_flat = _unpack_layer_stats(stats_all, l_name)
         print(txt.format(l_idx, *stats_flat))
 
-    def _get_layer_norm(stats_all, _id, model, l_name, norm_fn, stat_fns, axis):
+    def _get_layer_norm(stats_all, _id, model, l_name, omit_names, norm_fn,
+                        stat_fns, axis):
         def _compute_norm(w, norm_fn, axis=-1):
             axis = axis if axis != -1 else len(w.shape) - 1
             reduction_axes = tuple([ax for ax in range(len(w.shape))
@@ -404,24 +411,21 @@ def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
             for stat_idx, stat in enumerate(l2_stats):
                 stats_all[l_name][w_idx][stat_idx].append(stat)
 
-        weights = get_weights(model, _id, as_dict=True)
+        weights = get_weights(model, _id, omit_names, as_dict=True)
         w_names, W = zip(*weights.items())
 
         for w_idx, (w, w_name) in enumerate(zip(W, w_names)):
-            if any([to_omit in w_name for to_omit in omit_weight_names]):
-                continue
             l2 = _compute_norm(w, norm_fn, axis)
             l2_stats = [fn(l2) for fn in stat_fns]
             _append(stats_all, l2_stats, w_idx, l_name)
         return stats_all
 
-    _ids, stats_all, names, omit_weight_names = _process_args(model, _id, _dict,
-                                                              omit_weight_names)
+    _ids, stats_all, names = _process_args(model, _id, _dict)
     for l_idx, layer in enumerate(model.layers):
         if layer.name in names:
             _id = _ids[names.index(layer.name)]
             stats_all = _get_layer_norm(stats_all, _id, model, layer.name,
-                                        norm_fn, stat_fns, axis)
+                                        omit_names, norm_fn, stat_fns, axis)
             if verbose:
                 _print_stats(stats_all, l_idx, layer.name)
     return stats_all
