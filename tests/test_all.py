@@ -1,7 +1,8 @@
+import pytest
+import os
 import numpy as np
 import random
 import tensorflow as tf
-import os
 from termcolor import cprint, colored
 
 from . import K
@@ -282,7 +283,7 @@ def test_misc():  # test miscellaneous functionalities
     x, y = make_data(batch_shape, units)
     model.train_on_batch(x, y)
 
-    weights_norm(model, 'gru', omit_weight_names='bias', verbose=1)
+    weights_norm(model, 'gru', omit_names='bias', verbose=1)
     weights_norm(model, ['gru', 1, (1, 1)])
     stats = weights_norm(model, 'gru')
     weights_norm(model, 'gru', _dict=stats)
@@ -433,3 +434,7 @@ def test_envs():  # pseudo-tests for coverage for different env flags
 
     assert True
     cprint("\n<< ENV TESTS PASSED >>\n", 'green')
+
+if __name__ == '__main__':
+    os.environ['IS_MAIN'] = "1"
+    pytest.main([__file__, "-s"])

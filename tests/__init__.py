@@ -2,8 +2,11 @@ import os
 import tempfile
 import contextlib
 import shutil
+import matplotlib
 import tensorflow as tf
 
+if not os.environ.get('IS_MAIN', '0') == '1':
+    matplotlib.use('template')  # suppress figures for spyder unit testing
 
 TF_KERAS = bool(os.environ.get("TF_KERAS", '0') == '1')
 USING_GPU = bool(tf.config.experimental.list_physical_devices('GPU') != [])
