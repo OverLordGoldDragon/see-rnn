@@ -51,6 +51,7 @@ For further info on potential uses, see [this SO](https://stackoverflow.com/ques
 Will possibly implement:
 
  - [x] Weight norm inspection (all layers); see [here](https://stackoverflow.com/q/61481921/10133797)
+ - [ ] Pytorch support
  - [ ] Interpretability visuals (e.g. saliency maps, adversarial attacks)
  - [ ] Tools for better probing backprop of `return_sequences=False`
  
