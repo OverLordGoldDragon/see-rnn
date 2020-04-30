@@ -48,7 +48,7 @@ def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
     else:
         # exclude input layer & non-output layers
         names = [l.name for l in model.layers[1:]
-                 if getattr(l, 'output', None) not in (None, [])]
+                 if getattr(l, 'output', None) is not None]
         idxs, layers = None, None
         one_requested = len(_id) == 1
 
@@ -121,7 +121,7 @@ def get_gradients(model, _id, input_data, labels, layer=None, mode='outputs',
         # exclude input layer & non-output/weightless layers (`mode`-dependent)
         attr = 'output' if mode == 'outputs' else 'weights'
         _id = [l.name for l in model.layers[1:]
-               if getattr(l, attr, None) not in (None, [])]
+               if getattr(l, attr, None) is not None]
         names = _id
         idxs, layers = None, None
         one_requested = len(_id) == 1
