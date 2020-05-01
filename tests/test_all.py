@@ -1,5 +1,6 @@
 import pytest
 import os
+import matplotlib.pyplot as plt
 import numpy as np
 import random
 import tensorflow as tf
@@ -12,7 +13,7 @@ from . import tempdir
 from see_rnn import get_gradients, get_outputs, get_weights, get_rnn_weights
 from see_rnn import weights_norm
 from see_rnn import features_0D, features_1D, features_2D
-from see_rnn import features_hist, features_hist_v2
+from see_rnn import features_hist, features_hist_v2, hist_clipped
 from see_rnn import get_full_name
 from see_rnn import rnn_summary
 from see_rnn import rnn_heatmap, rnn_histogram
@@ -325,6 +326,10 @@ def test_misc():  # test miscellaneous functionalities
     with tempdir() as dirpath:
         rnn_heatmap(model, 1, norm=(-.004, .004),
                     savepath=os.path.join(dirpath, 'img.png'))
+
+    hist_clipped(grads, peaks_to_clip=2)
+    _, ax = plt.subplots(1, 1)
+    hist_clipped(grads, peaks_to_clip=2, ax=ax, annot_kw=dict(fontsize=15))
 
     get_full_name(model, 'gru')
     get_full_name(model, 1)
