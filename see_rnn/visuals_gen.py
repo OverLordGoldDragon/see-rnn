@@ -833,6 +833,9 @@ def hist_clipped(data, peaks_to_clip=1, ax=None, annot_kw={}, **kw):
     else:
         N, bins, _ = plt.hist(np.asarray(data).ravel(), **kw)
 
+    if peaks_to_clip == 0:
+        return
+
     Ns = np.sort(N)
     lower_max = Ns[-(peaks_to_clip + 1)]
 
@@ -842,9 +845,9 @@ def hist_clipped(data, peaks_to_clip=1, ax=None, annot_kw={}, **kw):
         peaks_info.append([bins[patch_idx], N[patch_idx]])
 
     if ax is not None:
-        ax.set_ylim(0, lower_max)
+        ax.set_ylim(0, lower_max * 1.05)  # include small gap
     else:
-        plt.ylim(0, lower_max)
+        plt.ylim(0, lower_max * 1.05)
 
     if annot_kw is not None:
         _annotate(ax, peaks_info, annot_kw)
