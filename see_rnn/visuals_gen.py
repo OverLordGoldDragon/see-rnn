@@ -602,7 +602,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             annotations = annotations.copy()
         return n_rows, n_cols, annotations
 
-    def _style_axis(ax, kw, show_borders, show_xy_ticks, annotations):
+    def _style_axis(ax, kw, show_borders, show_xy_ticks, xlims, annotations):
         if not show_xy_ticks[0]:
             ax.set_xticks([])
         if not show_xy_ticks[1]:
@@ -611,6 +611,8 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             ax.annotate(annotations.pop(0), **kw['annot'])
         if not show_borders:
             ax.set_frame_on(False)
+        if xlims is not None:
+            ax.set_xlim(*xlims)
 
     _catch_unknown_kwargs(kwargs)
     kw = _process_configs(configs, w, h, tight)
@@ -626,10 +628,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
 
     for ax_idx, ax in enumerate(axes.flat):
         hist_clipped(data[ax_idx], ax=ax, bins=bins, **kw['plot'])
-        _style_axis(ax, kw, show_borders, show_xy_ticks, annotations)
-
-    if xlims is not None:
-        ax.set_xlim(*xlims)
+        _style_axis(ax, kw, show_borders, show_xy_ticks, xlims, annotations)
 
     if tight:
         fig.subplots_adjust(**kw['tight'])
