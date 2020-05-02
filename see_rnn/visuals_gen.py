@@ -532,7 +532,8 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
                           If len(list) < len(data), won't annotate remainder.
              None: don't annotate.
         configs: dict. kwargs to customize various plot schemes:
-            'plot':    passed to ax.hist(); ax = subplots axis
+            'plot':    passed to ax.hist() in hist_clipped();
+                         ax = subplots axis. See help(hist_clipped).
             'subplot': passed to plt.subplots()
             'title':   passed to fig.suptitle(); fig = subplots figure
             'tight':   passed to fig.subplots_adjust()
@@ -665,7 +666,8 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
         side_annot: str. Text to display to the right side of rightmost subplot
               boxes, enumerated by row number ({side_annot}{row})
         configs: dict. kwargs to customize various plot schemes:
-            'plot':       passed to ax.hist(); ax = subplots axis
+            'plot':       passed to ax.hist() in hist_clipped();
+                             ax = subplots axis. See help(hist_clipped).
             'subplot':    passed to plt.subplots()
             'title':      passed to fig.suptitle(); fig = subplots figure
             'tight':      passed to fig.subplots_adjust()
