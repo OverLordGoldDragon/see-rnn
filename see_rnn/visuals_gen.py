@@ -532,7 +532,10 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
                           If len(list) < len(data), won't annotate remainder.
              None: don't annotate.
         configs: dict. kwargs to customize various plot schemes:
-            'plot':    passed to ax.hist(); ax = subplots axis
+            'plot':    passed partly* to ax.hist() in hist_clipped();
+                         include `peaks_to_clip` to adjust ylims with a
+                         number of peaks disregarded. *See help(hist_clipped).
+                         ax = subplots axis
             'subplot': passed to plt.subplots()
             'title':   passed to fig.suptitle(); fig = subplots figure
             'tight':   passed to fig.subplots_adjust()
@@ -563,7 +566,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
 
     def _process_configs(configs, w, h, tight):
         defaults = {
-            'plot':    dict(),
+            'plot':    dict(peaks_to_clip=0),
             'subplot': dict(sharex='col', sharey=True, dpi=76, figsize=(10, 10)),
             'title':   dict(weight='bold', fontsize=14, y=.93 + .12 * tight),
             'tight':   dict(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0),
@@ -602,7 +605,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             annotations = annotations.copy()
         return n_rows, n_cols, annotations
 
-    def _style_axis(ax, kw, show_borders, show_xy_ticks, annotations):
+    def _style_axis(ax, kw, show_borders, show_xy_ticks, xlims, annotations):
         if not show_xy_ticks[0]:
             ax.set_xticks([])
         if not show_xy_ticks[1]:
@@ -611,6 +614,8 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             ax.annotate(annotations.pop(0), **kw['annot'])
         if not show_borders:
             ax.set_frame_on(False)
+        if xlims is not None:
+            ax.set_xlim(*xlims)
 
     _catch_unknown_kwargs(kwargs)
     kw = _process_configs(configs, w, h, tight)
@@ -625,11 +630,8 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
         fig.suptitle(title, **kw['title'])
 
     for ax_idx, ax in enumerate(axes.flat):
-        ax.hist(np.asarray(data[ax_idx]).ravel(), bins=bins, **kw['plot'])
-        _style_axis(ax, kw, show_borders, show_xy_ticks, annotations)
-
-    if xlims is not None:
-        ax.set_xlim(*xlims)
+        hist_clipped(data[ax_idx], ax=ax, bins=bins, **kw['plot'])
+        _style_axis(ax, kw, show_borders, show_xy_ticks, xlims, annotations)
 
     if tight:
         fig.subplots_adjust(**kw['tight'])
@@ -666,7 +668,10 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
         side_annot: str. Text to display to the right side of rightmost subplot
               boxes, enumerated by row number ({side_annot}{row})
         configs: dict. kwargs to customize various plot schemes:
-            'plot':       passed to ax.hist(); ax = subplots axis
+            'plot':       passed partly* to ax.hist() in hist_clipped();
+                            include `peaks_to_clip` to adjust ylims with a
+                            number of peaks disregarded. *See help(hist_clipped).
+                            ax = subplots axis
             'subplot':    passed to plt.subplots()
             'title':      passed to fig.suptitle(); fig = subplots figure
             'tight':      passed to fig.subplots_adjust()
@@ -698,7 +703,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
 
     def _process_configs(configs, w, h):
         defaults = {
-            'plot':    dict(),
+            'plot':    dict(peaks_to_clip=0),
             'subplot': dict(sharex='col', sharey=True, dpi=76, figsize=(10, 10)),
             'title':   dict(weight='bold', fontsize=15, y=1.06),
             'tight':   dict(left=0, right=1, bottom=0, top=1,
@@ -765,7 +770,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
         for col in range(n_cols):
             ax = axes[row, col]
             for subdata in data[row][col]:
-                ax.hist(np.asarray(subdata).ravel(), bins=bins, **kw['plot'])
+                hist_clipped(subdata, ax=ax, bins=bins, **kw['plot'])
 
             _style_axis(ax, kw, show_borders, show_xy_ticks, xlims)
 
@@ -781,3 +786,73 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
     if savepath is not None:
         fig.savefig(savepath, **kw['save'])
     return fig, axes
+
+
+def hist_clipped(data, peaks_to_clip=1, ax=None, annot_kw={}, **kw):
+    """Histogram with ymax adjusted to a sub-maximal peak, with excluded peaks
+    annotated. Useful when extreme peaks dominate plots.
+
+    Arguments:
+        data. np.ndarray / list. Data to plot.
+        peaks_to_clip: int. ==0 -> regular histogram.
+                             >0 -> (e.g. 2) adjust ymax to third peak.
+        ax: AxesSubplot. To plot via ax.hist instead of plt.hist.
+        annot_kw: dict/None. Passed to plt.annotate().
+           None: doesn't annotate.
+           {}: uses defaults.
+           Non-empty dict: fills with defaults where absent.
+        **kw: dict. Passed to plt.hist().
+
+    Returns:
+        None
+    """
+    def _annotate(ax, peaks_info, annot_kw):
+        def _process_annot_kw(annot_kw):
+            defaults = dict(weight='bold', fontsize=13, color='r',
+                            xy=(.83, .85), xycoords='axes fraction')
+            if not annot_kw:
+                annot_kw = defaults.copy()
+            else:
+                annot_kw = annot_kw.copy()  # ensure external dict unaffected
+                # if `defaults` key not in `annot_kw`, add it & its value
+                for k, v in defaults.items():
+                    if k not in annot_kw:
+                        annot_kw[k] = v
+            return annot_kw
+
+        def _make_annotation(peaks_info):
+            txt = ''
+            for entry in peaks_info:
+                txt += "({:.2f}, {})\n".format(entry[0], int(entry[1]))
+            return txt.rstrip('\n')
+
+        annot_kw = _process_annot_kw(annot_kw)
+        txt = _make_annotation(peaks_info)
+        if ax is not None:
+            ax.annotate(txt, **annot_kw)
+        else:
+            plt.annotate(txt, **annot_kw)
+
+    if ax is not None:
+        N, bins, _ = ax.hist(np.asarray(data).ravel(), **kw)
+    else:
+        N, bins, _ = plt.hist(np.asarray(data).ravel(), **kw)
+
+    if peaks_to_clip == 0:
+        return
+
+    Ns = np.sort(N)
+    lower_max = Ns[-(peaks_to_clip + 1)]
+
+    peaks_info = []
+    for peak_idx in range(1, peaks_to_clip + 1):
+        patch_idx = np.where(N == Ns[-peak_idx])[0][0]
+        peaks_info.append([bins[patch_idx], N[patch_idx]])
+
+    if ax is not None:
+        ax.set_ylim(0, lower_max * 1.05)  # include small gap
+    else:
+        plt.ylim(0, lower_max * 1.05)
+
+    if annot_kw is not None:
+        _annotate(ax, peaks_info, annot_kw)
