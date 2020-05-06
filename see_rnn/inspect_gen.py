@@ -99,7 +99,8 @@ def get_gradients(model, _id, input_data, labels, layer=None, mode='outputs',
                        False: return gradient values as list in order fetched
 
     Returns:
-        Layer weight gradients or gradient-value pairs (see `as_dict`).
+        Layer gradients or gradient-value pairs (see `as_dict`); gradients for
+        weights (if mode=='weights') or outputs (if mode=='outputs').
 
     (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
          input data formats
