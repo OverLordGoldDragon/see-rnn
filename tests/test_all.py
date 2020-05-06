@@ -449,7 +449,7 @@ def test_envs():  # pseudo-tests for coverage for different env flags
 
         _model = _make_nonrnn_model()
         pass_on_error(_vrt, _model.layers[1])
-        pass_on_error(_get_grads(1, 2, 3, 4))
+        pass_on_error(_get_grads, 1, 2, 3, 4)
         del model, _model
 
     assert True
