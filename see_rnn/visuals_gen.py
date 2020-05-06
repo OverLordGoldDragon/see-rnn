@@ -525,8 +525,8 @@ def _get_nrows_and_ncols(n_rows, n_subplots):
 
 
 def features_hist(data, n_rows='vertical', bins=100, xlims=None,
-                  center_zero=False, tight=True, annotations='auto',
-                  configs=None, **kwargs):
+                  center_zero=False, tight=True, equate_axes=None,
+                  annotations='auto', configs=None, **kwargs):
     """Plots histograms in a subplot grid.
 
     Arguments:
@@ -541,6 +541,11 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None,
               Overrides `xlims`.
         tight: bool. If True, plt.subplots_adjust (spacing) according to
               configs['tight'], defaulted to minimize intermediate padding.
+        equate_axes: bool. True ->  subplots will share x- and y-axes limits.
+                           False -> subplot limits will be independent.
+                           None -> leave defaults (sharex='col', sharey=True).
+                           If not None, will override `sharex` and `sharey` in
+                           `configs['subplot']`.
         annotations: str list/'auto'/None.
             'auto': annotate each subplot with its index.
              list of str: annotate by indexing into the list.
@@ -579,7 +584,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None,
     borderwidth   = kwargs.get('borderwidth', None)
     savepath      = kwargs.get('savepath', None)
 
-    def _process_configs(configs, w, h, tight):
+    def _process_configs(configs, w, h, tight, equate_axes):
         defaults = {
             'plot':    dict(peaks_to_clip=0),
             'subplot': dict(sharex='col', sharey=True, dpi=76, figsize=(10, 10)),
@@ -599,6 +604,10 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None,
             defaults[key].update(configs.get(key, {}))
         kw = defaults.copy()
 
+        if equate_axes is True:
+            kw['subplot'].update(dict(sharex=True, sharey=True))
+        elif equate_axes is False:
+            kw['subplot'].update(dict(sharex=False, sharey=False))
         size = kw['subplot']['figsize']
         kw['subplot']['figsize'] = (size[0] * w, size[1] * h)
         return kw
@@ -642,7 +651,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None,
             ax.set_xlim(*xlims)
 
     _catch_unknown_kwargs(kwargs)
-    kw = _process_configs(configs, w, h, tight)
+    kw = _process_configs(configs, w, h, tight, equate_axes)
     n_rows, n_cols, annotations = _get_style_info(data, n_rows, annotations)
     if center_zero and xlims is not None:
         print(NOTE, "`center_zero` will override `xlims`")
@@ -673,8 +682,8 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None,
 
 
 def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
-                     center_zero=False, tight=True,  side_annot=None,
-                     configs=None, **kwargs):
+                     center_zero=False, tight=True, equate_axes=None,
+                     side_annot=None, configs=None, **kwargs):
     """Plots histograms in a subplot grid; tailored for multiple histograms
     per gridcell.
 
@@ -695,6 +704,11 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
         ylim: float. Top y limit of all subplots.
         tight: bool. If True, plt.subplots_adjust (spacing) according to
               configs['tight'], defaulted to minimize intermediate padding.
+        equate_axes: bool. True ->  subplots will share x- and y-axes limits.
+                           False -> subplot limits will be independent.
+                           None -> leave defaults (sharex='col', sharey=True).
+                           If not None, will override `sharex` and `sharey` in
+                           `configs['subplot']`.
         side_annot: str. Text to display to the right side of rightmost subplot
               boxes, enumerated by row number ({side_annot}{row})
         configs: dict. kwargs to customize various plot schemes:
@@ -731,7 +745,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
     borderwidth   = kwargs.get('borderwidth', None)
     savepath      = kwargs.get('savepath', None)
 
-    def _process_configs(configs, w, h):
+    def _process_configs(configs, w, h, equate_axes):
         defaults = {
             'plot':    dict(peaks_to_clip=0),
             'subplot': dict(sharex='col', sharey=True, dpi=76, figsize=(10, 10)),
@@ -753,6 +767,10 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
             defaults[key].update(configs.get(key, {}))
         kw = defaults.copy()
 
+        if equate_axes is True:
+            kw['subplot'].update(dict(sharex=True, sharey=True))
+        elif equate_axes is False:
+            kw['subplot'].update(dict(sharex=False, sharey=False))
         size = kw['subplot']['figsize']
         kw['subplot']['figsize'] = (size[0] * w, size[1] * h)
         return kw
@@ -792,7 +810,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
             ax.set_xlim(*xlims)
 
     _catch_unknown_kwargs(kwargs)
-    kw = _process_configs(configs, w, h)
+    kw = _process_configs(configs, w, h, equate_axes)
     n_rows, n_cols = _get_data_info(data)
     if center_zero and xlims is not None:
         print(NOTE, "`center_zero` will override `xlims`")
