@@ -8,4 +8,4 @@ from .visuals_rnn import *
 from .inspect_gen import *
 from .inspect_rnn import *
 
-__version__ = '1.12'
+__version__ = '1.13'

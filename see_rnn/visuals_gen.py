@@ -512,8 +512,9 @@ def _get_nrows_and_ncols(n_rows, n_subplots):
     return n_rows, n_cols
 
 
-def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
-                  annotations='auto', configs=None, **kwargs):
+def features_hist(data, n_rows='vertical', bins=100, xlims=None,
+                  center_zero=False, tight=True, annotations='auto',
+                  configs=None, **kwargs):
     """Plots histograms in a subplot grid.
 
     Arguments:
@@ -524,6 +525,8 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
               If 'vertical', sets n_rows = len(data).
         bins: int. Pyplot kwarg to plt.hist(), # of bins.
         xlims: float tuple. x limits to apply to all subplots.
+        center_zero: bool. If True, symmetrize xlims: (-max, max).
+              Overrides `xlims`.
         tight: bool. If True, plt.subplots_adjust (spacing) according to
               configs['tight'], defaulted to minimize intermediate padding.
         annotations: str list/'auto'/None.
@@ -605,7 +608,8 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             annotations = annotations.copy()
         return n_rows, n_cols, annotations
 
-    def _style_axis(ax, kw, show_borders, show_xy_ticks, xlims, annotations):
+    def _style_axis(ax, kw, show_borders, show_xy_ticks, xlims,
+                    center_zero, annotations):
         if not show_xy_ticks[0]:
             ax.set_xticks([])
         if not show_xy_ticks[1]:
@@ -614,12 +618,17 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             ax.annotate(annotations.pop(0), **kw['annot'])
         if not show_borders:
             ax.set_frame_on(False)
-        if xlims is not None:
+        if center_zero:
+            maxlim = max(np.abs(ax.get_xlim()))
+            ax.set_xlim(-maxlim, maxlim)
+        elif xlims is not None:
             ax.set_xlim(*xlims)
 
     _catch_unknown_kwargs(kwargs)
     kw = _process_configs(configs, w, h, tight)
     n_rows, n_cols, annotations = _get_style_info(data, n_rows, annotations)
+    if center_zero and xlims is not None:
+        print(NOTE, "`center_zero` will override `xlims`")
 
     fig, axes = plt.subplots(n_rows, n_cols, **kw['subplot'])
     if n_cols == 1:
@@ -631,7 +640,8 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
 
     for ax_idx, ax in enumerate(axes.flat):
         hist_clipped(data[ax_idx], ax=ax, bins=bins, **kw['plot'])
-        _style_axis(ax, kw, show_borders, show_xy_ticks, xlims, annotations)
+        _style_axis(ax, kw, show_borders, show_xy_ticks, xlims,
+                    center_zero, annotations)
 
     if tight:
         fig.subplots_adjust(**kw['tight'])
@@ -646,7 +656,8 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
 
 
 def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
-                     tight=True, side_annot=None, configs=None, **kwargs):
+                     center_zero=False, tight=True,  side_annot=None,
+                     configs=None, **kwargs):
     """Plots histograms in a subplot grid; tailored for multiple histograms
     per gridcell.
 
@@ -662,6 +673,8 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
         colnames: str list. Column titles, displayed on top subplot boxes.
         bins: int. Pyplot kwarg to plt.hist(), # of bins.
         xlims: float tuple. x limits to apply to all subplots.
+        center_zero: bool. If True, symmetrize xlims: (-max, max).
+              Overrides `xlims`.
         ylim: float. Top y limit of all subplots.
         tight: bool. If True, plt.subplots_adjust (spacing) according to
               configs['tight'], defaulted to minimize intermediate padding.
@@ -740,7 +753,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
                 "number of elements")
         return n_rows, n_cols
 
-    def _style_axis(ax, kw, show_borders, show_xy_ticks, xlims):
+    def _style_axis(ax, kw, show_borders, show_xy_ticks, xlims, center_zero):
         if row == 0 and colnames is not None:
             ax.set_title(f"{colnames[col]}", **kw['colnames'])
         if side_annot is not None and col == n_cols - 1:
@@ -751,12 +764,17 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
             ax.set_xticks([])
         if not show_xy_ticks[1]:
             ax.set_yticks([])
-        if xlims is not None:
+        if center_zero:
+            maxlim = max(np.abs(ax.get_xlim()))
+            ax.set_xlim(-maxlim, maxlim)
+        elif xlims is not None:
             ax.set_xlim(*xlims)
 
     _catch_unknown_kwargs(kwargs)
     kw = _process_configs(configs, w, h)
     n_rows, n_cols = _get_data_info(data)
+    if center_zero and xlims is not None:
+        print(NOTE, "`center_zero` will override `xlims`")
 
     fig, axes = plt.subplots(n_rows, n_cols, **kw['subplot'])
     if n_cols == 1:
@@ -772,7 +790,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
             for subdata in data[row][col]:
                 hist_clipped(subdata, ax=ax, bins=bins, **kw['plot'])
 
-            _style_axis(ax, kw, show_borders, show_xy_ticks, xlims)
+            _style_axis(ax, kw, show_borders, show_xy_ticks, xlims, center_zero)
 
     if ylim is not None:
         ax.set_ylim(0, ylim)

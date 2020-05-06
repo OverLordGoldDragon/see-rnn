@@ -315,6 +315,8 @@ def test_misc():  # test miscellaneous functionalities
                          borderwidth=1, show_xy_ticks=[0, 0], side_annot='row',
                          title="Grads",
                          savepath=os.path.join(dirpath, 'img.png'))
+    features_hist(grads, center_zero=True, xlims=(-1, 1))
+    features_hist_v2(list(grads[:, :4, :3]), center_zero=True, xlims=(-1, 1))
     with tempdir() as dirpath:
         rnn_histogram(model, 1, show_xy_ticks=[0, 0], equate_axes=2,
                       savepath=os.path.join(dirpath, 'img.png'))
