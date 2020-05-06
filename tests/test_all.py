@@ -270,6 +270,12 @@ def test_errors():  # test Exception cases
     pass_on_error(rnn_histogram, model, 1, data=[[1]])
     pass_on_error(features_hist, grads, co='vid')
 
+    pass_on_error(features_0D,      grads, configs={'x': {}})
+    pass_on_error(features_1D,      grads, configs={'x': {}})
+    pass_on_error(features_2D,      grads, configs={'x': {}})
+    pass_on_error(features_hist,    grads, configs={'x': {}})
+    pass_on_error(features_hist_v2, grads, configs={'x': {}})
+
     cprint("\n<< EXCEPTION TESTS PASSED >>\n", 'green')
     assert True
 
@@ -307,14 +313,17 @@ def test_misc():  # test miscellaneous functionalities
                     savepath=os.path.join(dirpath, 'img.png'))
     with tempdir() as dirpath:
         features_hist(grads, show_borders=False, borderwidth=1, annotations=[0],
-                      show_xy_ticks=[0, 0], title="grads",
+                      show_xy_ticks=[0, 0], equate_axes=True, title="grads",
                       savepath=os.path.join(dirpath, 'img.png'))
     with tempdir() as dirpath:
         features_hist_v2(list(grads[:, :4, :3]), colnames=list('abcd'),
                          show_borders=False, xlims=(-.01, .01), ylim=100,
                          borderwidth=1, show_xy_ticks=[0, 0], side_annot='row',
-                         title="Grads",
+                         equate_axes=True, title="Grads",
                          savepath=os.path.join(dirpath, 'img.png'))
+    features_hist(grads, center_zero=True, xlims=(-1, 1), equate_axes=False)
+    features_hist_v2(list(grads[:, :4, :3]), center_zero=True, xlims=(-1, 1),
+                     equate_axes=False)
     with tempdir() as dirpath:
         rnn_histogram(model, 1, show_xy_ticks=[0, 0], equate_axes=2,
                       savepath=os.path.join(dirpath, 'img.png'))
