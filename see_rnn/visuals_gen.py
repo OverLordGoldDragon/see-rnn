@@ -57,6 +57,10 @@ def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs
             'save':  dict(),
             }
         configs = configs or {}
+        for key in configs:
+            if key not in defaults:
+                raise ValueError(f"unexpected `configs` key: {key}; "
+                                 "supported are: %s" % ', '.join(list(defaults)))
         # override defaults, but keep those not in `configs`
         for key in defaults:
             defaults[key].update(configs.get(key, {}))
@@ -196,6 +200,10 @@ def features_1D(data, n_rows=None, annotations='auto', equate_axes=True,
             'save':    dict(),
             }
         configs = configs or {}
+        for key in configs:
+            if key not in defaults:
+                raise ValueError(f"unexpected `configs` key: {key}; "
+                                 "supported are: %s" % ', '.join(list(defaults)))
         # override defaults, but keep those not in `configs`
         for key in defaults:
             defaults[key].update(configs.get(key, {}))
@@ -391,6 +399,10 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
             'save':     dict(),
             }
         configs = configs or {}
+        for key in configs:
+            if key not in defaults:
+                raise ValueError(f"unexpected `configs` key: {key}; "
+                                 "supported are: %s" % ', '.join(list(defaults)))
         # override defaults, but keep those not in `configs`
         for key in defaults:
             defaults[key].update(configs.get(key, {}))
@@ -578,6 +590,10 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None,
             'save': dict(),
             }
         configs = configs or {}
+        for key in configs:
+            if key not in defaults:
+                raise ValueError(f"unexpected `configs` key: {key}; "
+                                 "supported are: %s" % ', '.join(list(defaults)))
         # override defaults, but keep those not in `configs`
         for key in defaults:
             defaults[key].update(configs.get(key, {}))
@@ -621,6 +637,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None,
         if center_zero:
             maxlim = max(np.abs(ax.get_xlim()))
             ax.set_xlim(-maxlim, maxlim)
+            print(maxlim)
         elif xlims is not None:
             ax.set_xlim(*xlims)
 
@@ -727,6 +744,10 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
             'save': dict(),
             }
         configs = configs or {}
+        for key in configs:
+            if key not in defaults:
+                raise ValueError(f"unexpected `configs` key: {key}; "
+                                 "supported are: %s" % ', '.join(list(defaults)))
         # override defaults, but keep those not in `configs`
         for key in defaults:
             defaults[key].update(configs.get(key, {}))

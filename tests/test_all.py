@@ -270,6 +270,12 @@ def test_errors():  # test Exception cases
     pass_on_error(rnn_histogram, model, 1, data=[[1]])
     pass_on_error(features_hist, grads, co='vid')
 
+    pass_on_error(features_0D,      grads, configs={'x': {}})
+    pass_on_error(features_1D,      grads, configs={'x': {}})
+    pass_on_error(features_2D,      grads, configs={'x': {}})
+    pass_on_error(features_hist,    grads, configs={'x': {}})
+    pass_on_error(features_hist_v2, grads, configs={'x': {}})
+
     cprint("\n<< EXCEPTION TESTS PASSED >>\n", 'green')
     assert True
 
