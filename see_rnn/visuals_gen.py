@@ -646,7 +646,6 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None,
         if center_zero:
             maxlim = max(np.abs(ax.get_xlim()))
             ax.set_xlim(-maxlim, maxlim)
-            print(maxlim)
         elif xlims is not None:
             ax.set_xlim(*xlims)
 
