@@ -65,8 +65,8 @@ def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
     return outs[0] if (one_requested and len(outs) == 1) else outs
 
 
-def get_gradients(model, _id, input_data, labels, layer=None, mode='outputs',
-                  sample_weights=None, learning_phase=0, as_dict=False):
+def get_gradients(model, _id, input_data, labels, sample_weights=None,
+                  learning_phase=0, layer=None, mode='outputs', as_dict=False):
     """Retrieves layer gradients w.r.t. outputs or weights.
     NOTE: gradients will be clipped if `clipvalue` or `clipnorm` were set.
 
@@ -87,14 +87,14 @@ def get_gradients(model, _id, input_data, labels, layer=None, mode='outputs',
                to be computed for the gradient.
         labels: np.ndarray & supported formats. Labels w.r.t. which loss is
                to be computed for the gradient.
-        layer: keras.Layer/tf.keras.Layer. Layer whose gradients to return.
-               Overrides `idx` and `name`.
-        mode: str. One of: 'outputs', 'weights'. If former, returns grads
-               w.r.t. layer outputs(2) - else, w.r.t. layer trainable weights.
         sample_weights: np.ndarray & supported formats. `sample_weight` kwarg
                to model.fit(), etc., weighting individual sample losses.
         learning_phase: bool. 1: use model in train mode
                               0: use model in inference mode
+        layer: keras.Layer/tf.keras.Layer. Layer whose gradients to return.
+               Overrides `idx` and `name`.
+        mode: str. One of: 'outputs', 'weights'. If former, returns grads
+               w.r.t. layer outputs(2) - else, w.r.t. layer trainable weights.
         as_dict: bool. True:  return gradient fullname-value pairs in a dict
                        False: return gradient values as list in order fetched
 

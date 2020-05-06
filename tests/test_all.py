@@ -10,8 +10,9 @@ from . import K
 from . import Input, LSTM, GRU, SimpleRNN, Bidirectional
 from . import Model
 from . import tempdir
+from see_rnn.inspect_gen import _get_grads
 from see_rnn import get_gradients, get_outputs, get_weights, get_rnn_weights
-from see_rnn import weights_norm, _get_grads
+from see_rnn import weights_norm
 from see_rnn import features_0D, features_1D, features_2D
 from see_rnn import features_hist, features_hist_v2, hist_clipped
 from see_rnn import get_full_name
