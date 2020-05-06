@@ -11,7 +11,7 @@ from . import Input, LSTM, GRU, SimpleRNN, Bidirectional
 from . import Model
 from . import tempdir
 from see_rnn import get_gradients, get_outputs, get_weights, get_rnn_weights
-from see_rnn import weights_norm
+from see_rnn import weights_norm, _get_grads
 from see_rnn import features_0D, features_1D, features_2D
 from see_rnn import features_hist, features_hist_v2, hist_clipped
 from see_rnn import get_full_name
@@ -448,6 +448,7 @@ def test_envs():  # pseudo-tests for coverage for different env flags
 
         _model = _make_nonrnn_model()
         pass_on_error(_vrt, _model.layers[1])
+        pass_on_error(_get_grads(1, 2, 3, 4))
         del model, _model
 
     assert True
