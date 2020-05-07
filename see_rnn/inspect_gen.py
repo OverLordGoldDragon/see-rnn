@@ -359,7 +359,7 @@ def get_weights(model, _id, omit_names=None, as_tensors=False, as_dict=False):
     return weights[0] if (len(_ids) == 1 and len(_ids) == 1) else weights
 
 
-def _detect_nans(data):
+def detect_nans(data):
     data = np.asarray(data)
     perc_nans = 100 * np.sum(np.isnan(data)) / data.size
     if perc_nans == 0:
