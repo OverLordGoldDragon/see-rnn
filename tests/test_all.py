@@ -13,7 +13,7 @@ from . import l1_l2
 from . import tempdir
 from see_rnn.inspect_gen import _get_grads
 from see_rnn import get_gradients, get_outputs, get_weights, get_rnn_weights
-from see_rnn import get_weight_penalties, weights_norm
+from see_rnn import get_weight_penalties, weights_norm, weights_loss
 from see_rnn import features_0D, features_1D, features_2D
 from see_rnn import features_hist, features_hist_v2, hist_clipped
 from see_rnn import get_full_name
@@ -373,15 +373,17 @@ def test_envs():  # pseudo-tests for coverage for different env flags
     cprint("\n<< ENV TESTS PASSED >>\n", 'green')
 
 
-def test_get_weight_penalties():
+def test_inspect_gen():
     units = 6
     batch_shape = (8, 100, 2 * units)
 
     reset_seeds(reset_graph_with_backend=K)
     model = make_model(GRU, batch_shape, activation='relu', bidirectional=True,
                        recurrent_dropout=0.3, include_dense=True)
-    get_weight_penalties(model)
-    cprint("\n<< get_weight_penalties TEST PASSED >>\n", 'green')
+
+    assert bool(get_weight_penalties(model))
+    assert weights_loss(model) > 0
+    cprint("\n<< INSPECT_GEN TEST PASSED >>\n", 'green')
 
 def make_model(rnn_layer, batch_shape, units=6, bidirectional=False,
                use_bias=True, activation='tanh', recurrent_dropout=0,

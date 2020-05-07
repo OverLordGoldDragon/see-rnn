@@ -531,3 +531,28 @@ def _get_layer_penalties(layer):
             l1_l2 = (float(_lambda.l1), float(_lambda.l2))
             penalties.append([getattr(layer, weight_name).name, l1_l2])
     return penalties
+
+
+def weights_loss(model):
+    """Compute l1, l2, and l1_l2 weight loss penalties of model layers.
+    (e.g. set via `kernel_regularizer=l2(1e-4)`)"""
+    weight_penalties = get_weight_penalties(model)
+
+    penalized_weights = []
+    ordered_penalties = []
+    for w_name, (l1, l2) in weight_penalties.items():
+        l_name = w_name.split('/')[0]
+        layer = model.get_layer(name=l_name)
+        for weight in layer.trainable_weights:
+            if weight.name == w_name:
+                penalized_weights.append(weight)
+                ordered_penalties.append((l1, l2))
+    penalized_weights = K.batch_get_value(penalized_weights)
+
+    loss = 0
+    for weight, (l1, l2) in zip(penalized_weights, ordered_penalties):
+        if l1 != 0:
+            loss += l1 * np.sum(np.abs(weight))
+        if l2 != 0:
+            loss += l2 * np.sum(np.square(weight))
+    return loss
