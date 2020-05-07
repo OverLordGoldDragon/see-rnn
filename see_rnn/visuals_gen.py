@@ -197,6 +197,18 @@ def features_1D(data, n_rows=None, annotations='auto', share_xy=(1, 1),
     savepath      = kwargs.get('savepath', None)
 
     def _process_configs(configs, w, h, tight, share_xy):
+        def _set_share_xy(kw, share_xy):
+            if isinstance(share_xy, (list, tuple)):
+                sharex, sharey = share_xy
+            else:
+                sharex = sharey = share_xy
+            if isinstance(sharex, int):
+                sharex = bool(sharex)
+            if isinstance(sharey, int):
+                sharey = bool(sharey)
+            kw['subplot']['sharex'] = sharex
+            kw['subplot']['sharey'] = sharey
+
         defaults = {
             'plot':    dict(),
             'subplot': dict(dpi=76, figsize=(10, 10)),
@@ -216,12 +228,7 @@ def features_1D(data, n_rows=None, annotations='auto', share_xy=(1, 1),
             defaults[key].update(configs.get(key, {}))
         kw = defaults.copy()
 
-        if isinstance(share_xy, (list, tuple)):
-            sharex, sharey = share_xy
-        else:
-            sharex = sharey = share_xy
-        kw['subplot']['sharex'] = sharex
-        kw['subplot']['sharey'] = sharey
+        _set_share_xy(kw, share_xy)
         size = kw['subplot']['figsize']
         kw['subplot']['figsize'] = (size[0] * w, size[1] * h)
         return kw
@@ -410,6 +417,18 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
     savepath      = kwargs.get('savepath', None)
 
     def _process_configs(configs, w, h, tight, share_xy):
+        def _set_share_xy(kw, share_xy):
+            if isinstance(share_xy, (list, tuple)):
+                sharex, sharey = share_xy
+            else:
+                sharex = sharey = share_xy
+            if isinstance(sharex, int):
+                sharex = bool(sharex)
+            if isinstance(sharey, int):
+                sharey = bool(sharey)
+            kw['subplot']['sharex'] = sharex
+            kw['subplot']['sharey'] = sharey
+
         defaults = {
             'plot':    dict(),
             'subplot': dict(dpi=76, figsize=(10, 10)),
@@ -428,12 +447,7 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
             defaults[key].update(configs.get(key, {}))
         kw = defaults.copy()
 
-        if isinstance(share_xy, (list, tuple)):
-            sharex, sharey = share_xy
-        else:
-            sharex = sharey = share_xy
-        kw['subplot']['sharex'] = sharex
-        kw['subplot']['sharey'] = sharey
+        _set_share_xy(kw, share_xy)
         size = kw['subplot']['figsize']
         kw['subplot']['figsize'] = (size[0] * w, size[1] * h)
         return kw
@@ -614,6 +628,18 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None,
     savepath      = kwargs.get('savepath', None)
 
     def _process_configs(configs, w, h, tight, share_xy):
+        def _set_share_xy(kw, share_xy):
+            if isinstance(share_xy, (list, tuple)):
+                sharex, sharey = share_xy
+            else:
+                sharex = sharey = share_xy
+            if isinstance(sharex, int):
+                sharex = bool(sharex)
+            if isinstance(sharey, int):
+                sharey = bool(sharey)
+            kw['subplot']['sharex'] = sharex
+            kw['subplot']['sharey'] = sharey
+
         defaults = {
             'plot':    dict(peaks_to_clip=0),
             'subplot': dict(dpi=76, figsize=(10, 10)),
@@ -633,12 +659,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None,
             defaults[key].update(configs.get(key, {}))
         kw = defaults.copy()
 
-        if isinstance(share_xy, (list, tuple)):
-            sharex, sharey = share_xy
-        else:
-            sharex = sharey = share_xy
-        kw['subplot']['sharex'] = sharex
-        kw['subplot']['sharey'] = sharey
+        _set_share_xy(kw, share_xy)
         size = kw['subplot']['figsize']
         kw['subplot']['figsize'] = (size[0] * w, size[1] * h)
         return kw
@@ -779,6 +800,18 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
     savepath      = kwargs.get('savepath', None)
 
     def _process_configs(configs, w, h, share_xy):
+        def _set_share_xy(kw, share_xy):
+            if isinstance(share_xy, (list, tuple)):
+                sharex, sharey = share_xy
+            else:
+                sharex = sharey = share_xy
+            if isinstance(sharex, int):
+                sharex = bool(sharex)
+            if isinstance(sharey, int):
+                sharey = bool(sharey)
+            kw['subplot']['sharex'] = sharex
+            kw['subplot']['sharey'] = sharey
+
         defaults = {
             'plot':    dict(peaks_to_clip=0),
             'subplot': dict(dpi=76, figsize=(10, 10)),
@@ -800,12 +833,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
             defaults[key].update(configs.get(key, {}))
         kw = defaults.copy()
 
-        if isinstance(share_xy, (list, tuple)):
-            sharex, sharey = share_xy
-        else:
-            sharex = sharey = share_xy
-        kw['subplot']['sharex'] = sharex
-        kw['subplot']['sharey'] = sharey
+        _set_share_xy(kw, share_xy)
         size = kw['subplot']['figsize']
         kw['subplot']['figsize'] = (size[0] * w, size[1] * h)
         return kw
