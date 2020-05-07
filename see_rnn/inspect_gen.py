@@ -360,12 +360,12 @@ def get_weights(model, _id, omit_names=None, as_tensors=False, as_dict=False):
 
 
 def _detect_nans(data):
-    data = np.asarray(data).ravel()
-    perc_nans = 100 * np.sum(np.isnan(data)) / len(data)
+    data = np.asarray(data)
+    perc_nans = 100 * np.sum(np.isnan(data)) / data.size
     if perc_nans == 0:
         return None
     if perc_nans < 0.1:
-        num_nans = int((perc_nans / 100) * len(data))  # show as quantity
+        num_nans = int((perc_nans / 100) * data.size)  # show as quantity
         txt = "{:d}% \nNaNs".format(num_nans)
     else:
         txt = "{:.1f}% \nNaNs".format(perc_nans)  # show as percent
