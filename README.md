@@ -69,12 +69,12 @@ outs  = get_outputs(model, 1, x)       # return_sequences=True,  layer index 1
 <hr>
 
 **EX 1: bi-LSTM, 32 units** - activations, `activation='relu'`<br>
-`features_1D(outs[:1], equate_axes=False)`<br>
-`features_1D(outs[:1], equate_axes=True, y_zero=True)`
+`features_1D(outs[:1], share_xy=False)`<br>
+`features_1D(outs[:1], share_xy=True, y_zero=True)`
 
  - Each subplot is an independent RNN channel's output (`return_sequences=True`)
  - In this example, each channel/filter appears to extract complex independent features of varying bias, frequency, and probabilistic distribution
- - Note that `equate_axes=False` better pronounces features' _shape_, whereas `=True` allows for an even comparison - but may greatly 'shrink' waveforms to appear flatlined (not shown here)
+ - Note that `share_xy=False` better pronounces features' _shape_, whereas `=True` allows for an even comparison - but may greatly 'shrink' waveforms to appear flatlined (not shown here)
 
 <img src="https://i.stack.imgur.com/k7RrD.png" width="800">
 
