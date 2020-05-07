@@ -9,7 +9,9 @@ from termcolor import cprint, colored
 from . import K
 from . import Input, LSTM, GRU, SimpleRNN, Bidirectional
 from . import Model
+from . import l1_l2
 from . import tempdir
+from see_rnn.inspect_gen import _get_grads
 from see_rnn import get_gradients, get_outputs, get_weights, get_rnn_weights
 from see_rnn import weights_norm
 from see_rnn import features_0D, features_1D, features_2D
@@ -143,90 +145,6 @@ def _test_prefetched_data(model):
     rnn_heatmap(model,   1, data=weights)
 
 
-def make_model(rnn_layer, batch_shape, units=6, bidirectional=False,
-               use_bias=True, activation='tanh', recurrent_dropout=0,
-               new_imports={}):
-    Input         = IMPORTS['Input']
-    Bidirectional = IMPORTS['Bidirectional']
-    Model         = IMPORTS['Model']
-    if new_imports != {}:
-        Input         = new_imports['Input']
-        Bidirectional = new_imports['Bidirectional']
-        Model         = new_imports['Model']
-
-    kw = {}
-    if not use_bias:
-        kw['use_bias'] = False     # for CuDNN or misc case
-    if activation == 'relu':
-        kw['activation'] = 'relu'  # for nan detection
-        kw['recurrent_dropout'] = recurrent_dropout
-
-    ipt = Input(batch_shape=batch_shape)
-    if bidirectional:
-        x = Bidirectional(rnn_layer(units, return_sequences=True, **kw))(ipt)
-    else:
-        x = rnn_layer(units, return_sequences=True, **kw)(ipt)
-    out = rnn_layer(units, return_sequences=False)(x)
-
-    model = Model(ipt, out)
-    model.compile('adam', 'mse')
-    return model
-
-
-def make_data(batch_shape, units):
-    return (np.random.randn(*batch_shape),
-            np.random.uniform(-1, 1, (batch_shape[0], units)))
-
-
-def train_model(model, iterations):
-    batch_shape = K.int_shape(model.input)
-    units = model.layers[2].units
-    x, y = make_data(batch_shape, units)
-
-    for i in range(iterations):
-        model.train_on_batch(x, y)
-        print(end='.')  # progbar
-        if i % 40 == 0:
-            x, y = make_data(batch_shape, units)
-
-
-def _make_nonrnn_model():
-    if os.environ.get("TF_KERAS", '0') == '1':
-        from tensorflow.keras.layers import Input, Dense
-        from tensorflow.keras.models import Model
-    else:
-        from keras.layers import Input, Dense
-        from keras.models import Model
-    ipt = Input((16,))
-    out = Dense(16)(ipt)
-    model = Model(ipt, out)
-    model.compile('adam', 'mse')
-    return model
-
-
-def reset_seeds(reset_graph_with_backend=None, verbose=1):
-    if reset_graph_with_backend is not None:
-        K = reset_graph_with_backend
-        K.clear_session()
-        tf.compat.v1.reset_default_graph()
-        if verbose:
-            print("KERAS AND TENSORFLOW GRAPHS RESET")
-
-    np.random.seed(1)
-    random.seed(2)
-    tf.compat.v1.set_random_seed(3)
-    if verbose:
-        print("RANDOM SEEDS RESET")
-
-
-def pass_on_error(func, *args, **kwargs):
-    try:
-        func(*args, **kwargs)
-    except BaseException as e:
-        print("Task Failed Successfully:", e)
-        pass
-
-
 def test_errors():  # test Exception cases
     units = 6
     batch_shape = (8, 100, 2*units)
@@ -301,7 +219,7 @@ def test_misc():  # test miscellaneous functionalities
     get_outputs(model, ['gru', 1], x)
 
     features_1D(grads, subplot_samples=True, tight=True, borderwidth=2,
-                equate_axes=False)
+                share_xy=False)
     with tempdir() as dirpath:
         features_0D(grads[0], savepath=os.path.join(dirpath, 'img.png'))
     with tempdir() as dirpath:
@@ -313,17 +231,17 @@ def test_misc():  # test miscellaneous functionalities
                     savepath=os.path.join(dirpath, 'img.png'))
     with tempdir() as dirpath:
         features_hist(grads, show_borders=False, borderwidth=1, annotations=[0],
-                      show_xy_ticks=[0, 0], equate_axes=True, title="grads",
-                      savepath=os.path.join(dirpath, 'img.png'))
+                      show_xy_ticks=[0, 0], share_xy=(1, 1),
+                      title="grads", savepath=os.path.join(dirpath, 'img.png'))
     with tempdir() as dirpath:
         features_hist_v2(list(grads[:, :4, :3]), colnames=list('abcd'),
                          show_borders=False, xlims=(-.01, .01), ylim=100,
                          borderwidth=1, show_xy_ticks=[0, 0], side_annot='row',
-                         equate_axes=True, title="Grads",
+                         share_xy=True, title="Grads",
                          savepath=os.path.join(dirpath, 'img.png'))
-    features_hist(grads, center_zero=True, xlims=(-1, 1), equate_axes=False)
+    features_hist(grads, center_zero=True, xlims=(-1, 1), share_xy=(0, 0))
     features_hist_v2(list(grads[:, :4, :3]), center_zero=True, xlims=(-1, 1),
-                     equate_axes=False)
+                     share_xy=(False, False))
     with tempdir() as dirpath:
         rnn_histogram(model, 1, show_xy_ticks=[0, 0], equate_axes=2,
                       savepath=os.path.join(dirpath, 'img.png'))
@@ -448,10 +366,109 @@ def test_envs():  # pseudo-tests for coverage for different env flags
 
         _model = _make_nonrnn_model()
         pass_on_error(_vrt, _model.layers[1])
+        pass_on_error(_get_grads, 1, 2, 3, 4)
         del model, _model
 
     assert True
     cprint("\n<< ENV TESTS PASSED >>\n", 'green')
+
+
+def test_get_weight_penalties():
+    units = 6
+    batch_shape = (8, 100, 2 * units)
+
+    reset_seeds(reset_graph_with_backend=K)
+    model = make_model(GRU, batch_shape, activation='relu',
+                       recurrent_dropout=0.3)
+    x, y = make_data(batch_shape, units)
+    model.train_on_batch(x, y)
+
+
+def make_model(rnn_layer, batch_shape, units=6, bidirectional=False,
+               use_bias=True, activation='tanh', recurrent_dropout=0,
+               new_imports={}):
+    Input         = IMPORTS['Input']
+    Bidirectional = IMPORTS['Bidirectional']
+    Model         = IMPORTS['Model']
+    if new_imports != {}:
+        Input         = new_imports['Input']
+        Bidirectional = new_imports['Bidirectional']
+        Model         = new_imports['Model']
+
+    kw = {}
+    if not use_bias:
+        kw['use_bias'] = False     # for CuDNN or misc case
+    if activation == 'relu':
+        kw['activation'] = 'relu'  # for nan detection
+        kw['recurrent_dropout'] = recurrent_dropout
+    kw.update(dict(kernel_regularizer=l1_l2(1e-4),
+                   recurrent_regularizer=l1_l2(1e-4),
+                   bias_regularizer=l1_l2(1e-4)))
+
+    ipt = Input(batch_shape=batch_shape)
+    if bidirectional:
+        x = Bidirectional(rnn_layer(units, return_sequences=True, **kw))(ipt)
+    else:
+        x = rnn_layer(units, return_sequences=True, **kw)(ipt)
+    out = rnn_layer(units, return_sequences=False)(x)
+
+    model = Model(ipt, out)
+    model.compile('adam', 'mse')
+    return model
+
+
+def make_data(batch_shape, units):
+    return (np.random.randn(*batch_shape),
+            np.random.uniform(-1, 1, (batch_shape[0], units)))
+
+
+def train_model(model, iterations):
+    batch_shape = K.int_shape(model.input)
+    units = model.layers[2].units
+    x, y = make_data(batch_shape, units)
+
+    for i in range(iterations):
+        model.train_on_batch(x, y)
+        print(end='.')  # progbar
+        if i % 40 == 0:
+            x, y = make_data(batch_shape, units)
+
+
+def _make_nonrnn_model():
+    if os.environ.get("TF_KERAS", '0') == '1':
+        from tensorflow.keras.layers import Input, Dense
+        from tensorflow.keras.models import Model
+    else:
+        from keras.layers import Input, Dense
+        from keras.models import Model
+    ipt = Input((16,))
+    out = Dense(16)(ipt)
+    model = Model(ipt, out)
+    model.compile('adam', 'mse')
+    return model
+
+
+def reset_seeds(reset_graph_with_backend=None, verbose=1):
+    if reset_graph_with_backend is not None:
+        K = reset_graph_with_backend
+        K.clear_session()
+        tf.compat.v1.reset_default_graph()
+        if verbose:
+            print("KERAS AND TENSORFLOW GRAPHS RESET")
+
+    np.random.seed(1)
+    random.seed(2)
+    tf.compat.v1.set_random_seed(3)
+    if verbose:
+        print("RANDOM SEEDS RESET")
+
+
+def pass_on_error(func, *args, **kwargs):
+    try:
+        func(*args, **kwargs)
+    except BaseException as e:
+        print("Task Failed Successfully:", e)
+
 
 if __name__ == '__main__':
     os.environ['IS_MAIN'] = "1"

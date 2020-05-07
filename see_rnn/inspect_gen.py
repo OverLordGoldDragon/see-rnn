@@ -2,7 +2,7 @@ import numpy as np
 
 from copy import deepcopy
 from .utils import _validate_args
-from ._backend import K, TF_KERAS
+from ._backend import K, WARN, TF_KERAS
 
 
 def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
@@ -65,8 +65,8 @@ def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
     return outs[0] if (one_requested and len(outs) == 1) else outs
 
 
-def get_gradients(model, _id, input_data, labels, layer=None, mode='outputs',
-                  sample_weights=None, learning_phase=0, as_dict=False):
+def get_gradients(model, _id, input_data, labels, sample_weights=None,
+                  learning_phase=0, layer=None, mode='outputs', as_dict=False):
     """Retrieves layer gradients w.r.t. outputs or weights.
     NOTE: gradients will be clipped if `clipvalue` or `clipnorm` were set.
 
@@ -87,19 +87,20 @@ def get_gradients(model, _id, input_data, labels, layer=None, mode='outputs',
                to be computed for the gradient.
         labels: np.ndarray & supported formats. Labels w.r.t. which loss is
                to be computed for the gradient.
-        layer: keras.Layer/tf.keras.Layer. Layer whose gradients to return.
-               Overrides `idx` and `name`.
-        mode: str. One of: 'outputs', 'weights'. If former, returns grads
-               w.r.t. layer outputs(2) - else, w.r.t. layer trainable weights.
         sample_weights: np.ndarray & supported formats. `sample_weight` kwarg
                to model.fit(), etc., weighting individual sample losses.
         learning_phase: bool. 1: use model in train mode
                               0: use model in inference mode
+        layer: keras.Layer/tf.keras.Layer. Layer whose gradients to return.
+               Overrides `idx` and `name`.
+        mode: str. One of: 'outputs', 'weights'. If former, returns grads
+               w.r.t. layer outputs(2) - else, w.r.t. layer trainable weights.
         as_dict: bool. True:  return gradient fullname-value pairs in a dict
                        False: return gradient values as list in order fetched
 
     Returns:
-        Layer weight gradients or gradient-value pairs (see `as_dict`).
+        Layer gradients or gradient-value pairs (see `as_dict`); gradients for
+        weights (if mode=='weights') or outputs (if mode=='outputs').
 
     (1): tf.data.Dataset, generators, .tfrecords, & other supported TensorFlow
          input data formats
@@ -129,35 +130,59 @@ def get_gradients(model, _id, input_data, labels, layer=None, mode='outputs',
     if layers is None:
         layers = get_layer(model, _id)
 
-    grads_fn = _make_grads_fn(model, layers, mode)
-    if TF_KERAS:
-        grads = grads_fn([input_data, labels])
-    else:
-        sample_weights = sample_weights or np.ones(len(input_data))
-        grads = grads_fn([input_data, sample_weights, labels, 1])
+    grads_fn = _make_grads_fn(model, layers, mode=mode)
+    grads = _get_grads(grads_fn, input_data, labels, sample_weights)
 
     if as_dict:
         return {get_full_name(model, i): x for i, x in zip(names or idxs, grads)}
     return grads[0] if (one_requested and len(grads) == 1) else grads
 
 
-def _make_grads_fn(model, layers, mode='outputs'):
+def _get_grads(grads_fn, input_data, labels, sample_weights=None):
+    """Helper method for computing gradients given a premade function."""
+    if TF_KERAS:
+        if sample_weights is not None:
+            print(WARN, "`sample_weights` is unsupported for tf.keras; "
+                  "will ignore")
+        return grads_fn([input_data, labels])
+    else:
+        sample_weights = sample_weights or np.ones(len(input_data))
+        return grads_fn([input_data, sample_weights, labels, 1])
+
+
+def _make_grads_fn(model, layers=None, params=None, mode='outputs'):
     """Returns gradient computation function w.r.t. layer outputs or weights.
     NOTE: gradients will be clipped if `clipnorm` or `clipvalue` were set.
+
+    `params` can be layer weights or outputs; cannot supply along `layers`.
+    `mode` is irrelevant if passing `params`.
     """
-    def _get_params(layers, mode):
-        if not isinstance(layers, list):
+    def _validate_args(layers, params, mode):
+        got_both = (layers is not None and params is not None)
+        got_neither = (layers is None and params is None)
+        if got_both or got_neither:
+            raise ValueError("one (and only one) of `layers` or `weights` "
+                             "must be set")
+        if mode not in ('outputs', 'weights'):
+            raise ValueError("`mode` must be one of: 'outputs', 'weights'")
+
+        if layers is not None and not isinstance(layers, list):
             layers = [layers]
+        if params is not None and not isinstance(params, list):
+            params = [params]
+        return layers, params
+
+    def _get_params(layers, mode):
         if mode == 'outputs':
             return [l.output for l in layers]
-        params = []
-        _ = [params.extend(l.trainable_weights) for l in layers]
-        return params
+        weights = []
+        _ = [weights.extend(l.trainable_weights) for l in layers]
+        return weights
 
-    if mode not in ('outputs', 'weights'):
-        raise Exception("`mode` must be one of: 'outputs', 'weights'")
+    layers, params = _validate_args(layers, params, mode)
 
-    params = _get_params(layers, mode)
+    if params is None:
+        params = _get_params(layers, mode)
     grads = model.optimizer.get_gradients(model.total_loss, params)
 
     if TF_KERAS:
@@ -232,7 +257,7 @@ def get_full_name(model, _id):
     return fullnames[0] if one_requested else fullnames
 
 
-def get_weights(model, _id, omit_names=None, as_dict=False):
+def get_weights(model, _id, omit_names=None, as_tensors=False, as_dict=False):
     """Given full or partial (substring) weight name(s), return weight values
     (and corresponding names if as_list=False).
 
@@ -256,6 +281,8 @@ def get_weights(model, _id, omit_names=None, as_dict=False):
             '*': wildcard -> get weights of all layers with 'weights' attribute.
         omit_names: str/str list. List of names (can be substring) of weights
                                   to omit from fetching.
+        as_tensors: bool. True:  return weight tensors.
+                          False: return weight values.
         as_dict: bool. True:  return weight fullname-value pairs in a dict
                        False: return weight values as list in order fetched
 
@@ -323,8 +350,9 @@ def get_weights(model, _id, omit_names=None, as_dict=False):
     for _id in _ids:
         weights.update(_get_weights_tensors(model, _id))
 
-    weights = {name: value for name, value in
-               zip(weights, K.batch_get_value(list(weights.values())))}
+    if not as_tensors:
+        weights = {name: value for name, value in
+                   zip(weights, K.batch_get_value(list(weights.values())))}
     if as_dict:
         return weights
     weights = list(weights.values())
@@ -347,7 +375,6 @@ def _detect_nans(data):
 def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
                  norm_fn=np.square, omit_names=None, axis=-1, verbose=0):
     """Retrieves model layer weight matrix norms, as specified by `norm_fn`.
-
     Arguments:
         model: keras.Model/tf.keras.Model.
         _id: str/int/tuple of int/(list of str/int/tuple of int).
@@ -376,11 +403,9 @@ def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
         axis: int. Axis w.r.t. which compute the norm (collapsing all others).
         verbose: int/bool, 0/1. 1/True: print norm stats, enumerated by layer
                indices. If `_dict` is not None, print last computed results.
-
     Returns:
         stats_all: dict. dict of lists containing layer weight norm statistics,
                structured: stats_all[layer_fullname][weight_index][stat_index].
-
     Applied example: https://stackoverflow.com/q/61481921/10133797
     """
     def _process_args(model, _id, _dict):
