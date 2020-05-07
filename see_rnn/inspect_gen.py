@@ -146,7 +146,8 @@ def _get_grads(grads_fn, input_data, labels, sample_weights=None):
                   "will ignore")
         return grads_fn([input_data, labels])
     else:
-        sample_weights = sample_weights or np.ones(len(input_data))
+        if sample_weights is None:
+            sample_weights = np.ones(len(input_data))
         return grads_fn([input_data, sample_weights, labels, 1])
 
 
