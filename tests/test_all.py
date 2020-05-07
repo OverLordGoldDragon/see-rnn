@@ -7,7 +7,7 @@ import tensorflow as tf
 from termcolor import cprint, colored
 
 from . import K
-from . import Input, LSTM, GRU, SimpleRNN, Bidirectional
+from . import Input, LSTM, GRU, SimpleRNN, Bidirectional, TimeDistributed, Dense
 from . import Model
 from . import l1_l2
 from . import tempdir
@@ -378,14 +378,14 @@ def test_get_weight_penalties():
     batch_shape = (8, 100, 2 * units)
 
     reset_seeds(reset_graph_with_backend=K)
-    model = make_model(GRU, batch_shape, activation='relu',
-                       recurrent_dropout=0.3)
+    model = make_model(GRU, batch_shape, activation='relu', bidirectional=True,
+                       recurrent_dropout=0.3, include_dense=True)
     get_weight_penalties(model)
     cprint("\n<< get_weight_penalties TEST PASSED >>\n", 'green')
 
 def make_model(rnn_layer, batch_shape, units=6, bidirectional=False,
                use_bias=True, activation='tanh', recurrent_dropout=0,
-               new_imports={}):
+               include_dense=False, new_imports={}):
     Input         = IMPORTS['Input']
     Bidirectional = IMPORTS['Bidirectional']
     Model         = IMPORTS['Model']
@@ -409,7 +409,10 @@ def make_model(rnn_layer, batch_shape, units=6, bidirectional=False,
         x = Bidirectional(rnn_layer(units, return_sequences=True, **kw))(ipt)
     else:
         x = rnn_layer(units, return_sequences=True, **kw)(ipt)
+    if include_dense:
+        x = TimeDistributed(Dense(units, bias_regularizer=l1_l2(1e-4)))(x)
     out = rnn_layer(units, return_sequences=False)(x)
+
 
     model = Model(ipt, out)
     model.compile('adam', 'mse')
