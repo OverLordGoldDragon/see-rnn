@@ -13,7 +13,7 @@ from . import l1_l2
 from . import tempdir
 from see_rnn.inspect_gen import _get_grads
 from see_rnn import get_gradients, get_outputs, get_weights, get_rnn_weights
-from see_rnn import get_weight_penalties, weights_norm, weights_loss
+from see_rnn import get_weight_penalties, weights_norm, weight_loss
 from see_rnn import features_0D, features_1D, features_2D
 from see_rnn import features_hist, features_hist_v2, hist_clipped
 from see_rnn import get_full_name
@@ -382,7 +382,7 @@ def test_inspect_gen():
                        recurrent_dropout=0.3, include_dense=True)
 
     assert bool(get_weight_penalties(model))
-    assert weights_loss(model) > 0
+    assert weight_loss(model) > 0
     cprint("\n<< INSPECT_GEN TEST PASSED >>\n", 'green')
 
 def make_model(rnn_layer, batch_shape, units=6, bidirectional=False,

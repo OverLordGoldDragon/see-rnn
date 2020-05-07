@@ -533,7 +533,7 @@ def _get_layer_penalties(layer):
     return penalties
 
 
-def weights_loss(model):
+def weight_loss(model):
     """Compute l1, l2, and l1_l2 weight loss penalties of model layers.
     (e.g. set via `kernel_regularizer=l2(1e-4)`)"""
     weight_penalties = get_weight_penalties(model)
