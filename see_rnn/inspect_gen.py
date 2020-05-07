@@ -359,13 +359,13 @@ def get_weights(model, _id, omit_names=None, as_tensors=False, as_dict=False):
     return weights[0] if (len(_ids) == 1 and len(_ids) == 1) else weights
 
 
-def _detect_nans(data):
-    data = np.asarray(data).ravel()
-    perc_nans = 100 * np.sum(np.isnan(data)) / len(data)
+def detect_nans(data):
+    data = np.asarray(data)
+    perc_nans = 100 * np.sum(np.isnan(data)) / data.size
     if perc_nans == 0:
         return None
     if perc_nans < 0.1:
-        num_nans = int((perc_nans / 100) * len(data))  # show as quantity
+        num_nans = int((perc_nans / 100) * data.size)  # show as quantity
         txt = "{:d}% \nNaNs".format(num_nans)
     else:
         txt = "{:.1f}% \nNaNs".format(perc_nans)  # show as percent
@@ -481,3 +481,78 @@ def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
             if verbose:
                 _print_stats(stats_all, l_idx, layer.name)
     return stats_all
+
+
+def get_weight_penalties(model):
+    """Get l1, l2, and l1_l2 weight loss penalties from all model layers."""
+    wp_dict = {}
+    for layer in model.layers:
+        layer_penalties = _get_layer_penalties(layer)
+        if layer_penalties:
+            for p in layer_penalties:
+                weight_name, weight_penalty = p
+                if not all(wp == 0 for wp in weight_penalty):
+                    wp_dict.update({weight_name: weight_penalty})
+    return wp_dict
+
+
+def _get_layer_penalties(layer):
+    """Get l1, l2, and l1_l2 weight loss penalties of `layer`."""
+    def _rnn_penalties(layer):
+        penalties = []
+        if hasattr(layer, 'backward_layer'):
+            for layer in [layer.forward_layer, layer.backward_layer]:
+                penalties += _cell_penalties(layer.cell)
+            return penalties
+        else:
+            return _cell_penalties(layer.cell)
+
+    def _cell_penalties(cell):
+        penalties = []
+        for weight_idx, weight_type in enumerate(['kernel', 'recurrent', 'bias']):
+            _lambda = getattr(cell, weight_type + '_regularizer', None)
+
+            if _lambda is not None:
+                weight_name = cell.weights[weight_idx].name
+                l1_l2 = (float(_lambda.l1), float(_lambda.l2))
+                penalties.append([weight_name, l1_l2])
+        return penalties
+
+    if hasattr(layer, 'cell') or \
+      (hasattr(layer, 'layer') and hasattr(layer.layer, 'cell')):
+        return _rnn_penalties(layer)
+    elif hasattr(layer, 'layer') and not hasattr(layer.layer, 'cell'):
+        layer = layer.layer
+
+    penalties= []
+    for weight_name in ['kernel', 'bias']:
+        _lambda = getattr(layer, weight_name + '_regularizer', None)
+        if _lambda is not None:
+            l1_l2 = (float(_lambda.l1), float(_lambda.l2))
+            penalties.append([getattr(layer, weight_name).name, l1_l2])
+    return penalties
+
+
+def weight_loss(model):
+    """Compute l1, l2, and l1_l2 weight loss penalties of model layers.
+    (e.g. set via `kernel_regularizer=l2(1e-4)`)"""
+    weight_penalties = get_weight_penalties(model)
+
+    penalized_weights = []
+    ordered_penalties = []
+    for w_name, (l1, l2) in weight_penalties.items():
+        l_name = w_name.split('/')[0]
+        layer = model.get_layer(name=l_name)
+        for weight in layer.trainable_weights:
+            if weight.name == w_name:
+                penalized_weights.append(weight)
+                ordered_penalties.append((l1, l2))
+    penalized_weights = K.batch_get_value(penalized_weights)
+
+    loss = 0
+    for weight, (l1, l2) in zip(penalized_weights, ordered_penalties):
+        if l1 != 0:
+            loss += l1 * np.sum(np.abs(weight))
+        if l2 != 0:
+            loss += l2 * np.sum(np.square(weight))
+    return loss

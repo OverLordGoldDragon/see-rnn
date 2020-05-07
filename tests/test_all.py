@@ -7,13 +7,13 @@ import tensorflow as tf
 from termcolor import cprint, colored
 
 from . import K
-from . import Input, LSTM, GRU, SimpleRNN, Bidirectional
+from . import Input, LSTM, GRU, SimpleRNN, Bidirectional, TimeDistributed, Dense
 from . import Model
 from . import l1_l2
 from . import tempdir
 from see_rnn.inspect_gen import _get_grads
 from see_rnn import get_gradients, get_outputs, get_weights, get_rnn_weights
-from see_rnn import weights_norm
+from see_rnn import get_weight_penalties, weights_norm, weight_loss
 from see_rnn import features_0D, features_1D, features_2D
 from see_rnn import features_hist, features_hist_v2, hist_clipped
 from see_rnn import get_full_name
@@ -281,14 +281,14 @@ def test_misc():  # test miscellaneous functionalities
     assert keys == ['a', 'b', 'c']
     assert data[0] == [1, 2, 4] and data[1] == [5, 6, 8]
 
-    from see_rnn.inspect_gen import get_layer, _detect_nans
+    from see_rnn.inspect_gen import get_layer, detect_nans
     get_layer(model, 'gru')
     get_rnn_weights(model, 1, concat_gates=False, as_tensors=True)
     rnn_heatmap(model, 1, input_data=x, labels=y, mode='weights')
     _test_prefetched_data(model)
 
     # test NaN detection
-    nan_txt = _detect_nans(np.array([1]*9999 + [np.nan])).replace('\n', ' ')
+    nan_txt = detect_nans(np.array([1]*9999 + [np.nan])).replace('\n', ' ')
     print(nan_txt)  # case: print as quantity
 
     K.set_value(model.optimizer.lr, 1e12)
@@ -373,20 +373,21 @@ def test_envs():  # pseudo-tests for coverage for different env flags
     cprint("\n<< ENV TESTS PASSED >>\n", 'green')
 
 
-def test_get_weight_penalties():
+def test_inspect_gen():
     units = 6
     batch_shape = (8, 100, 2 * units)
 
-    reset_seeds(reset_graph_with_backend=K)
-    model = make_model(GRU, batch_shape, activation='relu',
-                       recurrent_dropout=0.3)
-    x, y = make_data(batch_shape, units)
-    model.train_on_batch(x, y)
+    model = make_model(GRU, batch_shape, activation='relu', bidirectional=True,
+                       recurrent_dropout=0.3, include_dense=True)
+
+    assert bool(get_weight_penalties(model))
+    assert weight_loss(model) > 0
+    cprint("\n<< INSPECT_GEN TEST PASSED >>\n", 'green')
 
 
 def make_model(rnn_layer, batch_shape, units=6, bidirectional=False,
                use_bias=True, activation='tanh', recurrent_dropout=0,
-               new_imports={}):
+               include_dense=False, new_imports={}):
     Input         = IMPORTS['Input']
     Bidirectional = IMPORTS['Bidirectional']
     Model         = IMPORTS['Model']
@@ -410,6 +411,8 @@ def make_model(rnn_layer, batch_shape, units=6, bidirectional=False,
         x = Bidirectional(rnn_layer(units, return_sequences=True, **kw))(ipt)
     else:
         x = rnn_layer(units, return_sequences=True, **kw)(ipt)
+    if include_dense:
+        x = TimeDistributed(Dense(units, bias_regularizer=l1_l2(1e-4)))(x)
     out = rnn_layer(units, return_sequences=False)(x)
 
     model = Model(ipt, out)
