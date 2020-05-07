@@ -377,13 +377,13 @@ def test_inspect_gen():
     units = 6
     batch_shape = (8, 100, 2 * units)
 
-    reset_seeds(reset_graph_with_backend=K)
     model = make_model(GRU, batch_shape, activation='relu', bidirectional=True,
                        recurrent_dropout=0.3, include_dense=True)
 
     assert bool(get_weight_penalties(model))
     assert weight_loss(model) > 0
     cprint("\n<< INSPECT_GEN TEST PASSED >>\n", 'green')
+
 
 def make_model(rnn_layer, batch_shape, units=6, bidirectional=False,
                use_bias=True, activation='tanh', recurrent_dropout=0,
@@ -414,7 +414,6 @@ def make_model(rnn_layer, batch_shape, units=6, bidirectional=False,
     if include_dense:
         x = TimeDistributed(Dense(units, bias_regularizer=l1_l2(1e-4)))(x)
     out = rnn_layer(units, return_sequences=False)(x)
-
 
     model = Model(ipt, out)
     model.compile('adam', 'mse')
