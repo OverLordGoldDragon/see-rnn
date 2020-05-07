@@ -4,7 +4,7 @@ import numpy as np
 from termcolor import colored
 
 from .utils import _process_rnn_args, _save_rnn_fig
-from .inspect_gen import _detect_nans
+from .inspect_gen import detect_nans
 
 
 def rnn_histogram(model, _id, layer=None, input_data=None, labels=None,
@@ -100,7 +100,7 @@ def rnn_histogram(model, _id, layer=None, input_data=None, labels=None,
                 raise Exception("unknown kwarg `%s`" % kwarg)
 
     def _detect_and_zero_nans(matrix_data):
-        nan_txt = _detect_nans(matrix_data)
+        nan_txt = detect_nans(matrix_data)
         if nan_txt is not None:  # NaNs detected
             matrix_data[np.isnan(matrix_data)] = 0  # set NaNs to zero
         return matrix_data, nan_txt
@@ -423,13 +423,13 @@ def rnn_heatmap(model, _id, layer=None, input_data=None, labels=None,
                 gates_data.append(matrix_data[..., start:end])
 
             for gate_name, gate_data in zip(gate_names, gates_data):
-                nan_txt = _detect_nans(gate_data)
+                nan_txt = detect_nans(gate_data)
                 if nan_txt is not None:
                     nan_txt = nan_txt.replace('\n', '')
                     print(gate_name + ':', colored(nan_txt, 'red'))
 
     def _detect_and_print_nans(matrix_data, kernel_type, d):
-        nan_txt = _detect_nans(matrix_data)
+        nan_txt = detect_nans(matrix_data)
         if nan_txt is not None:
             _print_nans(nan_txt, matrix_data, kernel_type,
                         d['gate_names'], d['rnn_dim'])

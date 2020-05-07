@@ -281,14 +281,14 @@ def test_misc():  # test miscellaneous functionalities
     assert keys == ['a', 'b', 'c']
     assert data[0] == [1, 2, 4] and data[1] == [5, 6, 8]
 
-    from see_rnn.inspect_gen import get_layer, _detect_nans
+    from see_rnn.inspect_gen import get_layer, detect_nans
     get_layer(model, 'gru')
     get_rnn_weights(model, 1, concat_gates=False, as_tensors=True)
     rnn_heatmap(model, 1, input_data=x, labels=y, mode='weights')
     _test_prefetched_data(model)
 
     # test NaN detection
-    nan_txt = _detect_nans(np.array([1]*9999 + [np.nan])).replace('\n', ' ')
+    nan_txt = detect_nans(np.array([1]*9999 + [np.nan])).replace('\n', ' ')
     print(nan_txt)  # case: print as quantity
 
     K.set_value(model.optimizer.lr, 1e12)
