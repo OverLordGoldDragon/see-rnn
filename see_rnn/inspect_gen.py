@@ -481,3 +481,53 @@ def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
             if verbose:
                 _print_stats(stats_all, l_idx, layer.name)
     return stats_all
+
+
+def get_weight_penalties(model):
+    """Get l1, l2, and l1_l2 weight loss penalties from all model layers."""
+    wp_dict = {}
+    for layer in model.layers:
+        layer_penalties = _get_layer_penalties(layer)
+        if layer_penalties:
+            for p in layer_penalties:
+                weight_name, weight_penalty = p
+                if not all(wp == 0 for wp in weight_penalty):
+                    wp_dict.update({weight_name: weight_penalty})
+    return wp_dict
+
+
+def _get_layer_penalties(layer):
+    """Get l1, l2, and l1_l2 weight loss penalties of `layer`."""
+    def _rnn_penalties(layer):
+        penalties = []
+        if hasattr(layer, 'backward_layer'):
+            for layer in [layer.forward_layer, layer.backward_layer]:
+                penalties += _cell_penalties(layer.cell)
+            return penalties
+        else:
+            return _cell_penalties(layer.cell)
+
+    def _cell_penalties(cell):
+        penalties = []
+        for weight_idx, weight_type in enumerate(['kernel', 'recurrent', 'bias']):
+            _lambda = getattr(cell, weight_type + '_regularizer', None)
+
+            if _lambda is not None:
+                weight_name = cell.weights[weight_idx].name
+                l1_l2 = (float(_lambda.l1), float(_lambda.l2))
+                penalties.append([weight_name, l1_l2])
+        return penalties
+
+    if hasattr(layer, 'cell') or \
+      (hasattr(layer, 'layer') and hasattr(layer.layer, 'cell')):
+        return _rnn_penalties(layer)
+    elif hasattr(layer, 'layer') and not hasattr(layer.layer, 'cell'):
+        layer = layer.layer
+
+    penalties= []
+    for weight_name in ['kernel', 'bias']:
+        _lambda = getattr(layer, weight_name + '_regularizer', None)
+        if _lambda is not None:
+            l1_l2 = (float(_lambda.l1), float(_lambda.l2))
+            penalties.append([getattr(layer, weight_name).name, l1_l2])
+    return penalties

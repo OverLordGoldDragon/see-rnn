@@ -13,7 +13,7 @@ from . import l1_l2
 from . import tempdir
 from see_rnn.inspect_gen import _get_grads
 from see_rnn import get_gradients, get_outputs, get_weights, get_rnn_weights
-from see_rnn import weights_norm
+from see_rnn import get_weight_penalties, weights_norm
 from see_rnn import features_0D, features_1D, features_2D
 from see_rnn import features_hist, features_hist_v2, hist_clipped
 from see_rnn import get_full_name
@@ -380,9 +380,8 @@ def test_get_weight_penalties():
     reset_seeds(reset_graph_with_backend=K)
     model = make_model(GRU, batch_shape, activation='relu',
                        recurrent_dropout=0.3)
-    x, y = make_data(batch_shape, units)
-    model.train_on_batch(x, y)
-
+    get_weight_penalties(model)
+    cprint("\n<< get_weight_penalties TEST PASSED >>\n", 'green')
 
 def make_model(rnn_layer, batch_shape, units=6, bidirectional=False,
                use_bias=True, activation='tanh', recurrent_dropout=0,
