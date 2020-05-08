@@ -150,7 +150,7 @@ def get_gradients(model, _id, input_data, labels, sample_weights=None,
 
     if as_dict:
         return {name: x for name, x in zip(names, grads)}
-    return grads[0][0] if (one_requested and len(grads) == 1) else grads
+    return grads[0] if (one_requested and len(grads) == 1) else grads
 
 
 def _get_grads(grads_fn, input_data, labels, sample_weights=None,
