@@ -60,6 +60,7 @@ def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
         outs_fn = K.function([model.input, K.learning_phase()], layer_outs)
 
     outs = outs_fn([input_data, learning_phase])
+
     if as_dict:
         return {get_full_name(model, i): x for i, x in zip(names or idxs, outs)}
     return outs[0] if (one_requested and len(outs) == 1) else outs
@@ -115,30 +116,45 @@ def get_gradients(model, _id, input_data, labels, sample_weights=None,
             raise Exception("`mode` must be one of: 'outputs', 'weights'")
         return _validate_args(_id, layer)
 
-    if _id != '*':
-        names, idxs, layers, one_requested = _validate_args_(_id, layer, mode)
-        _id = [x for var in (names, idxs) if var for x in var] or None
-    else:
-        # exclude input layer & non-output/weightless layers (`mode`-dependent)
-        attr = 'output' if mode == 'outputs' else 'weights'
-        _id = [l.name for l in model.layers[1:]
-               if getattr(l, attr, None) is not None]
-        names = _id
-        idxs, layers = None, None
-        one_requested = len(_id) == 1
+    def _get_info(model, _id, layer, mode):
+        def _get_all_id(model, _id, mode):
+            # exclude input layer & non-output/weightless layers
+            # (`mode`-dependent)
+            attr = 'output' if mode == 'outputs' else 'trainable_weights'
+            _id = []
+            for l in model.layers[1:]:  # exclude input
+                params = getattr(l, attr, [])
+                if (isinstance(params, list) and len(params) > 0) or (
+                        not isinstance(params, list)):
+                    _id.append(l.name)
+            return _id
+
+        if _id != '*':
+            names, idxs, layers, one_requested = _validate_args_(_id, layer, mode)
+            _id = [x for var in (names, idxs) if var for x in var] or None
+        else:
+            _id = _get_all_id(model, _id, mode)
+            names = _id
+            idxs, layers = None, None
+            one_requested = len(_id) == 1
+        return _id, names, idxs, layers, one_requested
+
+    _id, names, idxs, layers, one_requested = _get_info(model, _id, layer, mode)
 
     if layers is None:
         layers = get_layer(model, _id)
 
-    grads_fn = _make_grads_fn(model, layers, mode=mode)
-    grads = _get_grads(grads_fn, input_data, labels, sample_weights)
+    grads_fn, names = _make_grads_fn(model, layers, mode=mode, return_names=True)
+    grads = _get_grads(grads_fn, input_data, labels, sample_weights,
+                       learning_phase)
 
     if as_dict:
-        return {get_full_name(model, i): x for i, x in zip(names or idxs, grads)}
-    return grads[0] if (one_requested and len(grads) == 1) else grads
+        return {name: x for name, x in zip(names, grads)}
+    return grads[0][0] if (one_requested and len(grads) == 1) else grads
 
 
-def _get_grads(grads_fn, input_data, labels, sample_weights=None):
+def _get_grads(grads_fn, input_data, labels, sample_weights=None,
+               learning_phase=0):
     """Helper method for computing gradients given a premade function."""
     if TF_KERAS:
         if sample_weights is not None:
@@ -148,15 +164,17 @@ def _get_grads(grads_fn, input_data, labels, sample_weights=None):
     else:
         if sample_weights is None:
             sample_weights = np.ones(len(input_data))
-        return grads_fn([input_data, sample_weights, labels, 1])
+        return grads_fn([input_data, sample_weights, labels, learning_phase])
 
 
-def _make_grads_fn(model, layers=None, params=None, mode='outputs'):
+def _make_grads_fn(model, layers=None, params=None, mode='outputs',
+                   return_names=False):
     """Returns gradient computation function w.r.t. layer outputs or weights.
     NOTE: gradients will be clipped if `clipnorm` or `clipvalue` were set.
 
     `params` can be layer weights or outputs; cannot supply along `layers`.
     `mode` is irrelevant if passing `params`.
+    `return_names`: whether to return parameter names along grads_fn.
     """
     def _validate_args(layers, params, mode):
         got_both = (layers is not None and params is not None)
@@ -181,7 +199,6 @@ def _make_grads_fn(model, layers=None, params=None, mode='outputs'):
         return weights
 
     layers, params = _validate_args(layers, params, mode)
-
     if params is None:
         params = _get_params(layers, mode)
     grads = model.optimizer.get_gradients(model.total_loss, params)
@@ -191,7 +208,12 @@ def _make_grads_fn(model, layers=None, params=None, mode='outputs'):
     else:
         inputs = [model.inputs[0], model.sample_weights[0],
                   model._feed_targets[0], K.learning_phase()]
-    return K.function(inputs=inputs, outputs=grads)
+
+    if not return_names:
+        return K.function(inputs=inputs, outputs=grads)
+    else:
+        return (K.function(inputs=inputs, outputs=grads),
+                [p.name for p in params])
 
 
 def get_layer(model, _id):
