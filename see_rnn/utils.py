@@ -1,6 +1,33 @@
 import numpy as np
+from copy import deepcopy
 from pathlib import Path
+
 from ._backend import WARN, NOTE
+
+
+def _kw_from_configs(configs, defaults):
+    def _fill_absent_defaults(kw, defaults):
+        # override `defaults`, but keep those not in `configs`
+        for name, _dict in defaults.items():
+            if name not in kw:
+                kw[name] = _dict
+            else:
+                for k, v in _dict.items():
+                    if k not in kw[name]:
+                        kw[name][k] = v
+        return kw
+
+    configs = configs or {}
+    configs = deepcopy(configs)  # ensure external dict unchanged
+    for key in configs:
+        if key not in defaults:
+            raise ValueError(f"unexpected `configs` key: {key}; "
+                             "supported are: %s" % ', '.join(list(defaults)))
+
+    kw = deepcopy(configs)  # ensure external dict unchanged
+    # override `defaults`, but keep those not in `configs`
+    kw = _fill_absent_defaults(configs, defaults)
+    return kw
 
 
 def _validate_args(_id, layer=None):
