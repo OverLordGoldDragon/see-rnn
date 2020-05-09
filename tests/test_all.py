@@ -247,7 +247,8 @@ def test_misc():  # test miscellaneous functionalities
                       savepath=os.path.join(dirpath, 'img.png'))
     rnn_histogram(model, 1, equate_axes=False,
                   configs={'tight': dict(left=0, right=1),
-                            'plot': dict(color='red')})
+                           'plot':  dict(color='red'),
+                           'title': dict(fontsize=14),})
     rnn_heatmap(model, 1, cmap=None, normalize=True, show_borders=False)
     rnn_heatmap(model, 1, cmap=None, norm='auto', absolute_value=True)
     rnn_heatmap(model, 1, norm=None)
