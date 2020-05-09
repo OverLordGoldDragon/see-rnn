@@ -247,7 +247,8 @@ def test_misc():  # test miscellaneous functionalities
                       savepath=os.path.join(dirpath, 'img.png'))
     rnn_histogram(model, 1, equate_axes=False,
                   configs={'tight': dict(left=0, right=1),
-                           'plot': dict(color='red')})
+                           'plot':  dict(color='red'),
+                           'title': dict(fontsize=14),})
     rnn_heatmap(model, 1, cmap=None, normalize=True, show_borders=False)
     rnn_heatmap(model, 1, cmap=None, norm='auto', absolute_value=True)
     rnn_heatmap(model, 1, norm=None)
@@ -288,9 +289,15 @@ def test_misc():  # test miscellaneous functionalities
     rnn_heatmap(model, 1, input_data=x, labels=y, mode='weights')
     _test_prefetched_data(model)
 
-    # test NaN detection
+    # test NaN/Inf detection
     nan_txt = detect_nans(np.array([1]*9999 + [np.nan])).replace('\n', ' ')
     print(nan_txt)  # case: print as quantity
+    data = np.array([np.nan, np.inf, -np.inf, 0])
+    print(detect_nans(data, include_inf=True))
+    print(detect_nans(data, include_inf=False))
+    data = np.array([np.inf, 0])
+    print(detect_nans(data, include_inf=True))
+    detect_nans(np.array([0]))
 
     K.set_value(model.optimizer.lr, 1e12)
     train_model(model, iterations=10)
@@ -304,7 +311,7 @@ def test_misc():  # test miscellaneous functionalities
     _model = make_model(SimpleRNN, batch_shape, units=128, use_bias=False)
     train_model(_model, iterations=1)  # TF2-Keras-Graph bug workaround
     rnn_histogram(_model, 1)  # test _pretty_hist
-    K.set_value(_model.optimizer.lr, 1e50)  # SimpleRNNs seem ridiculously robust
+    K.set_value(_model.optimizer.lr, 1e50)  # force NaNs
     train_model(_model, iterations=20)
     rnn_heatmap(_model, 1)
     data = get_rnn_weights(_model, 1)

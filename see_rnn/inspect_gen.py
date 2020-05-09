@@ -382,16 +382,36 @@ def get_weights(model, _id, omit_names=None, as_tensors=False, as_dict=False):
     return weights[0] if (len(_ids) == 1 and len(_ids) == 1) else weights
 
 
-def detect_nans(data):
+def detect_nans(data, include_inf=True):
+    def _get_txt(perc, data, name):
+        txt = ''
+        if perc > 0:
+            if perc < .1:
+                num = int((perc / 100) * data.size)  # show as quantity
+                txt = "{:d}% {}".format(num, name)
+            else:
+                txt = "{:.1f}% {}".format(perc, name)  # show as percent
+        return txt
+
     data = np.asarray(data)
     perc_nans = 100 * np.sum(np.isnan(data)) / data.size
-    if perc_nans == 0:
-        return None
-    if perc_nans < 0.1:
-        num_nans = int((perc_nans / 100) * data.size)  # show as quantity
-        txt = "{:d}% \nNaNs".format(num_nans)
+
+    if include_inf:
+        perc_inf = 100 * np.sum(np.isinf(data)) / data.size
     else:
-        txt = "{:.1f}% \nNaNs".format(perc_nans)  # show as percent
+        perc_inf = 0
+    if perc_nans == 0 and perc_inf == 0:
+        return None
+
+    nan_txt = _get_txt(perc_nans, data, 'NaN')
+    inf_txt = _get_txt(perc_inf,  data, 'Inf')
+
+    if nan_txt and inf_txt:
+        txt = nan_txt + ', ' + inf_txt
+    elif nan_txt:
+        txt = nan_txt
+    else:
+        txt = inf_txt
     return txt
 
 

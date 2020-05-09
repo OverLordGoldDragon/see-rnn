@@ -97,9 +97,14 @@ def rnn_histogram(model, _id, layer=None, input_data=None, labels=None,
                 raise Exception("unknown kwarg `%s`" % kwarg)
 
     def _detect_and_zero_nans(matrix_data):
-        nan_txt = detect_nans(matrix_data)
-        if nan_txt is not None:  # NaNs detected
+        nan_txt = detect_nans(matrix_data, include_inf=True)
+        if nan_txt is not None:  # NaN/Inf detected
             matrix_data[np.isnan(matrix_data)] = 0  # set NaNs to zero
+            matrix_data[np.isinf(matrix_data)] = 0  # set Infs to zero
+            if ', ' in nan_txt:
+                nan_txt = '\n'.join(nan_txt.split(', '))
+            else:
+                nan_txt = '\n'.join(nan_txt.split(' '))
         return matrix_data, nan_txt
 
     def _plot_bias(data, axes, direction_idx, bins, d, kw):
@@ -406,7 +411,6 @@ def rnn_heatmap(model, _id, layer=None, input_data=None, labels=None,
     def _print_nans(nan_txt, matrix_data, kernel_type, gate_names, rnn_dim):
         if gate_names[0] == '':
             print(kernel_type, end=":")
-            nan_txt = nan_txt.replace('\n', '')
             print(colored(nan_txt, 'red'))
         else:
             print('\n' + kernel_type + ":")
@@ -417,13 +421,12 @@ def rnn_heatmap(model, _id, layer=None, input_data=None, labels=None,
                 gates_data.append(matrix_data[..., start:end])
 
             for gate_name, gate_data in zip(gate_names, gates_data):
-                nan_txt = detect_nans(gate_data)
+                nan_txt = detect_nans(gate_data, include_inf=True)
                 if nan_txt is not None:
-                    nan_txt = nan_txt.replace('\n', '')
                     print(gate_name + ':', colored(nan_txt, 'red'))
 
     def _detect_and_print_nans(matrix_data, kernel_type, d):
-        nan_txt = detect_nans(matrix_data)
+        nan_txt = detect_nans(matrix_data, include_inf=True)
         if nan_txt is not None:
             _print_nans(nan_txt, matrix_data, kernel_type,
                         d['gate_names'], d['rnn_dim'])
