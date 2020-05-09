@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
+from .utils import _kw_from_configs
 from ._backend import NOTE
 
 
@@ -56,15 +57,8 @@ def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs
             'title': dict(weight='bold', fontsize=14),
             'save':  dict(),
             }
-        configs = configs or {}
-        for key in configs:
-            if key not in defaults:
-                raise ValueError(f"unexpected `configs` key: {key}; "
-                                 "supported are: %s" % ', '.join(list(defaults)))
-        # override defaults, but keep those not in `configs`
-        for key in defaults:
-            defaults[key].update(configs.get(key, {}))
-        kw = defaults.copy()
+        # deepcopy configs, and override defaults dicts or dict values
+        kw = _kw_from_configs(configs, defaults)
         return kw
 
     def _catch_unknown_kwargs(kwargs):
@@ -218,15 +212,8 @@ def features_1D(data, n_rows=None, annotations='auto', share_xy=(1, 1),
                             xy=(.03, .9), xycoords='axes fraction'),
             'save':    dict(),
             }
-        configs = configs or {}
-        for key in configs:
-            if key not in defaults:
-                raise ValueError(f"unexpected `configs` key: {key}; "
-                                 "supported are: %s" % ', '.join(list(defaults)))
-        # override defaults, but keep those not in `configs`
-        for key in defaults:
-            defaults[key].update(configs.get(key, {}))
-        kw = defaults.copy()
+        # deepcopy configs, and override defaults dicts or dict values
+        kw = _kw_from_configs(configs, defaults)
 
         _set_share_xy(kw, share_xy)
         size = kw['subplot']['figsize']
@@ -437,15 +424,8 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
             'colorbar': dict(),
             'save':     dict(),
             }
-        configs = configs or {}
-        for key in configs:
-            if key not in defaults:
-                raise ValueError(f"unexpected `configs` key: {key}; "
-                                 "supported are: %s" % ', '.join(list(defaults)))
-        # override defaults, but keep those not in `configs`
-        for key in defaults:
-            defaults[key].update(configs.get(key, {}))
-        kw = defaults.copy()
+        # deepcopy configs, and override defaults dicts or dict values
+        kw = _kw_from_configs(configs, defaults)
 
         _set_share_xy(kw, share_xy)
         size = kw['subplot']['figsize']
@@ -589,9 +569,9 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
                                   'row' -> limits shared along rows.
                                   Overrides 'sharex' in `configs['subplot']`.
               - sharey: bool/str. `sharex`, but for y-axis.
-        pad_xticks: bool/int. int-> kwarg to ax.tick_params(pad=). Move xticks
-                    above x-axis, and include only min/max shifted 10% inward.
-                    Useful for `tight`. If False/0, makes no change.
+        pad_xticks: bool/int. int-> kwarg to ax.tick_params(pad=). Pad xticks
+                    (<0 for above x-axis), and include only min/max shifted
+                    10% inward. Useful for `tight`. If False/0, makes no change.
                     If None and bool(`tight` and not `sharex`), defaults to -20.
         annotations: str list/'auto'/None.
             'auto': annotate each subplot with its index.
@@ -644,6 +624,17 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             kw['subplot']['sharex'] = sharex
             kw['subplot']['sharey'] = sharey
 
+        def _fill_absent_defaults(kw, defaults):
+            # override `defaults`, but keep those not in `configs`
+            for name, _dict in defaults.items():
+                if name not in kw:
+                    kw[name] = _dict
+                else:
+                    for k, v in _dict.items():
+                        if k not in kw[name]:
+                            kw[name][k] = v
+            return kw
+
         defaults = {
             'plot':    dict(peaks_to_clip=0),
             'subplot': dict(dpi=76, figsize=(10, 10)),
@@ -653,15 +644,8 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
                             xycoords='axes fraction', color='g'),
             'save': dict(),
             }
-        configs = configs or {}
-        for key in configs:
-            if key not in defaults:
-                raise ValueError(f"unexpected `configs` key: {key}; "
-                                 "supported are: %s" % ', '.join(list(defaults)))
-        # override defaults, but keep those not in `configs`
-        for key in defaults:
-            defaults[key].update(configs.get(key, {}))
-        kw = defaults.copy()
+        # deepcopy configs, and override defaults dicts or dict values
+        kw = _kw_from_configs(configs, defaults)
 
         _set_share_xy(kw, share_xy)
         size = kw['subplot']['figsize']
@@ -783,9 +767,9 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
                                   'row' -> limits shared along rows.
                                   Overrides 'sharex' in `configs['subplot']`.
               - sharey: bool/str. `sharex`, but for y-axis.
-        pad_xticks: bool/int. int-> kwarg to ax.tick_params(pad=). Move xticks
-                    above x-axis, and include only min/max shifted 10% inward.
-                    Useful for `tight`. If False/0, makes no change.
+        pad_xticks: bool/int. int-> kwarg to ax.tick_params(pad=). Pad xticks
+                    (<0 for above x-axis), and include only min/max shifted
+                    10% inward. Useful for `tight`. If False/0, makes no change.
                     If None and bool(`tight` and not `sharex`), defaults to -20.
         side_annot: str. Text to display to the right side of rightmost subplot
               boxes, enumerated by row number ({side_annot}{row})
@@ -836,6 +820,17 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
             kw['subplot']['sharex'] = sharex
             kw['subplot']['sharey'] = sharey
 
+        def _fill_absent_defaults(kw, defaults):
+            # override `defaults`, but keep those not in `configs`
+            for name, _dict in defaults.items():
+                if name not in kw:
+                    kw[name] = _dict
+                else:
+                    for k, v in _dict.items():
+                        if k not in kw[name]:
+                            kw[name][k] = v
+            return kw
+
         defaults = {
             'plot':    dict(peaks_to_clip=0),
             'subplot': dict(dpi=76, figsize=(10, 10)),
@@ -847,15 +842,8 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
                                xy=(1.02, .5), xycoords='axes fraction'),
             'save': dict(),
             }
-        configs = configs or {}
-        for key in configs:
-            if key not in defaults:
-                raise ValueError(f"unexpected `configs` key: {key}; "
-                                 "supported are: %s" % ', '.join(list(defaults)))
-        # override defaults, but keep those not in `configs`
-        for key in defaults:
-            defaults[key].update(configs.get(key, {}))
-        kw = defaults.copy()
+        # deepcopy configs, and override defaults dicts or dict values
+        kw = _kw_from_configs(configs, defaults)
 
         _set_share_xy(kw, share_xy)
         size = kw['subplot']['figsize']

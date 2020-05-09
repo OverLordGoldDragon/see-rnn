@@ -3,7 +3,7 @@ import numpy as np
 
 from termcolor import colored
 
-from .utils import _process_rnn_args, _save_rnn_fig
+from .utils import _process_rnn_args, _kw_from_configs, _save_rnn_fig
 from .inspect_gen import detect_nans
 
 
@@ -80,11 +80,8 @@ def rnn_histogram(model, _id, layer=None, input_data=None, labels=None,
                               xy=(.05, .63), xycoords='axes fraction'),
             'save': dict(),
             }
-        configs = configs or {}
-        # override defaults, but keep those not in `configs`
-        for key in defaults:
-            defaults[key].update(configs.get(key, {}))
-        kw = defaults.copy()
+        # deepcopy configs, and override defaults dicts or dict values
+        kw = _kw_from_configs(configs, defaults)
 
         if not equate_axes:
             kw['subplot'].update({'sharex': False, 'sharey': False})
@@ -353,11 +350,8 @@ def rnn_heatmap(model, _id, layer=None, input_data=None, labels=None,
             'colorbar':  dict(fraction=.03),
             'save':      dict(),
             }
-        configs = configs or {}
-        # override defaults, but keep those not in `configs`
-        for key in defaults:
-            defaults[key].update(configs.get(key, {}))
-        kw = defaults.copy()
+        # deepcopy configs, and override defaults dicts or dict values
+        kw = _kw_from_configs(configs, defaults)
 
         size = kw['subplot']['figsize']
         kw['subplot']['figsize'] = (size[0] * w, size[1] * h)
