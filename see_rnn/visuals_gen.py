@@ -564,8 +564,8 @@ def _get_nrows_and_ncols(n_rows, n_subplots):
     return n_rows, n_cols
 
 
-def features_hist(data, n_rows='vertical', bins=100, xlims=None,
-                  center_zero=False, tight=True, share_xy=('col', 1),
+def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
+                  center_zero=False, share_xy=('col', 1), pad_xticks=None,
                   annotations='auto', configs=None, **kwargs):
     """Plots histograms in a subplot grid.
 
@@ -577,10 +577,10 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None,
               If 'vertical', sets n_rows = len(data).
         bins: int. Pyplot kwarg to plt.hist(), # of bins.
         xlims: float tuple. x limits to apply to all subplots.
-        center_zero: bool. If True, symmetrize xlims: (-max, max).
-              Overrides `xlims`.
         tight: bool. If True, plt.subplots_adjust (spacing) according to
               configs['tight'], defaulted to minimize intermediate padding.
+        center_zero: bool. If True, symmetrize xlims: (-max, max).
+              Overrides `xlims`.
         share_xy: bool/str/(tuple/list of bool/str) for (sharex, sharey)
               kwargs passed to plt.subplots(). If bool/str, will use same
               value for sharex & sharey.
@@ -589,6 +589,10 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None,
                                   'row' -> limits shared along rows.
                                   Overrides 'sharex' in `configs['subplot']`.
               - sharey: bool/str. `sharex`, but for y-axis.
+        pad_xticks: bool/int. int-> kwarg to ax.tick_params(pad=). Move xticks
+                    above x-axis, and include only min/max shifted 10% inward.
+                    Useful for `tight`. If False/0, makes no change.
+                    If None and bool(`tight` and not `sharex`), defaults to -20.
         annotations: str list/'auto'/None.
             'auto': annotate each subplot with its index.
              list of str: annotate by indexing into the list.
@@ -664,6 +668,14 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None,
         kw['subplot']['figsize'] = (size[0] * w, size[1] * h)
         return kw
 
+    def _process_pad_xticks(pad_xticks, kw):
+        if pad_xticks is None:
+            if tight and not kw['subplot']['sharex']:
+                pad_xticks = -20
+            else:
+                pad_xticks = 0
+        return pad_xticks
+
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks', 'title',
                           'borderwidth', 'savepath')
@@ -686,7 +698,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None,
         return n_rows, n_cols, annotations
 
     def _style_axis(ax, kw, show_borders, show_xy_ticks, xlims,
-                    center_zero, annotations):
+                    center_zero, pad_xticks, annotations):
         if not show_xy_ticks[0]:
             ax.set_xticks([])
         if not show_xy_ticks[1]:
@@ -700,9 +712,17 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None,
             ax.set_xlim(-maxlim, maxlim)
         elif xlims is not None:
             ax.set_xlim(*xlims)
+        if pad_xticks:
+            xmin, xmax = ax.get_xlim()
+            xmin += .1 * abs(xmin)
+            xmax -= .1 * abs(xmax)
+            ax.set_xticks([xmin, xmax])
+            ax.tick_params(axis='x', pad=pad_xticks)
 
     _catch_unknown_kwargs(kwargs)
     kw = _process_configs(configs, w, h, tight, share_xy)
+    pad_xticks = _process_pad_xticks(pad_xticks, kw)
+
     n_rows, n_cols, annotations = _get_style_info(data, n_rows, annotations)
     if center_zero and xlims is not None:
         print(NOTE, "`center_zero` will override `xlims`")
@@ -718,7 +738,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None,
     for ax_idx, ax in enumerate(axes.flat):
         hist_clipped(data[ax_idx], ax=ax, bins=bins, **kw['plot'])
         _style_axis(ax, kw, show_borders, show_xy_ticks, xlims,
-                    center_zero, annotations)
+                    center_zero, pad_xticks, annotations)
 
     if tight:
         fig.subplots_adjust(**kw['tight'])
@@ -734,7 +754,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None,
 
 def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
                      center_zero=False, tight=True, share_xy=('col', 1),
-                     side_annot=None, configs=None, **kwargs):
+                     pad_xticks=None, side_annot=None, configs=None, **kwargs):
     """Plots histograms in a subplot grid; tailored for multiple histograms
     per gridcell.
 
@@ -763,6 +783,10 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
                                   'row' -> limits shared along rows.
                                   Overrides 'sharex' in `configs['subplot']`.
               - sharey: bool/str. `sharex`, but for y-axis.
+        pad_xticks: bool/int. int-> kwarg to ax.tick_params(pad=). Move xticks
+                    above x-axis, and include only min/max shifted 10% inward.
+                    Useful for `tight`. If False/0, makes no change.
+                    If None and bool(`tight` and not `sharex`), defaults to -20.
         side_annot: str. Text to display to the right side of rightmost subplot
               boxes, enumerated by row number ({side_annot}{row})
         configs: dict. kwargs to customize various plot schemes:
@@ -838,6 +862,14 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
         kw['subplot']['figsize'] = (size[0] * w, size[1] * h)
         return kw
 
+    def _process_pad_xticks(pad_xticks, kw):
+        if pad_xticks is None:
+            if tight and not kw['subplot']['sharex']:
+                pad_xticks = -20
+            else:
+                pad_xticks = 0
+        return pad_xticks
+
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks', 'title',
                           'borderwidth', 'savepath')
@@ -855,7 +887,8 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
                 "number of elements")
         return n_rows, n_cols
 
-    def _style_axis(ax, kw, show_borders, show_xy_ticks, xlims, center_zero):
+    def _style_axis(ax, kw, show_borders, show_xy_ticks, xlims, center_zero,
+                    pad_xticks):
         if row == 0 and colnames is not None:
             ax.set_title(f"{colnames[col]}", **kw['colnames'])
         if side_annot is not None and col == n_cols - 1:
@@ -871,9 +904,17 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
             ax.set_xlim(-maxlim, maxlim)
         elif xlims is not None:
             ax.set_xlim(*xlims)
+        if pad_xticks:
+            xmin, xmax = ax.get_xlim()
+            xmin += .1 * abs(xmin)
+            xmax -= .1 * abs(xmax)
+            ax.set_xticks([xmin, xmax])
+            ax.tick_params(axis='x', pad=pad_xticks)
 
     _catch_unknown_kwargs(kwargs)
     kw = _process_configs(configs, w, h, share_xy)
+    pad_xticks = _process_pad_xticks(pad_xticks, kw)
+
     n_rows, n_cols = _get_data_info(data)
     if center_zero and xlims is not None:
         print(NOTE, "`center_zero` will override `xlims`")
@@ -892,7 +933,8 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
             for subdata in data[row][col]:
                 hist_clipped(subdata, ax=ax, bins=bins, **kw['plot'])
 
-            _style_axis(ax, kw, show_borders, show_xy_ticks, xlims, center_zero)
+            _style_axis(ax, kw, show_borders, show_xy_ticks, xlims,
+                        center_zero, pad_xticks)
 
     if ylim is not None:
         ax.set_ylim(0, ylim)
