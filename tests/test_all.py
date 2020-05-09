@@ -288,9 +288,15 @@ def test_misc():  # test miscellaneous functionalities
     rnn_heatmap(model, 1, input_data=x, labels=y, mode='weights')
     _test_prefetched_data(model)
 
-    # test NaN detection
+    # test NaN/Inf detection
     nan_txt = detect_nans(np.array([1]*9999 + [np.nan])).replace('\n', ' ')
     print(nan_txt)  # case: print as quantity
+    data = np.array([np.nan, np.inf, -np.inf, 0])
+    print(detect_nans(data, include_inf=True))
+    print(detect_nans(data, include_inf=False))
+    data = np.array([np.inf, 0])
+    print(detect_nans(data, include_inf=True))
+    detect_nans(np.array([0]))
 
     K.set_value(model.optimizer.lr, 1e12)
     train_model(model, iterations=10)
