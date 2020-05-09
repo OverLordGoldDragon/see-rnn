@@ -624,17 +624,6 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             kw['subplot']['sharex'] = sharex
             kw['subplot']['sharey'] = sharey
 
-        def _fill_absent_defaults(kw, defaults):
-            # override `defaults`, but keep those not in `configs`
-            for name, _dict in defaults.items():
-                if name not in kw:
-                    kw[name] = _dict
-                else:
-                    for k, v in _dict.items():
-                        if k not in kw[name]:
-                            kw[name][k] = v
-            return kw
-
         defaults = {
             'plot':    dict(peaks_to_clip=0),
             'subplot': dict(dpi=76, figsize=(10, 10)),
@@ -819,17 +808,6 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
                 sharey = bool(sharey)
             kw['subplot']['sharex'] = sharex
             kw['subplot']['sharey'] = sharey
-
-        def _fill_absent_defaults(kw, defaults):
-            # override `defaults`, but keep those not in `configs`
-            for name, _dict in defaults.items():
-                if name not in kw:
-                    kw[name] = _dict
-                else:
-                    for k, v in _dict.items():
-                        if k not in kw[name]:
-                            kw[name][k] = v
-            return kw
 
         defaults = {
             'plot':    dict(peaks_to_clip=0),
