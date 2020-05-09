@@ -101,7 +101,10 @@ def rnn_histogram(model, _id, layer=None, input_data=None, labels=None,
         if nan_txt is not None:  # NaN/Inf detected
             matrix_data[np.isnan(matrix_data)] = 0  # set NaNs to zero
             matrix_data[np.isinf(matrix_data)] = 0  # set Infs to zero
-            nan_txt = '\n'.join(nan_txt.split(' '))  # reformat
+            if ', ' in nan_txt:
+                nan_txt = '\n'.join(nan_txt.split(', '))
+            else:
+                nan_txt = '\n'.join(nan_txt.split(' '))
         return matrix_data, nan_txt
 
     def _plot_bias(data, axes, direction_idx, bins, d, kw):

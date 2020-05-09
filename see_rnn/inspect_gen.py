@@ -407,7 +407,7 @@ def detect_nans(data, include_inf=True):
     inf_txt = _get_txt(perc_inf,  data, 'Inf')
 
     if nan_txt and inf_txt:
-        txt = nan_txt + '\n' + inf_txt
+        txt = nan_txt + ', ' + inf_txt
     elif nan_txt:
         txt = nan_txt
     else:

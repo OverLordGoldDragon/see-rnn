@@ -247,7 +247,7 @@ def test_misc():  # test miscellaneous functionalities
                       savepath=os.path.join(dirpath, 'img.png'))
     rnn_histogram(model, 1, equate_axes=False,
                   configs={'tight': dict(left=0, right=1),
-                           'plot': dict(color='red')})
+                            'plot': dict(color='red')})
     rnn_heatmap(model, 1, cmap=None, normalize=True, show_borders=False)
     rnn_heatmap(model, 1, cmap=None, norm='auto', absolute_value=True)
     rnn_heatmap(model, 1, norm=None)
@@ -310,7 +310,7 @@ def test_misc():  # test miscellaneous functionalities
     _model = make_model(SimpleRNN, batch_shape, units=128, use_bias=False)
     train_model(_model, iterations=1)  # TF2-Keras-Graph bug workaround
     rnn_histogram(_model, 1)  # test _pretty_hist
-    K.set_value(_model.optimizer.lr, 1e50)  # SimpleRNNs seem ridiculously robust
+    K.set_value(_model.optimizer.lr, 1e50)  # force NaNs
     train_model(_model, iterations=20)
     rnn_heatmap(_model, 1)
     data = get_rnn_weights(_model, 1)
