@@ -239,7 +239,7 @@ def test_misc():  # test miscellaneous functionalities
                          borderwidth=1, show_xy_ticks=[0, 0], side_annot='row',
                          share_xy=True, title="Grads",
                          savepath=os.path.join(dirpath, 'img.png'))
-    features_hist(grads, center_zero=True, xlims=(-1, 1), share_xy=(0, 0))
+    features_hist(grads, center_zero=True, xlims=(-1, 1), share_xy=0)
     features_hist_v2(list(grads[:, :4, :3]), center_zero=True, xlims=(-1, 1),
                      share_xy=(False, False))
     with tempdir() as dirpath:
