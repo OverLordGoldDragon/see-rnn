@@ -70,6 +70,10 @@ def get_gradients(model, _id, input_data, labels, sample_weights=None,
                   learning_phase=0, layer=None, mode='outputs', as_dict=False):
     """Retrieves layer gradients w.r.t. outputs or weights.
     NOTE: gradients will be clipped if `clipvalue` or `clipnorm` were set.
+    NOTE: repeated calls to `get_gradients` can be expensive due to remaking
+          the grads getter function; reuse parts of code to use `_make_grads_fn`
+          ONCE, and subsequently only `_get_grads`, for potentially
+          significant speedup.
 
     Arguments:
         model: keras.Model/tf.keras.Model.
