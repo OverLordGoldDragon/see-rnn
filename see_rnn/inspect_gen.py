@@ -2,7 +2,7 @@ import numpy as np
 
 from copy import deepcopy
 from .utils import _validate_args
-from ._backend import K, WARN, TF_KERAS
+from ._backend import K, WARN, TF_KERAS, TF_22
 
 
 def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
@@ -54,7 +54,7 @@ def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
 
     layer_outs = _get_outs_tensors(model, names, idxs, layers)
 
-    if TF_KERAS:
+    if TF_KERAS and not TF_22:
         outs_fn = K.function([model.input], layer_outs)
     else:
         outs_fn = K.function([model.input, K.learning_phase()], layer_outs)
@@ -160,7 +160,7 @@ def get_gradients(model, _id, input_data, labels, sample_weights=None,
 def _get_grads(grads_fn, input_data, labels, sample_weights=None,
                learning_phase=0):
     """Helper method for computing gradients given a premade function."""
-    if TF_KERAS:
+    if TF_KERAS and not TF_22:
         if sample_weights is not None:
             print(WARN, "`sample_weights` is unsupported for tf.keras; "
                   "will ignore")
@@ -207,7 +207,7 @@ def _make_grads_fn(model, layers=None, params=None, mode='outputs',
         params = _get_params(layers, mode)
     grads = model.optimizer.get_gradients(model.total_loss, params)
 
-    if TF_KERAS:
+    if TF_KERAS and not TF_22:
         inputs = [model.inputs[0], model._feed_targets[0]]
     else:
         inputs = [model.inputs[0], model.sample_weights[0],

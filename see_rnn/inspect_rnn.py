@@ -52,7 +52,7 @@ def _get_cell_weights(rnn_cell, as_tensors=True, concat_gates=True):
     def _get_cell_info(rnn_cell):
         rnn_type = type(rnn_cell).__name__.replace('Cell', '')
 
-        if rnn_type in ['SimpleRNN', 'IndRNN']:
+        if rnn_type in ['SimpleRNN', 'IndRNN'] or rnn_cell.implementation == 2:
             gate_names = ['']
         elif rnn_type in ['LSTM', 'CuDNNLSTM']:
             gate_names = ['i', 'f', 'c', 'o']
@@ -72,7 +72,7 @@ def _get_cell_weights(rnn_cell, as_tensors=True, concat_gates=True):
         print(WARN, "getting weights per-gate not supported for tf.keras "
               "implementations; fetching per concat_gates==True instead")
         concat_gates = True
-    if not concat_gates and gate_names[0]=='':
+    if not concat_gates and gate_names[0] == '':
         print(WARN, rnn_type + " is not a gated RNN; fetching per "
               "concat_gates==True instead")
         concat_gates = True

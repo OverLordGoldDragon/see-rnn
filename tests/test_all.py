@@ -90,7 +90,7 @@ def test_main():
 
 
 def _test_outputs(model):
-    x, _ = make_data(K.int_shape(model.input), model.layers[2].units)
+    x, *_ = make_data(K.int_shape(model.input), model.layers[2].units)
     outs = get_outputs(model, 1, x)
     features_1D(outs[:1], show_y_zero=True)
     features_1D(outs[0])
@@ -98,7 +98,7 @@ def _test_outputs(model):
 
 
 def _test_outputs_gradients(model):
-    x, y = make_data(K.int_shape(model.input), model.layers[2].units)
+    x, y, _ = make_data(K.int_shape(model.input), model.layers[2].units)
     name = model.layers[1].name
     grads_all  = get_gradients(model, name, x, y, mode='outputs')
     grads_last = get_gradients(model, 2,    x, y, mode='outputs')
@@ -121,7 +121,7 @@ def _test_outputs_gradients(model):
 
 
 def _test_weights_gradients(model):
-    x, y = make_data(K.int_shape(model.input), model.layers[2].units)
+    x, y, _ = make_data(K.int_shape(model.input), model.layers[2].units)
     name = model.layers[1].name
 
     with tempdir() as dirpath:
@@ -152,8 +152,8 @@ def test_errors():  # test Exception cases
     reset_seeds(reset_graph_with_backend=K)
     model = make_model(GRU, batch_shape, activation='relu',
                        recurrent_dropout=0.3)
-    x, y = make_data(batch_shape, units)
-    model.train_on_batch(x, y)
+    x, y, sw = make_data(batch_shape, units)
+    model.train_on_batch(x, y, sw)
 
     grads = get_gradients(model, 1, x, y)
     grads_4D = np.expand_dims(grads, -1)
@@ -205,8 +205,8 @@ def test_misc():  # test miscellaneous functionalities
     reset_seeds(reset_graph_with_backend=K)
     model = make_model(GRU, batch_shape, activation='relu',
                        recurrent_dropout=0.3)
-    x, y = make_data(batch_shape, units)
-    model.train_on_batch(x, y)
+    x, y, sw = make_data(batch_shape, units)
+    model.train_on_batch(x, y, sw)
 
     weights_norm(model, 'gru', omit_names='bias', verbose=1)
     weights_norm(model, ['gru', 1, (1, 1)])
@@ -328,7 +328,7 @@ def test_envs():  # pseudo-tests for coverage for different env flags
     reset_seeds(reset_graph_with_backend=K)
     units = 6
     batch_shape = (8, 100, 2*units)
-    x, y = make_data(batch_shape, units)
+    x, y, sw = make_data(batch_shape, units)
 
     from importlib import reload
 
@@ -362,7 +362,7 @@ def test_envs():  # pseudo-tests for coverage for different env flags
         model = make_model(_GRU, batch_shape, new_imports=new_imports)
 
         pass_on_error(model, x, y, 1)  # possibly _backend-induced err
-        pass_on_error(glg, model, x, y, 1)
+        pass_on_error(glg, model, 1, x, y)
         rs(model.layers[1])
 
         from see_rnn.inspect_rnn import get_rnn_weights as grw
@@ -430,19 +430,20 @@ def make_model(rnn_layer, batch_shape, units=6, bidirectional=False,
 
 def make_data(batch_shape, units):
     return (np.random.randn(*batch_shape),
-            np.random.uniform(-1, 1, (batch_shape[0], units)))
+            np.random.uniform(-1, 1, (batch_shape[0], units)),
+            np.random.uniform(0, 2, batch_shape[0]))
 
 
 def train_model(model, iterations):
     batch_shape = K.int_shape(model.input)
     units = model.layers[2].units
-    x, y = make_data(batch_shape, units)
+    x, y, sw = make_data(batch_shape, units)
 
     for i in range(iterations):
-        model.train_on_batch(x, y)
+        model.train_on_batch(x, y, sw)
         print(end='.')  # progbar
         if i % 40 == 0:
-            x, y = make_data(batch_shape, units)
+            x, y, sw = make_data(batch_shape, units)
 
 
 def _make_nonrnn_model():
