@@ -45,11 +45,11 @@ WARN = colored("WARNING:", 'red')
 if TF_EAGER:
     if not TF_2:
         tf.enable_eager_execution()
-    print("TF running eagerly")
+    print("TF executing Eagerly")
 else:
     if TF_2:
         tf.compat.v1.disable_eager_execution()
-    print("TF running in graph mode")
+    print("TF executing in Graph mode")
 if TF_2 and not TF_KERAS:
     print(WARN, "LSTM, CuDNNLSTM, and CuDNNGRU imported `from keras` "
           + "are not supported in TF2, and will be skipped")
@@ -330,6 +330,50 @@ def test_misc():  # test miscellaneous functionalities
     cprint("\n<< MISC TESTS PASSED >>\n", 'green')
 
 
+def test_multi_io():
+    def _make_multi_io_model():
+        ipt1 = Input((40, 8))
+        ipt2 = Input((40, 16))
+        ipts = concatenate([ipt1, ipt2])
+        out1 = GRU(6,  return_sequences=True)(ipts)
+        out2 = GRU(12, return_sequences=True)(ipts)
+
+        model = Model([ipt1, ipt2], [out1, out2])
+        model.compile('adam', 'mse')
+        return model
+
+    def _make_multi_io_data():
+        x1 = np.random.randn(8, 40, 8)
+        x2 = np.random.randn(8, 40, 16)
+        y1 = np.random.randn(8, 40, 6)
+        y2 = np.random.randn(8, 40, 12)
+        return x1, x2, y1, y2
+
+    model = _make_multi_io_model()
+    x1, x2, y1, y2 = _make_multi_io_data()
+    model.train_on_batch([x1, x2], [y1, y2])
+
+    outs = get_outputs(model, '*', [x1, x2])
+    grads = get_gradients(model, '*', [x1, x2], [y1, y2])
+    assert outs[0].shape == grads[0].shape == (8, 40, 24)
+    assert outs[1].shape == grads[1].shape == (8, 40, 6)
+    assert outs[2].shape == grads[2].shape == (8, 40, 12)
+
+    cprint("\n<< MULTI_IO TESTS PASSED >>\n", 'green')
+
+
+def test_inspect_gen():
+    units = 6
+    batch_shape = (8, 100, 2 * units)
+
+    model = make_model(GRU, batch_shape, activation='relu', bidirectional=True,
+                       recurrent_dropout=0.3, include_dense=True)
+
+    assert bool(get_weight_penalties(model))
+    assert weight_loss(model) > 0
+    cprint("\n<< INSPECT_GEN TEST PASSED >>\n", 'green')
+
+
 def test_envs():  # pseudo-tests for coverage for different env flags
     reset_seeds(reset_graph_with_backend=K)
     units = 6
@@ -384,50 +428,6 @@ def test_envs():  # pseudo-tests for coverage for different env flags
 
     assert True
     cprint("\n<< ENV TESTS PASSED >>\n", 'green')
-
-
-def test_multi_io():
-    def _make_multi_io_model():
-        ipt1 = Input((40, 8))
-        ipt2 = Input((40, 16))
-        ipts = concatenate([ipt1, ipt2])
-        out1 = GRU(6,  return_sequences=True)(ipts)
-        out2 = GRU(12, return_sequences=True)(ipts)
-
-        model = Model([ipt1, ipt2], [out1, out2])
-        model.compile('adam', 'mse')
-        return model
-
-    def _make_multi_io_data():
-        x1 = np.random.randn(8, 40, 8)
-        x2 = np.random.randn(8, 40, 16)
-        y1 = np.random.randn(8, 40, 6)
-        y2 = np.random.randn(8, 40, 12)
-        return x1, x2, y1, y2
-
-    model = _make_multi_io_model()
-    x1, x2, y1, y2 = _make_multi_io_data()
-    model.train_on_batch([x1, x2], [y1, y2])
-
-    outs = get_outputs(model, '*', [x1, x2])
-    grads = get_gradients(model, '*', [x1, x2], [y1, y2])
-    assert outs[0].shape == grads[0].shape == (8, 40, 24)
-    assert outs[1].shape == grads[1].shape == (8, 40, 6)
-    assert outs[2].shape == grads[2].shape == (8, 40, 12)
-
-    cprint("\n<< MULTI_IO TESTS PASSED >>\n", 'green')
-
-
-def test_inspect_gen():
-    units = 6
-    batch_shape = (8, 100, 2 * units)
-
-    model = make_model(GRU, batch_shape, activation='relu', bidirectional=True,
-                       recurrent_dropout=0.3, include_dense=True)
-
-    assert bool(get_weight_penalties(model))
-    assert weight_loss(model) > 0
-    cprint("\n<< INSPECT_GEN TEST PASSED >>\n", 'green')
 
 
 def make_model(rnn_layer, batch_shape, units=6, bidirectional=False,

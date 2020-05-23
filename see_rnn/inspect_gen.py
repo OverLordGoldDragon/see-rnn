@@ -62,9 +62,11 @@ def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
 
     layer_outs = _get_outs_tensors(model, names, idxs, layers)
     lp = K.symbolic_learning_phase() if TF_KERAS else K.learning_phase()
-    outs_fn = K.function([model.inputs, lp], layer_outs)
+    outs_fn = K.function([*model.inputs, lp], layer_outs)
 
-    outs = outs_fn([input_data, bool(learning_phase)])
+    if not isinstance(input_data, (list, tuple)):
+        input_data = [input_data]
+    outs = outs_fn([*input_data, bool(learning_phase)])
 
     if as_dict:
         return {get_full_name(model, i): x for i, x in zip(names or idxs, outs)}
@@ -164,9 +166,13 @@ def get_gradients(model, _id, input_data, labels, sample_weight=None,
                     # extend to each input
                     sample_weight.append(np.ones(len(x)))
             else:
-                sample_weight = np.ones(len(input_data))
-        grads = grads_fn([input_data, labels, sample_weight,
-                          bool(learning_phase)])
+                sample_weight = [np.ones(len(input_data))]
+        ins = [input_data, labels, sample_weight]
+        for i, data in enumerate(ins):
+            if not isinstance(data, (list, tuple)):
+                ins[i] = [data]
+        ins = [x for data in ins for x in data]  # flatten list
+        grads = grads_fn([*ins, bool(learning_phase)])
 
     if as_dict:
         return {p.name: x for p, x in zip(params, grads)}
