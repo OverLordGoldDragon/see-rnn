@@ -20,9 +20,16 @@ from see_rnn import rnn_summary
 from see_rnn import rnn_heatmap, rnn_histogram
 
 
+TF_KERAS = bool(os.environ.get("TF_KERAS", '0') == '1')
+TF_EAGER = bool(os.environ.get("TF_EAGER", '0') == '1')
+TF_2 = (tf.__version__[0] == '2')
+
 IMPORTS = dict(K=K, Input=Input, GRU=GRU,
                Bidirectional=Bidirectional, Model=Model)
-USING_GPU = bool(tf.config.list_logical_devices('GPU') != [])
+if TF_2:
+    USING_GPU = bool(tf.config.list_logical_devices('GPU') != [])
+else:
+    USING_GPU = bool(tf.config.experimental.list_logical_devices('GPU') != [])
 
 if USING_GPU:
     from . import CuDNNLSTM, CuDNNGRU
@@ -31,9 +38,6 @@ else:
     print("TF uses CPU")
 
 print("TF version: %s" % tf.__version__)
-TF_KERAS = bool(os.environ.get("TF_KERAS", '0') == '1')
-TF_EAGER = bool(os.environ.get("TF_EAGER", '0') == '1')
-TF_2 = (tf.__version__[0] == '2')
 
 WARN = colored("WARNING:", 'red')
 

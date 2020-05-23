@@ -3,7 +3,7 @@ import numpy as np
 
 from copy import deepcopy
 from .utils import _validate_args, _get_params, _layer_of_output
-from ._backend import K
+from ._backend import K, TF_KERAS
 
 if tf.executing_eagerly():
     from tensorflow.python.distribute import parameter_server_strategy
@@ -61,8 +61,8 @@ def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
         one_requested = len(_id) == 1
 
     layer_outs = _get_outs_tensors(model, names, idxs, layers)
-    outs_fn = K.function([model.input, K.symbolic_learning_phase()],
-                         layer_outs)
+    lp = K.symbolic_learning_phase() if TF_KERAS else K.learning_phase()
+    outs_fn = K.function([model.input, lp], layer_outs)
 
     outs = outs_fn([input_data, bool(learning_phase)])
 
@@ -159,7 +159,8 @@ def get_gradients(model, _id, input_data, labels, sample_weight=None,
         grads_fn = _make_grads_fn(model, params=params)
         if sample_weight is None:
             sample_weight = np.ones(len(input_data))
-        grads = grads_fn([input_data, labels, sample_weight, learning_phase])
+        grads = grads_fn([input_data, labels, sample_weight,
+                          bool(learning_phase)])
 
     if as_dict:
         return {p.name: x for p, x in zip(params, grads)}
