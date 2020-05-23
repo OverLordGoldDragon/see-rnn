@@ -62,7 +62,7 @@ def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
 
     layer_outs = _get_outs_tensors(model, names, idxs, layers)
     lp = K.symbolic_learning_phase() if TF_KERAS else K.learning_phase()
-    outs_fn = K.function([model.input, lp], layer_outs)
+    outs_fn = K.function([model.inputs, lp], layer_outs)
 
     outs = outs_fn([input_data, bool(learning_phase)])
 
@@ -145,20 +145,26 @@ def get_gradients(model, _id, input_data, labels, sample_weight=None,
         params = _get_params(model, layer, params, mode, verbose=1)
         one_requested = len(params) == 1
     else:
-        verbose = bool(_id == '*')
+        verbose = bool(_id != '*')
         _id, names, idxs, layers, one_requested = _get_info(
             model, _id, layer, mode)
         if layers is None and params is None:
             layers = get_layer(model, _id)
         params = _get_params(model, layers, params, mode, verbose=verbose)
 
-    if tf.executing_eagerly():
+    if TF_KERAS and tf.executing_eagerly():
         grads = _get_grads_eager(model, input_data, labels, sample_weight,
                                  learning_phase, params=params)
     else:
         grads_fn = _make_grads_fn(model, params=params)
         if sample_weight is None:
-            sample_weight = np.ones(len(input_data))
+            if isinstance(input_data, list):
+                sample_weight = []
+                for x in input_data:
+                    # extend to each input
+                    sample_weight.append(np.ones(len(x)))
+            else:
+                sample_weight = np.ones(len(input_data))
         grads = grads_fn([input_data, labels, sample_weight,
                           bool(learning_phase)])
 
@@ -174,8 +180,9 @@ def _make_grads_fn(model, layers=None, params=None, mode='outputs'):
     `params` can be layer weights or outputs; cannot supply along `layers`.
     `layers` and `mode` ignored if `params` is not None.
     """
-    if tf.executing_eagerly():
-        raise Exception("`_make_grads_fn` is unavailable in Eager execution")
+    if TF_KERAS and tf.executing_eagerly():
+        raise Exception("`_make_grads_fn` is unavailable in tf.keras "
+                        "Eager execution")
 
     params = _get_params(model, layers, params, mode)
     grads = model.optimizer.get_gradients(model.total_loss, params)

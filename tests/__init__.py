@@ -14,7 +14,7 @@ USING_GPU = bool(tf.config.experimental.list_physical_devices('GPU') != [])
 if TF_KERAS:
     import tensorflow.keras.backend as K
     from tensorflow.keras.layers import Input, LSTM, GRU, TimeDistributed, Dense
-    from tensorflow.keras.layers import SimpleRNN, Bidirectional
+    from tensorflow.keras.layers import SimpleRNN, Bidirectional, concatenate
     from tensorflow.keras.models import Model
     from tensorflow.keras.regularizers import l1, l2, l1_l2
     if USING_GPU:
@@ -22,7 +22,7 @@ if TF_KERAS:
 else:
     import keras.backend as K
     from keras.layers import Input, LSTM, GRU, TimeDistributed, Dense
-    from keras.layers import SimpleRNN, Bidirectional
+    from keras.layers import SimpleRNN, Bidirectional, concatenate
     from keras.models import Model
     from keras.regularizers import l1, l2, l1_l2
     if USING_GPU:
