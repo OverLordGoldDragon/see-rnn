@@ -22,11 +22,13 @@ from see_rnn import rnn_heatmap, rnn_histogram
 
 IMPORTS = dict(K=K, Input=Input, GRU=GRU,
                Bidirectional=Bidirectional, Model=Model)
-USING_GPU = bool(tf.config.experimental.list_physical_devices('GPU') != [])
+USING_GPU = bool(tf.config.list_logical_devices('GPU') != [])
 
 if USING_GPU:
     from . import CuDNNLSTM, CuDNNGRU
     print("TF uses GPU")
+else:
+    print("TF uses CPU")
 
 print("TF version: %s" % tf.__version__)
 TF_KERAS = bool(os.environ.get("TF_KERAS", '0') == '1')

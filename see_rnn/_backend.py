@@ -12,7 +12,7 @@ NOTE = colored("NOTE:", 'blue')
 
 
 if TF_KERAS:
-    from tensorflow.keras import backend as K
+    from tensorflow.python.keras import backend as K
     from tensorflow.keras.layers import Layer
 else:
     from keras import backend as K

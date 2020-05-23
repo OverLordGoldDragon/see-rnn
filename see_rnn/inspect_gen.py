@@ -2,8 +2,8 @@ import tensorflow as tf
 import numpy as np
 
 from copy import deepcopy
-from .utils import _validate_args
-from ._backend import K, WARN, TF_KERAS, Layer
+from .utils import _validate_args, _get_params, _layer_of_output
+from ._backend import K
 
 if tf.executing_eagerly():
     from tensorflow.python.distribute import parameter_server_strategy
@@ -61,9 +61,10 @@ def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
         one_requested = len(_id) == 1
 
     layer_outs = _get_outs_tensors(model, names, idxs, layers)
-    outs_fn = K.function([model.input, K.learning_phase()], layer_outs)
+    outs_fn = K.function([model.input, K.symbolic_learning_phase()],
+                         layer_outs)
 
-    outs = outs_fn([input_data, learning_phase])
+    outs = outs_fn([input_data, bool(learning_phase)])
 
     if as_dict:
         return {get_full_name(model, i): x for i, x in zip(names or idxs, outs)}
@@ -165,76 +166,6 @@ def get_gradients(model, _id, input_data, labels, sample_weight=None,
     return grads[0] if (one_requested and len(grads) == 1) else grads
 
 
-def _get_params(model, layers=None, params=None, mode='outputs', verbose=1):
-    def _validate_args(layers, params, mode):
-        got_both = (layers is not None and params is not None)
-        got_neither = (layers is None and params is None)
-        if got_both or got_neither:
-            raise ValueError("one (and only one) of `layers` or `params` "
-                             "must be supplied")
-        if mode not in ('outputs', 'weights'):
-            raise ValueError("`mode` must be one of: 'outputs', 'weights'")
-
-        if layers is not None and not isinstance(layers, list):
-            layers = [layers]
-        if params is not None and not isinstance(params, list):
-            params = [params]
-        return layers, params
-
-    def _layer_of_output(output):
-        h =  output._keras_history
-        if isinstance(h, tuple):
-            for x in h:
-                if isinstance(x, Layer):
-                    return x
-        return h.layer
-
-    def _filter_params(params, verbose):
-        def _to_omit(p):
-            if isinstance(p, tf.Variable):  # param is layer weight
-                return False
-            elif isinstance(p, tf.Tensor):  # param is layer output
-                layer = _layer_of_output(p)
-                if TF_KERAS and hasattr(layer, 'activation'):
-                    # these activations don't have gradients defined (or ==0),
-                    # and tf.keras doesn't re-route output gradients
-                    # to the pre-activation weights transform
-                    value = getattr(layer.activation, '__name__') in ('softmax',)
-                    if value and verbose:
-                        print(WARN, ("{} has {} activation, which has a None "
-                                     "gradient in tf.keras; will skip".format(
-                                         layer, layer.activation.__name__)))
-                    return value
-                elif 'Input' in getattr(layer.__class__, '__name__'):
-                    # omit input layer(s)
-                    if verbose:
-                        print(WARN, layer, "is an Input layer; getting input "
-                              "gradients is unsupported - will skip")
-                    return True
-                else:
-                    return False
-            else:
-                raise ValueError(("unsupported param type: {} ({}); must be"
-                                  "tf.Variable or tf.Tensor".format(type(p), p)))
-        _params = []
-        for p in params:
-            if not _to_omit(p):
-                _params.append(p)
-        return _params
-
-    # run check even if `params` is not None to couple `_get_params` with
-    # `_validate_args` for other methods
-    layers, params = _validate_args(layers, params, mode)
-
-    if not params:
-        if mode == 'outputs':
-            params = [l.output for l in layers]
-        else:
-            params = [w for l in layers for w in l.trainable_weights]
-    params = _filter_params(params, verbose)
-    return params
-
-
 def _make_grads_fn(model, layers=None, params=None, mode='outputs'):
     """Returns gradient computation function w.r.t. layer outputs or weights.
     NOTE: gradients will be clipped if `clipnorm` or `clipvalue` were set.
@@ -277,6 +208,9 @@ def _get_grads_eager(model, input_data, labels, sample_weight=None,
         """Make `layer` watchable by `tape` (tf.GradientTape()). After calling
            this function, layer output gradients can be obtained via:
                grads = tape.gradient(..., layer.output_cache)
+
+           Does nothing if `layer.call_orig` is already defined (ensures no
+           unintended composite definitions due to e.g. duplicate `params`).
         """
         def cache_and_watch_output(func):
             def wrap(*args, **kwargs):
@@ -287,9 +221,9 @@ def _get_grads_eager(model, input_data, labels, sample_weight=None,
                 # return the output to continue with the forward pass
                 return layer.output_cache
             return wrap
-        layer.call_orig = layer.call
-        layer.call = cache_and_watch_output(layer.call)
-        return layer
+        if not hasattr(layer, 'call_orig'):
+            layer.call_orig = layer.call
+            layer.call = cache_and_watch_output(layer.call)
 
     def _clip_and_scale_grads(strategy, tape, optimizer, loss, params):
         with tape:
@@ -313,9 +247,6 @@ def _get_grads_eager(model, input_data, labels, sample_weight=None,
         gradients = optimizer._clip_gradients(gradients)
         return gradients
 
-    def _layer_of_output(output):
-        return output._keras_history.layer
-
     if not tf.executing_eagerly():
         raise Exception("`_get_grads_eager` requires TF in Eager execution")
 
@@ -338,10 +269,14 @@ def _get_grads_eager(model, input_data, labels, sample_weight=None,
         for p in params:
             if isinstance(p, tf.Tensor):
                 layer = _layer_of_output(p)
-                layer.call = layer.call_orig
-                delattr(layer, 'call_orig')
-                layer.output_cache = []  # ensures no potential memory leak
-                delattr(layer, 'output_cache')
+                if hasattr(layer, 'call_orig'):
+                    # may be False if `params` includes duplicates
+                    layer.call = layer.call_orig
+                    delattr(layer, 'call_orig')
+                if hasattr(layer, 'output_cache'):
+                    # may be False if `params` includeds duplicates
+                    layer.output_cache = []  # ensures no potential memory leak
+                    delattr(layer, 'output_cache')
 
     gradients = K.batch_get_value(gradients)  # evaluate gradient tensors
     return gradients
