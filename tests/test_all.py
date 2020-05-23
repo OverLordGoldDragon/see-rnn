@@ -11,7 +11,6 @@ from . import Input, LSTM, GRU, SimpleRNN, Bidirectional, TimeDistributed, Dense
 from . import Model
 from . import l1_l2
 from . import tempdir
-from see_rnn.inspect_gen import _get_grads
 from see_rnn import get_gradients, get_outputs, get_weights, get_rnn_weights
 from see_rnn import get_weight_penalties, weights_norm, weight_loss
 from see_rnn import features_0D, features_1D, features_2D
@@ -235,20 +234,20 @@ def test_misc():  # test miscellaneous functionalities
                       title="grads", savepath=os.path.join(dirpath, 'img.png'))
     with tempdir() as dirpath:
         features_hist_v2(list(grads[:, :4, :3]), colnames=list('abcd'),
-                         show_borders=False, xlims=(-.01, .01), ylim=100,
-                         borderwidth=1, show_xy_ticks=[0, 0], side_annot='row',
-                         share_xy=True, title="Grads",
-                         savepath=os.path.join(dirpath, 'img.png'))
+                          show_borders=False, xlims=(-.01, .01), ylim=100,
+                          borderwidth=1, show_xy_ticks=[0, 0], side_annot='row',
+                          share_xy=True, title="Grads",
+                          savepath=os.path.join(dirpath, 'img.png'))
     features_hist(grads, center_zero=True, xlims=(-1, 1), share_xy=0)
     features_hist_v2(list(grads[:, :4, :3]), center_zero=True, xlims=(-1, 1),
-                     share_xy=(False, False))
+                      share_xy=(False, False))
     with tempdir() as dirpath:
         rnn_histogram(model, 1, show_xy_ticks=[0, 0], equate_axes=2,
                       savepath=os.path.join(dirpath, 'img.png'))
     rnn_histogram(model, 1, equate_axes=False,
                   configs={'tight': dict(left=0, right=1),
-                           'plot':  dict(color='red'),
-                           'title': dict(fontsize=14),})
+                            'plot':  dict(color='red'),
+                            'title': dict(fontsize=14),})
     rnn_heatmap(model, 1, cmap=None, normalize=True, show_borders=False)
     rnn_heatmap(model, 1, cmap=None, norm='auto', absolute_value=True)
     rnn_heatmap(model, 1, norm=None)
@@ -374,7 +373,6 @@ def test_envs():  # pseudo-tests for coverage for different env flags
 
         _model = _make_nonrnn_model()
         pass_on_error(_vrt, _model.layers[1])
-        pass_on_error(_get_grads, 1, 2, 3, 4)
         del model, _model
 
     assert True

@@ -1,8 +1,15 @@
+import tensorflow as tf
 import numpy as np
 
 from copy import deepcopy
 from .utils import _validate_args
-from ._backend import K, WARN, TF_KERAS, TF_22
+from ._backend import K, WARN, TF_KERAS, Layer
+
+if tf.executing_eagerly():
+    from tensorflow.python.distribute import parameter_server_strategy
+    from tensorflow.python.keras.engine import data_adapter
+    from tensorflow.python.keras.mixed_precision.experimental import (
+        loss_scale_optimizer as lso)
 
 
 def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
@@ -47,17 +54,14 @@ def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
         names, idxs, layers, one_requested = _validate_args(_id, layer)
     else:
         # exclude input layer & non-output layers
-        names = [l.name for l in model.layers[1:]
-                 if getattr(l, 'output', None) is not None]
+        names = [l.name for l in model.layers
+                 if (getattr(l, 'output', None) is not None and
+                     'Input' not in getattr(l.__class__, '__name__', ''))]
         idxs, layers = None, None
         one_requested = len(_id) == 1
 
     layer_outs = _get_outs_tensors(model, names, idxs, layers)
-
-    if TF_KERAS and not TF_22:
-        outs_fn = K.function([model.input], layer_outs)
-    else:
-        outs_fn = K.function([model.input, K.learning_phase()], layer_outs)
+    outs_fn = K.function([model.input, K.learning_phase()], layer_outs)
 
     outs = outs_fn([input_data, learning_phase])
 
@@ -66,18 +70,21 @@ def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
     return outs[0] if (one_requested and len(outs) == 1) else outs
 
 
-def get_gradients(model, _id, input_data, labels, sample_weights=None,
-                  learning_phase=0, layer=None, mode='outputs', as_dict=False):
+def get_gradients(model, _id, input_data, labels, sample_weight=None,
+                  learning_phase=0, layer=None, mode='outputs',
+                  params=None, as_dict=False):
     """Retrieves layer gradients w.r.t. outputs or weights.
+
     NOTE: gradients will be clipped if `clipvalue` or `clipnorm` were set.
-    NOTE: repeated calls to `get_gradients` can be expensive due to remaking
-          the grads getter function; reuse parts of code to use `_make_grads_fn`
-          ONCE, and subsequently only `_get_grads`, for potentially
-          significant speedup.
+    NOTE: in Graph execution, repeated calls to `get_gradients` can be expensive
+          due to remaking the grads getter function; reuse parts of code to use
+          `_make_grads_fn` ONCE to make `grads_fn`, and subsequently feed to
+          `grads_fn` for potentially significant speedup.
 
     Arguments:
         model: keras.Model/tf.keras.Model.
         _id: str/int/(list of str/int). int -> idx; str -> name
+        Ignored if `params` is not None.
             idx: int. Index of layer to fetch, via model.layers[idx].
             name: str. Name of layer (full or substring) to be fetched.
                        Returns earliest match if multiple found.
@@ -92,7 +99,7 @@ def get_gradients(model, _id, input_data, labels, sample_weights=None,
                to be computed for the gradient.
         labels: np.ndarray & supported formats. Labels w.r.t. which loss is
                to be computed for the gradient.
-        sample_weights: np.ndarray & supported formats. `sample_weight` kwarg
+        sample_weight: np.ndarray & supported formats. `sample_weight` kwarg
                to model.fit(), etc., weighting individual sample losses.
         learning_phase: bool. 1: use model in train mode
                               0: use model in inference mode
@@ -100,6 +107,8 @@ def get_gradients(model, _id, input_data, labels, sample_weights=None,
                Overrides `idx` and `name`.
         mode: str. One of: 'outputs', 'weights'. If former, returns grads
                w.r.t. layer outputs(2) - else, w.r.t. layer trainable weights.
+        params: outputs / weights or list of, or None. If not None, will
+               ignore `_id`, `mode`, and `layer`.
         as_dict: bool. True:  return gradient fullname-value pairs in a dict
                        False: return gradient values as list in order fetched
 
@@ -114,78 +123,55 @@ def get_gradients(model, _id, input_data, labels, sample_weights=None,
          instead. To then get grads w.r.t. activations, specify the
          Activation layer.
     """
-
     def _validate_args_(_id, layer, mode):
         if mode not in ['outputs', 'weights']:
             raise Exception("`mode` must be one of: 'outputs', 'weights'")
         return _validate_args(_id, layer)
 
     def _get_info(model, _id, layer, mode):
-        def _get_all_id(model, _id, mode):
-            # exclude input layer & non-output/weightless layers
-            # (`mode`-dependent)
-            attr = 'output' if mode == 'outputs' else 'trainable_weights'
-            _id = []
-            for l in model.layers[1:]:  # exclude input
-                params = getattr(l, attr, [])
-                if (isinstance(params, list) and len(params) > 0) or (
-                        not isinstance(params, list)):
-                    _id.append(l.name)
-            return _id
-
-        if _id != '*':
-            names, idxs, layers, one_requested = _validate_args_(_id, layer, mode)
-            _id = [x for var in (names, idxs) if var for x in var] or None
-        else:
-            _id = _get_all_id(model, _id, mode)
+        if _id == '*':
+            # get all names for now, do validation in _get_params
+            _id = [l.name for l in model.layers]
             names = _id
             idxs, layers = None, None
             one_requested = len(_id) == 1
+        else:
+            names, idxs, layers, one_requested = _validate_args_(_id, layer, mode)
+            _id = [x for var in (names, idxs) if var for x in var] or None
         return _id, names, idxs, layers, one_requested
 
-    _id, names, idxs, layers, one_requested = _get_info(model, _id, layer, mode)
+    if params is not None:
+        params = _get_params(model, layer, params, mode, verbose=1)
+        one_requested = len(params) == 1
+    else:
+        verbose = bool(_id == '*')
+        _id, names, idxs, layers, one_requested = _get_info(
+            model, _id, layer, mode)
+        if layers is None and params is None:
+            layers = get_layer(model, _id)
+        params = _get_params(model, layers, params, mode, verbose=verbose)
 
-    if layers is None:
-        layers = get_layer(model, _id)
-
-    grads_fn, names = _make_grads_fn(model, layers, mode=mode, return_names=True)
-    grads = _get_grads(grads_fn, input_data, labels, sample_weights,
-                       learning_phase)
+    if tf.executing_eagerly():
+        grads = _get_grads_eager(model, input_data, labels, sample_weight,
+                                 learning_phase, params=params)
+    else:
+        grads_fn = _make_grads_fn(model, params=params)
+        if sample_weight is None:
+            sample_weight = np.ones(len(input_data))
+        grads = grads_fn([input_data, labels, sample_weight, learning_phase])
 
     if as_dict:
-        return {name: x for name, x in zip(names, grads)}
+        return {p.name: x for p, x in zip(params, grads)}
     return grads[0] if (one_requested and len(grads) == 1) else grads
 
 
-def _get_grads(grads_fn, input_data, labels, sample_weights=None,
-               learning_phase=0):
-    """Helper method for computing gradients given a premade function."""
-    if TF_KERAS and not TF_22:
-        if sample_weights is not None:
-            print(WARN, "`sample_weights` is unsupported for tf.keras; "
-                  "will ignore")
-        return grads_fn([input_data, labels])
-    else:
-        if sample_weights is None:
-            sample_weights = np.ones(len(input_data))
-        return grads_fn([input_data, sample_weights, labels, learning_phase])
-
-
-def _make_grads_fn(model, layers=None, params=None, mode='outputs',
-                   return_names=False):
-    """Returns gradient computation function w.r.t. layer outputs or weights.
-    NOTE: gradients will be clipped if `clipnorm` or `clipvalue` were set.
-
-    `params` can be layer weights or outputs; cannot supply along `layers`.
-    `mode` is irrelevant if passing `params`.
-    `return_names`: whether to return parameter names along grads_fn.
-    """
+def _get_params(model, layers=None, params=None, mode='outputs', verbose=1):
     def _validate_args(layers, params, mode):
         got_both = (layers is not None and params is not None)
         got_neither = (layers is None and params is None)
         if got_both or got_neither:
-            raise ValueError("one (and only one) of `layers` or `weights` "
-                             "must be set")
+            raise ValueError("one (and only one) of `layers` or `params` "
+                             "must be supplied")
         if mode not in ('outputs', 'weights'):
             raise ValueError("`mode` must be one of: 'outputs', 'weights'")
 
@@ -195,29 +181,170 @@ def _make_grads_fn(model, layers=None, params=None, mode='outputs',
             params = [params]
         return layers, params
 
-    def _get_params(layers, mode):
-        if mode == 'outputs':
-            return [l.output for l in layers]
-        weights = []
-        _ = [weights.extend(l.trainable_weights) for l in layers]
-        return weights
+    def _layer_of_output(output):
+        h =  output._keras_history
+        if isinstance(h, tuple):
+            for x in h:
+                if isinstance(x, Layer):
+                    return x
+        return h.layer
 
+    def _filter_params(params, verbose):
+        def _to_omit(p):
+            if isinstance(p, tf.Variable):  # param is layer weight
+                return False
+            elif isinstance(p, tf.Tensor):  # param is layer output
+                layer = _layer_of_output(p)
+                if TF_KERAS and hasattr(layer, 'activation'):
+                    # these activations don't have gradients defined (or ==0),
+                    # and tf.keras doesn't re-route output gradients
+                    # to the pre-activation weights transform
+                    value = getattr(layer.activation, '__name__') in ('softmax',)
+                    if value and verbose:
+                        print(WARN, ("{} has {} activation, which has a None "
+                                     "gradient in tf.keras; will skip".format(
+                                         layer, layer.activation.__name__)))
+                    return value
+                elif 'Input' in getattr(layer.__class__, '__name__'):
+                    # omit input layer(s)
+                    if verbose:
+                        print(WARN, layer, "is an Input layer; getting input "
+                              "gradients is unsupported - will skip")
+                    return True
+                else:
+                    return False
+            else:
+                raise ValueError(("unsupported param type: {} ({}); must be"
+                                  "tf.Variable or tf.Tensor".format(type(p), p)))
+        _params = []
+        for p in params:
+            if not _to_omit(p):
+                _params.append(p)
+        return _params
+
+    # run check even if `params` is not None to couple `_get_params` with
+    # `_validate_args` for other methods
     layers, params = _validate_args(layers, params, mode)
-    if params is None:
-        params = _get_params(layers, mode)
+
+    if not params:
+        if mode == 'outputs':
+            params = [l.output for l in layers]
+        else:
+            params = [w for l in layers for w in l.trainable_weights]
+    params = _filter_params(params, verbose)
+    return params
+
+
+def _make_grads_fn(model, layers=None, params=None, mode='outputs'):
+    """Returns gradient computation function w.r.t. layer outputs or weights.
+    NOTE: gradients will be clipped if `clipnorm` or `clipvalue` were set.
+
+    `params` can be layer weights or outputs; cannot supply along `layers`.
+    `layers` and `mode` ignored if `params` is not None.
+    """
+    if tf.executing_eagerly():
+        raise Exception("`_make_grads_fn` is unavailable in Eager execution")
+
+    params = _get_params(model, layers, params, mode)
     grads = model.optimizer.get_gradients(model.total_loss, params)
 
-    if TF_KERAS and not TF_22:
-        inputs = [model.inputs[0], model._feed_targets[0]]
-    else:
-        inputs = [model.inputs[0], model.sample_weights[0],
-                  model._feed_targets[0], K.learning_phase()]
+    inputs = (model.inputs + model._feed_targets + model._feed_sample_weights
+              + [K.learning_phase()])
+    return K.function(inputs=inputs, outputs=grads)
 
-    if not return_names:
-        return K.function(inputs=inputs, outputs=grads)
-    else:
-        return (K.function(inputs=inputs, outputs=grads),
-                [p.name for p in params])
+
+def _get_grads_eager(model, input_data, labels, sample_weight=None,
+                     learning_phase=0, layers=None, params=None, mode='outputs'):
+    """Helper method to get gradients in Eager execution; reuses parts of
+    Eager train loop code (tf.python.keras.engine.training.train_step) to ensure
+    consistency with TensorFlow's training gradient computation.
+
+    `layers` and `mode` ignored if `params` is not None.
+
+    NOTE: do not interrupt, as layer.call of layers are temporarily modified,
+    then later reverted IF not interrupted.
+    """
+    def _process_input_data(x, y, sample_weight):
+        iterator = data_adapter.single_batch_iterator(model.distribute_strategy,
+                                                      x, y, sample_weight,
+                                                      class_weight=None)
+        data = next(iterator)
+        data = data_adapter.expand_1d(data)
+        x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
+        return x, y, sample_weight
+
+    def _watch_layer_outputs(layer, tape):
+        """Make `layer` watchable by `tape` (tf.GradientTape()). After calling
+           this function, layer output gradients can be obtained via:
+               grads = tape.gradient(..., layer.output_cache)
+        """
+        def cache_and_watch_output(func):
+            def wrap(*args, **kwargs):
+                # store the output of `layer.call` internally
+                layer.output_cache = func(*args, **kwargs)
+                # watch this tensor
+                tape.watch(layer.output_cache)
+                # return the output to continue with the forward pass
+                return layer.output_cache
+            return wrap
+        layer.call_orig = layer.call
+        layer.call = cache_and_watch_output(layer.call)
+        return layer
+
+    def _clip_and_scale_grads(strategy, tape, optimizer, loss, params):
+        with tape:
+            if isinstance(optimizer, lso.LossScaleOptimizer):
+                loss = optimizer.get_scaled_loss(loss)
+
+        _params = [(p if isinstance(p, tf.Variable)
+                    else _layer_of_output(p).output_cache) for p in params]
+        gradients = tape.gradient(loss, _params)
+
+        aggregate_grads_outside_optimizer = (
+            optimizer._HAS_AGGREGATE_GRAD and not isinstance(
+                strategy.extended,
+                parameter_server_strategy.ParameterServerStrategyExtended))
+
+        if aggregate_grads_outside_optimizer:
+            gradients = optimizer._aggregate_gradients(zip(gradients, _params))
+        if isinstance(optimizer, lso.LossScaleOptimizer):
+            gradients = optimizer.get_unscaled_gradients(gradients)
+
+        gradients = optimizer._clip_gradients(gradients)
+        return gradients
+
+    def _layer_of_output(output):
+        return output._keras_history.layer
+
+    if not tf.executing_eagerly():
+        raise Exception("`_get_grads_eager` requires TF in Eager execution")
+
+    params = _get_params(model, layers, params, mode)
+    x, y, sample_weight = _process_input_data(input_data, labels, sample_weight)
+
+    try:
+        with tf.GradientTape() as tape:
+            for p in params:
+                if isinstance(p, tf.Tensor):
+                    _watch_layer_outputs(_layer_of_output(p), tape)
+            y_pred = model(x, training=bool(learning_phase))
+            loss = model.compiled_loss(y, y_pred, sample_weight,
+                                       regularization_losses=model.losses)
+        gradients = _clip_and_scale_grads(model.distribute_strategy, tape,
+                                          model.optimizer, loss, params)
+    finally:
+        # ensure layer.call is restored to original
+        # not guaranteed; can fail if program is forcibly interrupted
+        for p in params:
+            if isinstance(p, tf.Tensor):
+                layer = _layer_of_output(p)
+                layer.call = layer.call_orig
+                delattr(layer, 'call_orig')
+                layer.output_cache = []  # ensures no potential memory leak
+                delattr(layer, 'output_cache')
+
+    gradients = K.batch_get_value(gradients)  # evaluate gradient tensors
+    return gradients
 
 
 def get_layer(model, _id):
