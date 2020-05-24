@@ -1,8 +1,9 @@
 import numpy as np
+import tensorflow as tf
 from copy import deepcopy
 from pathlib import Path
 
-from ._backend import WARN, NOTE
+from ._backend import WARN, NOTE, TF_KERAS, Layer
 
 
 def _kw_from_configs(configs, defaults):
@@ -197,3 +198,74 @@ def _save_rnn_fig(figs, savepath, kwargs):
 
     for fig, name in zip(figs, names):
         fig.savefig(Path(_dir).joinpath(name, ext), **kwargs)
+
+
+def _layer_of_output(output):
+    h =  output._keras_history
+    if isinstance(h, tuple):
+        for x in h:
+            if isinstance(x, Layer):
+                return x
+    return h.layer
+
+
+def _get_params(model, layers=None, params=None, mode='outputs', verbose=1):
+    def _validate_args(layers, params, mode):
+        got_both = (layers is not None and params is not None)
+        got_neither = (layers is None and params is None)
+        if got_both or got_neither:
+            raise ValueError("one (and only one) of `layers` or `params` "
+                             "must be supplied")
+        if mode not in ('outputs', 'weights'):
+            raise ValueError("`mode` must be one of: 'outputs', 'weights'")
+
+        if layers is not None and not isinstance(layers, list):
+            layers = [layers]
+        if params is not None and not isinstance(params, list):
+            params = [params]
+        return layers, params
+
+    def _filter_params(params, verbose):
+        def _to_omit(p):
+            if isinstance(p, tf.Variable):  # param is layer weight
+                return False
+            elif isinstance(p, tf.Tensor):  # param is layer output
+                layer = _layer_of_output(p)
+                if TF_KERAS and hasattr(layer, 'activation'):
+                    # these activations don't have gradients defined (or ==0),
+                    # and tf.keras doesn't re-route output gradients
+                    # to the pre-activation weights transform
+                    value = getattr(layer.activation, '__name__') in ('softmax',)
+                    if value and verbose:
+                        print(WARN, ("{} has {} activation, which has a None "
+                                     "gradient in tf.keras; will skip".format(
+                                         layer, layer.activation.__name__)))
+                    return value
+                elif 'Input' in getattr(layer.__class__, '__name__'):
+                    # omit input layer(s)
+                    if verbose:
+                        print(WARN, layer, "is an Input layer; getting input "
+                              "gradients is unsupported - will skip")
+                    return True
+                else:
+                    return False
+            else:
+                raise ValueError(("unsupported param type: {} ({}); must be"
+                                  "tf.Variable or tf.Tensor".format(type(p), p)))
+        _params = []
+        for p in params:
+            if not _to_omit(p):
+                _params.append(p)
+        return _params
+
+    # run check even if `params` is not None to couple `_get_params` with
+    # `_validate_args` for other methods
+    layers, params = _validate_args(layers, params, mode)
+
+    if not params:
+        if mode == 'outputs':
+            params = [l.output for l in layers]
+        else:
+            params = [w for l in layers for w in l.trainable_weights]
+    params = _filter_params(params, verbose)
+    return params

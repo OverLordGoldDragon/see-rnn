@@ -48,7 +48,6 @@ def _get_cell_weights(rnn_cell, as_tensors=True, concat_gates=True):
     NOTE: if CuDNNLSTM or CuDNNGRU cell, `rnn_cell` must be the layer instead,
           where non-CuDNN cell attributes are stored.
     """
-
     def _get_cell_info(rnn_cell):
         rnn_type = type(rnn_cell).__name__.replace('Cell', '')
 
@@ -72,7 +71,8 @@ def _get_cell_weights(rnn_cell, as_tensors=True, concat_gates=True):
         print(WARN, "getting weights per-gate not supported for tf.keras "
               "implementations; fetching per concat_gates==True instead")
         concat_gates = True
-    if not concat_gates and gate_names[0]=='':
+    if not concat_gates and not (hasattr(rnn_cell, 'kernel_i') or
+                                 hasattr(rnn_cell, 'kernel_z')):
         print(WARN, rnn_type + " is not a gated RNN; fetching per "
               "concat_gates==True instead")
         concat_gates = True

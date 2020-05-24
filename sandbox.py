@@ -54,21 +54,22 @@ def make_model(rnn_layer, batch_shape, units=8, bidirectional=False):
 
 def make_data(batch_shape, units):
     return (np.random.randn(*batch_shape),
-            np.random.uniform(-1, 1, (batch_shape[0], units)))
+            np.random.uniform(-1, 1, (batch_shape[0], units)),
+            np.random.uniform(0, 2, batch_shape[0]))
 
 def train_model(model, iterations):
     batch_shape = K.int_shape(model.input)
     units = model.layers[2].units
-    x, y = make_data(batch_shape, units)
+    x, y, sw = make_data(batch_shape, units)
 
     for i in range(iterations):
-        model.train_on_batch(x, y)
+        model.train_on_batch(x, y, sw)
         print(end='.')  # progbar
         if i % 40 == 0:
-            x, y = make_data(batch_shape, units)
+            x, y, sw = make_data(batch_shape, units)
 
 def viz_outs(model, idx=1):
-    x, y = make_data(K.int_shape(model.input), model.layers[2].units)
+    x, y, _ = make_data(K.int_shape(model.input), model.layers[2].units)
     outs = get_outputs(model, idx, x)
 
     features_1D(outs[:1], n_rows=8, show_borders=False)
@@ -80,7 +81,7 @@ def viz_weights(model, idx=1):
     rnn_heatmap(model,   idx, mode='weights', norm='auto')
 
 def viz_outs_grads(model, idx=1):
-    x, y = make_data(K.int_shape(model.input), model.layers[2].units)
+    x, y, _ = make_data(K.int_shape(model.input), model.layers[2].units)
     grads = get_gradients(model, idx, x, y)
     kws = dict(n_rows=8, title_mode='grads')
 
@@ -88,12 +89,12 @@ def viz_outs_grads(model, idx=1):
     features_2D(grads,    norm=(-1e-4, 1e-4), **kws)
 
 def viz_outs_grads_last(model, idx=2):  # return_sequences=False layer
-    x, y = make_data(K.int_shape(model.input), model.layers[2].units)
+    x, y, _ = make_data(K.int_shape(model.input), model.layers[2].units)
     grads = get_gradients(model, idx, x, y)
     features_0D(grads)
 
 def viz_weights_grads(model, idx=1):
-    x, y = make_data(K.int_shape(model.input), model.layers[2].units)
+    x, y, _ = make_data(K.int_shape(model.input), model.layers[2].units)
     kws = dict(_id=idx, input_data=x, labels=y)
 
     rnn_histogram(model, mode='grads', bins=400, **kws)

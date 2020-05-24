@@ -7,11 +7,11 @@ import tensorflow as tf
 from termcolor import cprint, colored
 
 from . import K
-from . import Input, LSTM, GRU, SimpleRNN, Bidirectional, TimeDistributed, Dense
+from . import Input, LSTM, GRU, SimpleRNN, Bidirectional, TimeDistributed
+from . import Dense, concatenate
 from . import Model
 from . import l1_l2
 from . import tempdir
-from see_rnn.inspect_gen import _get_grads
 from see_rnn import get_gradients, get_outputs, get_weights, get_rnn_weights
 from see_rnn import get_weight_penalties, weights_norm, weight_loss
 from see_rnn import features_0D, features_1D, features_2D
@@ -21,29 +21,35 @@ from see_rnn import rnn_summary
 from see_rnn import rnn_heatmap, rnn_histogram
 
 
+TF_KERAS = bool(os.environ.get("TF_KERAS", '0') == '1')
+TF_EAGER = bool(os.environ.get("TF_EAGER", '0') == '1')
+TF_2 = (tf.__version__[0] == '2')
+
 IMPORTS = dict(K=K, Input=Input, GRU=GRU,
                Bidirectional=Bidirectional, Model=Model)
-USING_GPU = bool(tf.config.experimental.list_physical_devices('GPU') != [])
+if TF_2:
+    USING_GPU = bool(tf.config.list_logical_devices('GPU') != [])
+else:
+    USING_GPU = bool(tf.config.experimental.list_logical_devices('GPU') != [])
 
 if USING_GPU:
     from . import CuDNNLSTM, CuDNNGRU
     print("TF uses GPU")
+else:
+    print("TF uses CPU")
 
 print("TF version: %s" % tf.__version__)
-TF_KERAS = bool(os.environ.get("TF_KERAS", '0') == '1')
-TF_EAGER = bool(os.environ.get("TF_EAGER", '0') == '1')
-TF_2 = (tf.__version__[0] == '2')
 
 WARN = colored("WARNING:", 'red')
 
 if TF_EAGER:
     if not TF_2:
         tf.enable_eager_execution()
-    print("TF running eagerly")
+    print("TF executing Eagerly")
 else:
     if TF_2:
         tf.compat.v1.disable_eager_execution()
-    print("TF running in graph mode")
+    print("TF executing in Graph mode")
 if TF_2 and not TF_KERAS:
     print(WARN, "LSTM, CuDNNLSTM, and CuDNNGRU imported `from keras` "
           + "are not supported in TF2, and will be skipped")
@@ -90,7 +96,7 @@ def test_main():
 
 
 def _test_outputs(model):
-    x, _ = make_data(K.int_shape(model.input), model.layers[2].units)
+    x, *_ = make_data(K.int_shape(model.input), model.layers[2].units)
     outs = get_outputs(model, 1, x)
     features_1D(outs[:1], show_y_zero=True)
     features_1D(outs[0])
@@ -98,7 +104,7 @@ def _test_outputs(model):
 
 
 def _test_outputs_gradients(model):
-    x, y = make_data(K.int_shape(model.input), model.layers[2].units)
+    x, y, _ = make_data(K.int_shape(model.input), model.layers[2].units)
     name = model.layers[1].name
     grads_all  = get_gradients(model, name, x, y, mode='outputs')
     grads_last = get_gradients(model, 2,    x, y, mode='outputs')
@@ -121,7 +127,7 @@ def _test_outputs_gradients(model):
 
 
 def _test_weights_gradients(model):
-    x, y = make_data(K.int_shape(model.input), model.layers[2].units)
+    x, y, _ = make_data(K.int_shape(model.input), model.layers[2].units)
     name = model.layers[1].name
 
     with tempdir() as dirpath:
@@ -152,8 +158,8 @@ def test_errors():  # test Exception cases
     reset_seeds(reset_graph_with_backend=K)
     model = make_model(GRU, batch_shape, activation='relu',
                        recurrent_dropout=0.3)
-    x, y = make_data(batch_shape, units)
-    model.train_on_batch(x, y)
+    x, y, sw = make_data(batch_shape, units)
+    model.train_on_batch(x, y, sw)
 
     grads = get_gradients(model, 1, x, y)
     grads_4D = np.expand_dims(grads, -1)
@@ -205,8 +211,8 @@ def test_misc():  # test miscellaneous functionalities
     reset_seeds(reset_graph_with_backend=K)
     model = make_model(GRU, batch_shape, activation='relu',
                        recurrent_dropout=0.3)
-    x, y = make_data(batch_shape, units)
-    model.train_on_batch(x, y)
+    x, y, sw = make_data(batch_shape, units)
+    model.train_on_batch(x, y, sw)
 
     weights_norm(model, 'gru', omit_names='bias', verbose=1)
     weights_norm(model, ['gru', 1, (1, 1)])
@@ -235,20 +241,20 @@ def test_misc():  # test miscellaneous functionalities
                       title="grads", savepath=os.path.join(dirpath, 'img.png'))
     with tempdir() as dirpath:
         features_hist_v2(list(grads[:, :4, :3]), colnames=list('abcd'),
-                         show_borders=False, xlims=(-.01, .01), ylim=100,
-                         borderwidth=1, show_xy_ticks=[0, 0], side_annot='row',
-                         share_xy=True, title="Grads",
-                         savepath=os.path.join(dirpath, 'img.png'))
+                          show_borders=False, xlims=(-.01, .01), ylim=100,
+                          borderwidth=1, show_xy_ticks=[0, 0], side_annot='row',
+                          share_xy=True, title="Grads",
+                          savepath=os.path.join(dirpath, 'img.png'))
     features_hist(grads, center_zero=True, xlims=(-1, 1), share_xy=0)
     features_hist_v2(list(grads[:, :4, :3]), center_zero=True, xlims=(-1, 1),
-                     share_xy=(False, False))
+                      share_xy=(False, False))
     with tempdir() as dirpath:
         rnn_histogram(model, 1, show_xy_ticks=[0, 0], equate_axes=2,
                       savepath=os.path.join(dirpath, 'img.png'))
     rnn_histogram(model, 1, equate_axes=False,
                   configs={'tight': dict(left=0, right=1),
-                           'plot':  dict(color='red'),
-                           'title': dict(fontsize=14),})
+                            'plot':  dict(color='red'),
+                            'title': dict(fontsize=14),})
     rnn_heatmap(model, 1, cmap=None, normalize=True, show_borders=False)
     rnn_heatmap(model, 1, cmap=None, norm='auto', absolute_value=True)
     rnn_heatmap(model, 1, norm=None)
@@ -324,11 +330,54 @@ def test_misc():  # test miscellaneous functionalities
     cprint("\n<< MISC TESTS PASSED >>\n", 'green')
 
 
+def test_multi_io():
+    def _make_multi_io_model():
+        ipt1 = Input((40, 8))
+        ipt2 = Input((40, 16))
+        ipts = concatenate([ipt1, ipt2])
+        out1 = GRU(6,  return_sequences=True)(ipts)
+        out2 = GRU(12, return_sequences=True)(ipts)
+
+        model = Model([ipt1, ipt2], [out1, out2])
+        model.compile('adam', 'mse')
+        return model
+
+    def _make_multi_io_data():
+        x1 = np.random.randn(8, 40, 8)
+        x2 = np.random.randn(8, 40, 16)
+        y1 = np.random.randn(8, 40, 6)
+        y2 = np.random.randn(8, 40, 12)
+        return x1, x2, y1, y2
+
+    model = _make_multi_io_model()
+    x1, x2, y1, y2 = _make_multi_io_data()
+
+    grads = get_gradients(model, '*', [x1, x2], [y1, y2])
+    outs = get_outputs(model, '*', [x1, x2])
+    assert outs[0].shape == grads[0].shape == (8, 40, 24)
+    assert outs[1].shape == grads[1].shape == (8, 40, 6)
+    assert outs[2].shape == grads[2].shape == (8, 40, 12)
+
+    cprint("\n<< MULTI_IO TESTS PASSED >>\n", 'green')
+
+
+def test_inspect_gen():
+    units = 6
+    batch_shape = (8, 100, 2 * units)
+
+    model = make_model(GRU, batch_shape, activation='relu', bidirectional=True,
+                       recurrent_dropout=0.3, include_dense=True)
+
+    assert bool(get_weight_penalties(model))
+    assert weight_loss(model) > 0
+    cprint("\n<< INSPECT_GEN TEST PASSED >>\n", 'green')
+
+
 def test_envs():  # pseudo-tests for coverage for different env flags
     reset_seeds(reset_graph_with_backend=K)
     units = 6
     batch_shape = (8, 100, 2*units)
-    x, y = make_data(batch_shape, units)
+    x, y, sw = make_data(batch_shape, units)
 
     from importlib import reload
 
@@ -362,7 +411,7 @@ def test_envs():  # pseudo-tests for coverage for different env flags
         model = make_model(_GRU, batch_shape, new_imports=new_imports)
 
         pass_on_error(model, x, y, 1)  # possibly _backend-induced err
-        pass_on_error(glg, model, x, y, 1)
+        pass_on_error(glg, model, 1, x, y)
         rs(model.layers[1])
 
         from see_rnn.inspect_rnn import get_rnn_weights as grw
@@ -374,23 +423,10 @@ def test_envs():  # pseudo-tests for coverage for different env flags
 
         _model = _make_nonrnn_model()
         pass_on_error(_vrt, _model.layers[1])
-        pass_on_error(_get_grads, 1, 2, 3, 4)
         del model, _model
 
     assert True
     cprint("\n<< ENV TESTS PASSED >>\n", 'green')
-
-
-def test_inspect_gen():
-    units = 6
-    batch_shape = (8, 100, 2 * units)
-
-    model = make_model(GRU, batch_shape, activation='relu', bidirectional=True,
-                       recurrent_dropout=0.3, include_dense=True)
-
-    assert bool(get_weight_penalties(model))
-    assert weight_loss(model) > 0
-    cprint("\n<< INSPECT_GEN TEST PASSED >>\n", 'green')
 
 
 def make_model(rnn_layer, batch_shape, units=6, bidirectional=False,
@@ -430,19 +466,20 @@ def make_model(rnn_layer, batch_shape, units=6, bidirectional=False,
 
 def make_data(batch_shape, units):
     return (np.random.randn(*batch_shape),
-            np.random.uniform(-1, 1, (batch_shape[0], units)))
+            np.random.uniform(-1, 1, (batch_shape[0], units)),
+            np.random.uniform(0, 2, batch_shape[0]))
 
 
 def train_model(model, iterations):
     batch_shape = K.int_shape(model.input)
     units = model.layers[2].units
-    x, y = make_data(batch_shape, units)
+    x, y, sw = make_data(batch_shape, units)
 
     for i in range(iterations):
-        model.train_on_batch(x, y)
+        model.train_on_batch(x, y, sw)
         print(end='.')  # progbar
         if i % 40 == 0:
-            x, y = make_data(batch_shape, units)
+            x, y, sw = make_data(batch_shape, units)
 
 
 def _make_nonrnn_model():
