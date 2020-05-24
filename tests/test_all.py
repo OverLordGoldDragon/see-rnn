@@ -351,10 +351,9 @@ def test_multi_io():
 
     model = _make_multi_io_model()
     x1, x2, y1, y2 = _make_multi_io_data()
-    model.train_on_batch([x1, x2], [y1, y2])
 
-    outs = get_outputs(model, '*', [x1, x2])
     grads = get_gradients(model, '*', [x1, x2], [y1, y2])
+    outs = get_outputs(model, '*', [x1, x2])
     assert outs[0].shape == grads[0].shape == (8, 40, 24)
     assert outs[1].shape == grads[1].shape == (8, 40, 6)
     assert outs[2].shape == grads[2].shape == (8, 40, 12)
