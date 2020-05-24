@@ -148,7 +148,7 @@ def get_gradients(model, _id, input_data, labels, sample_weight=None,
         one_requested = len(params) == 1
     else:
         verbose = bool(_id != '*')
-        _id, names, idxs, layers, one_requested = _get_info(
+        _id, _, _, layers, one_requested = _get_info(
             model, _id, layer, mode)
         if layers is None and params is None:
             layers = get_layer(model, _id)
