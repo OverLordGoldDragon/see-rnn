@@ -1,17 +1,26 @@
-import pytest
 import os
+import sys
+import inspect
+# ensure `tests` directory path is on top of Python's module search
+filedir = os.path.dirname(inspect.stack()[0][1])
+if sys.path[0] != filedir:
+    if filedir in sys.path:
+        sys.path.pop(sys.path.index(filedir))  # avoid dudplication
+    sys.path.insert(0, filedir)
+
+import pytest
 import matplotlib.pyplot as plt
 import numpy as np
 import random
 import tensorflow as tf
 from termcolor import cprint, colored
 
-from . import K
-from . import Input, LSTM, GRU, SimpleRNN, Bidirectional, TimeDistributed
-from . import Dense, concatenate
-from . import Model
-from . import l1_l2
-from . import tempdir
+from backend import K
+from backend import Input, LSTM, GRU, SimpleRNN, Bidirectional, TimeDistributed
+from backend import Dense, concatenate, Activation
+from backend import Model
+from backend import l1_l2
+from backend import tempdir
 from see_rnn import get_gradients, get_outputs, get_weights, get_rnn_weights
 from see_rnn import get_weight_penalties, weights_norm, weight_loss
 from see_rnn import features_0D, features_1D, features_2D
@@ -33,7 +42,7 @@ else:
     USING_GPU = bool(tf.config.experimental.list_logical_devices('GPU') != [])
 
 if USING_GPU:
-    from . import CuDNNLSTM, CuDNNGRU
+    from backend import CuDNNLSTM, CuDNNGRU
     print("TF uses GPU")
 else:
     print("TF uses CPU")
@@ -361,6 +370,32 @@ def test_multi_io():
     cprint("\n<< MULTI_IO TESTS PASSED >>\n", 'green')
 
 
+def test_none_gradients():
+    n_classes = 4
+    batch_size = 16
+
+    def _make_softmax_model():
+        ipt = Input(batch_shape=(batch_size, 8))
+        x   = Dense(n_classes)(ipt)
+        out = Activation('softmax')(x)
+
+        model = Model(ipt, out)
+        model.compile('adam', 'categorical_crossentropy')
+        return model
+
+    def _make_data():
+        class_labels = np.random.randint(0, n_classes, batch_size)
+        y = np.eye(n_classes)[class_labels]
+        x = np.random.randn(batch_size, 8)
+        return x, y
+
+    model = _make_softmax_model()
+    x, y = _make_data()
+    model.train_on_batch(x, y)
+
+    get_gradients(model, '*', x, y)
+
+
 def test_inspect_gen():
     units = 6
     batch_shape = (8, 100, 2 * units)
@@ -519,5 +554,4 @@ def pass_on_error(func, *args, **kwargs):
 
 
 if __name__ == '__main__':
-    os.environ['IS_MAIN'] = "1"
     pytest.main([__file__, "-s"])

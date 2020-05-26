@@ -231,11 +231,13 @@ def _get_params(model, layers=None, params=None, mode='outputs', verbose=1):
                 return False
             elif isinstance(p, tf.Tensor):  # param is layer output
                 layer = _layer_of_output(p)
-                if TF_KERAS and hasattr(layer, 'activation'):
+                if (TF_KERAS or tf.__version__[0] == '2'
+                    ) and hasattr(layer, 'activation'):
                     # these activations don't have gradients defined (or ==0),
                     # and tf.keras doesn't re-route output gradients
                     # to the pre-activation weights transform
-                    value = getattr(layer.activation, '__name__') in ('softmax',)
+                    value = getattr(layer.activation, '__name__', '').lower() in (
+                        'softmax',)
                     if value and verbose:
                         print(WARN, ("{} has {} activation, which has a None "
                                      "gradient in tf.keras; will skip".format(
