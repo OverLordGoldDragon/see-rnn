@@ -148,11 +148,10 @@ def get_gradients(model, _id, input_data, labels, sample_weight=None,
         one_requested = len(params) == 1
     else:
         verbose = bool(_id != '*')
-        _id, _, _, layers, one_requested = _get_info(
-            model, _id, layer, mode)
+        _id, _, _, layers, one_requested = _get_info(model, _id, layer, mode)
         if layers is None and params is None:
             layers = get_layer(model, _id)
-        params = _get_params(model, layers, params, mode, verbose=verbose)
+        params = _get_params(model, layers, mode=mode, verbose=verbose)
 
     if TF_KERAS and tf.executing_eagerly():
         grads = _get_grads_eager(model, input_data, labels, sample_weight,
