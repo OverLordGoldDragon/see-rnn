@@ -22,7 +22,7 @@ RNN weights, gradients, &amp; activations visualization in Keras &amp; TensorFlo
   - **Gate visuals**: gates in gated architectures (LSTM, GRU) shown explicitly
   - **Channel visuals**: cell units (feature extractors) shown explicitly
   - **General visuals**: methods also applicable to CNNs & others
-  - **Weight norm tracking**: useful for analyzing weight decay
+  - **Weight norm tracking**: useful for analyzing weight decay 
 
 
 ## Why use?
