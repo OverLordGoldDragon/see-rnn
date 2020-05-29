@@ -163,9 +163,9 @@ def get_gradients(model, _id, input_data, labels, sample_weight=None,
                 sample_weight = []
                 for x in input_data:
                     # extend to each input
-                    sample_weight.append(np.ones(len(x)))
+                    sample_weight.append(None)
             else:
-                sample_weight = [np.ones(len(input_data))]
+                sample_weight = [None]
         ins = [input_data, labels, sample_weight]
         for i, data in enumerate(ins):
             if not isinstance(data, (list, tuple)):
