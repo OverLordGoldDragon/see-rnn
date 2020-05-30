@@ -11,15 +11,14 @@ if sys.path[0] != filedir:
 import pytest
 import matplotlib.pyplot as plt
 import numpy as np
-import random
-import tensorflow as tf
-from termcolor import cprint, colored
+from termcolor import cprint
 
-from backend import K
-from backend import Input, LSTM, GRU, SimpleRNN, Bidirectional, TimeDistributed
-from backend import Dense, concatenate, Activation
+from backend import K, WARN, TF_KERAS, TF_2, USING_GPU
+from backend import make_model, make_data, train_model, _make_nonrnn_model
+from backend import reset_seeds, pass_on_error
+from backend import Input, LSTM, GRU, SimpleRNN, Bidirectional
+from backend import Dense, concatenate, Activation, CuDNNLSTM, CuDNNGRU
 from backend import Model
-from backend import l1_l2
 from backend import tempdir
 from see_rnn import get_gradients, get_outputs, get_weights, get_rnn_weights
 from see_rnn import get_weight_penalties, weights_norm, weight_loss
@@ -30,35 +29,9 @@ from see_rnn import rnn_summary
 from see_rnn import rnn_heatmap, rnn_histogram
 
 
-TF_KERAS = bool(os.environ.get("TF_KERAS", '0') == '1')
-TF_EAGER = bool(os.environ.get("TF_EAGER", '0') == '1')
-TF_2 = (tf.__version__[0] == '2')
-
 IMPORTS = dict(K=K, Input=Input, GRU=GRU,
                Bidirectional=Bidirectional, Model=Model)
-if TF_2:
-    USING_GPU = bool(tf.config.list_logical_devices('GPU') != [])
-else:
-    USING_GPU = bool(tf.config.experimental.list_logical_devices('GPU') != [])
 
-if USING_GPU:
-    from backend import CuDNNLSTM, CuDNNGRU
-    print("TF uses GPU")
-else:
-    print("TF uses CPU")
-
-print("TF version: %s" % tf.__version__)
-
-WARN = colored("WARNING:", 'red')
-
-if TF_EAGER:
-    if not TF_2:
-        tf.enable_eager_execution()
-    print("TF executing Eagerly")
-else:
-    if TF_2:
-        tf.compat.v1.disable_eager_execution()
-    print("TF executing in Graph mode")
 if TF_2 and not TF_KERAS:
     print(WARN, "LSTM, CuDNNLSTM, and CuDNNGRU imported `from keras` "
           + "are not supported in TF2, and will be skipped")
@@ -66,11 +39,13 @@ if TF_2 and not TF_KERAS:
 
 def test_main():
     units = 6
-    batch_shape = (8, 100, 2*units)
+    batch_shape = (8, 100, 2 * units)
     iterations = 20
 
-    kwargs1 = dict(batch_shape=batch_shape, units=units, bidirectional=False)
-    kwargs2 = dict(batch_shape=batch_shape, units=units, bidirectional=True)
+    kwargs1 = dict(batch_shape=batch_shape, units=units, bidirectional=False,
+                   IMPORTS=IMPORTS)
+    kwargs2 = dict(batch_shape=batch_shape, units=units, bidirectional=True,
+                   IMPORTS=IMPORTS)
 
     if TF_2 and not TF_KERAS:
         rnn_layers = GRU, SimpleRNN
@@ -166,7 +141,7 @@ def test_errors():  # test Exception cases
 
     reset_seeds(reset_graph_with_backend=K)
     model = make_model(GRU, batch_shape, activation='relu',
-                       recurrent_dropout=0.3)
+                       recurrent_dropout=0.3, IMPORTS=IMPORTS)
     x, y, sw = make_data(batch_shape, units)
     model.train_on_batch(x, y, sw)
 
@@ -219,7 +194,7 @@ def test_misc():  # test miscellaneous functionalities
 
     reset_seeds(reset_graph_with_backend=K)
     model = make_model(GRU, batch_shape, activation='relu',
-                       recurrent_dropout=0.3)
+                       recurrent_dropout=0.3, IMPORTS=IMPORTS)
     x, y, sw = make_data(batch_shape, units)
     model.train_on_batch(x, y, sw)
 
@@ -323,7 +298,8 @@ def test_misc():  # test miscellaneous functionalities
     reset_seeds(reset_graph_with_backend=K)
 
     # test SimpleRNN & other
-    _model = make_model(SimpleRNN, batch_shape, units=128, use_bias=False)
+    _model = make_model(SimpleRNN, batch_shape, units=128, use_bias=False,
+                        IMPORTS=IMPORTS)
     train_model(_model, iterations=1)  # TF2-Keras-Graph bug workaround
     rnn_histogram(_model, 1)  # test _pretty_hist
     K.set_value(_model.optimizer.lr, 1e50)  # force NaNs
@@ -401,7 +377,7 @@ def test_inspect_gen():
     batch_shape = (8, 100, 2 * units)
 
     model = make_model(GRU, batch_shape, activation='relu', bidirectional=True,
-                       recurrent_dropout=0.3, include_dense=True)
+                       recurrent_dropout=0.3, include_dense=True, IMPORTS=IMPORTS)
 
     assert bool(get_weight_penalties(model))
     assert weight_loss(model) > 0
@@ -443,7 +419,8 @@ def test_envs():  # pseudo-tests for coverage for different env flags
         reset_seeds(reset_graph_with_backend=_K)
         new_imports = dict(Input=Input, Bidirectional=Bidirectional,
                            Model=Model)
-        model = make_model(_GRU, batch_shape, new_imports=new_imports)
+        model = make_model(_GRU, batch_shape, new_imports=new_imports,
+                           IMPORTS=IMPORTS)
 
         pass_on_error(model, x, y, 1)  # possibly _backend-induced err
         pass_on_error(glg, model, 1, x, y)
@@ -462,95 +439,6 @@ def test_envs():  # pseudo-tests for coverage for different env flags
 
     assert True
     cprint("\n<< ENV TESTS PASSED >>\n", 'green')
-
-
-def make_model(rnn_layer, batch_shape, units=6, bidirectional=False,
-               use_bias=True, activation='tanh', recurrent_dropout=0,
-               include_dense=False, new_imports={}):
-    Input         = IMPORTS['Input']
-    Bidirectional = IMPORTS['Bidirectional']
-    Model         = IMPORTS['Model']
-    if new_imports != {}:
-        Input         = new_imports['Input']
-        Bidirectional = new_imports['Bidirectional']
-        Model         = new_imports['Model']
-
-    kw = {}
-    if not use_bias:
-        kw['use_bias'] = False     # for CuDNN or misc case
-    if activation == 'relu':
-        kw['activation'] = 'relu'  # for nan detection
-        kw['recurrent_dropout'] = recurrent_dropout
-    kw.update(dict(kernel_regularizer=l1_l2(1e-4),
-                   recurrent_regularizer=l1_l2(1e-4),
-                   bias_regularizer=l1_l2(1e-4)))
-
-    ipt = Input(batch_shape=batch_shape)
-    if bidirectional:
-        x = Bidirectional(rnn_layer(units, return_sequences=True, **kw))(ipt)
-    else:
-        x = rnn_layer(units, return_sequences=True, **kw)(ipt)
-    if include_dense:
-        x = TimeDistributed(Dense(units, bias_regularizer=l1_l2(1e-4)))(x)
-    out = rnn_layer(units, return_sequences=False)(x)
-
-    model = Model(ipt, out)
-    model.compile('adam', 'mse')
-    return model
-
-
-def make_data(batch_shape, units):
-    return (np.random.randn(*batch_shape),
-            np.random.uniform(-1, 1, (batch_shape[0], units)),
-            np.random.uniform(0, 2, batch_shape[0]))
-
-
-def train_model(model, iterations):
-    batch_shape = K.int_shape(model.input)
-    units = model.layers[2].units
-    x, y, sw = make_data(batch_shape, units)
-
-    for i in range(iterations):
-        model.train_on_batch(x, y, sw)
-        print(end='.')  # progbar
-        if i % 40 == 0:
-            x, y, sw = make_data(batch_shape, units)
-
-
-def _make_nonrnn_model():
-    if os.environ.get("TF_KERAS", '0') == '1':
-        from tensorflow.keras.layers import Input, Dense
-        from tensorflow.keras.models import Model
-    else:
-        from keras.layers import Input, Dense
-        from keras.models import Model
-    ipt = Input((16,))
-    out = Dense(16)(ipt)
-    model = Model(ipt, out)
-    model.compile('adam', 'mse')
-    return model
-
-
-def reset_seeds(reset_graph_with_backend=None, verbose=1):
-    if reset_graph_with_backend is not None:
-        K = reset_graph_with_backend
-        K.clear_session()
-        tf.compat.v1.reset_default_graph()
-        if verbose:
-            print("KERAS AND TENSORFLOW GRAPHS RESET")
-
-    np.random.seed(1)
-    random.seed(2)
-    tf.compat.v1.set_random_seed(3)
-    if verbose:
-        print("RANDOM SEEDS RESET")
-
-
-def pass_on_error(func, *args, **kwargs):
-    try:
-        func(*args, **kwargs)
-    except BaseException as e:
-        print("Task Failed Successfully:", e)
 
 
 if __name__ == '__main__':
