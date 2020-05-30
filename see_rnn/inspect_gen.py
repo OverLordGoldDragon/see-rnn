@@ -159,13 +159,17 @@ def get_gradients(model, _id, input_data, labels, sample_weight=None,
     else:
         grads_fn = _make_grads_fn(model, params=params)
         if sample_weight is None:
+            sw = None if TF_KERAS else np.ones(len(input_data))
             if isinstance(input_data, list):
                 sample_weight = []
                 for x in input_data:
                     # extend to each input
-                    sample_weight.append(None)
+                    if TF_KERAS:
+                        sample_weight.append(sw)
+                    else:
+                        sample_weight.append(sw)
             else:
-                sample_weight = [None]
+                sample_weight = [sw]
         ins = [input_data, labels, sample_weight]
         for i, data in enumerate(ins):
             if not isinstance(data, (list, tuple)):
