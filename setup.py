@@ -32,8 +32,8 @@ setup(
     license="MIT",
     author="OverLordGoldDragon",
     author_email="16495490+OverLordGoldDragon@users.noreply.github.com",
-    description=('RNN weights, gradients, & activations visualization '
-                 'in Keras & TensorFlow'),
+    description=("RNN and general weights, gradients, & activations "
+                 "visualization in Keras & TensorFlow"),
     long_description=read_file('README.md'),
     long_description_content_type="text/markdown",
     keywords=(
