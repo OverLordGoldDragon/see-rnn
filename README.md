@@ -54,6 +54,7 @@ Will possibly implement:
  - [ ] Pytorch support
  - [ ] Interpretability visuals (e.g. saliency maps, adversarial attacks)
  - [ ] Tools for better probing backprop of `return_sequences=False`
+ - [ ] Unify `_id` and `layer`? Need duplicates resolution scheme
  
 ## Examples
 

@@ -61,7 +61,7 @@ def _validate_args(_id, layer=None):
     def _one_requested(_ids, layer):
         return len(layer or _ids) == 1  # give `layer` precedence
 
-    if (_id is not None and layer is not None):
+    if _id and layer:
         print(WARN, "`layer` will override `_id`")
 
     _ids, layer = _ensure_list(_id, layer)
