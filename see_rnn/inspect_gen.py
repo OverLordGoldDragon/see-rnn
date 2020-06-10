@@ -504,7 +504,8 @@ def detect_nans(data, include_inf=True):
 
 
 def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
-                 norm_fn=np.square, omit_names=None, axis=-1, verbose=0):
+                 norm_fn=(np.sqrt, np.square), omit_names=None, axis=-1,
+                 verbose=0):
     """Retrieves model layer weight matrix norms, as specified by `norm_fn`.
     Arguments:
         model: keras.Model/tf.keras.Model.
@@ -526,9 +527,11 @@ def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
         _dict: dict/None. If None, returns new dict. If dict, appends to it.
         stat_fns: functions list/tuple. Aggregate statistic to compute from
                normed weights.
-        norm_fn: function. Norm transform to apply to weights. Ex:
-              - np.square (l2 norm)
-              - np.abs    (l1 norm)
+        norm_fn: inner function / (outer function, inner function). Norm
+                 transform to apply to weights. Ex:
+              - (np.sqrt, np.square) (l2 norm)
+              - np.abs               (l1 norm)
+              Computed as: `outer_fn(sum(inner_fn(x) for x in data))`.
         omit_names: str/str list. List of names (can be substring) of weights
                                   to omit from fetching.
         axis: int. Axis w.r.t. which compute the norm (collapsing all others).
@@ -584,7 +587,11 @@ def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
             axis = axis if axis != -1 else len(w.shape) - 1
             reduction_axes = tuple([ax for ax in range(len(w.shape))
                                     if ax != axis])
-            return np.sqrt(np.sum(norm_fn(w), axis=reduction_axes))
+            if isinstance(norm_fn, tuple):
+                outer_fn, inner_fn = norm_fn
+                return outer_fn(np.sum(inner_fn(w), axis=reduction_axes))
+            else:
+                return np.sum(norm_fn(w), axis=reduction_axes)
 
         def _append(stats_all, l2_stats, w_idx, l_name):
             if len(stats_all[l_name]) < w_idx + 1:
