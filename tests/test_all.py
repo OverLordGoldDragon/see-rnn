@@ -199,7 +199,7 @@ def test_misc():  # test miscellaneous functionalities
     model.train_on_batch(x, y, sw)
 
     weights_norm(model, 'gru', omit_names='bias', verbose=1)
-    weights_norm(model, ['gru', 1, (1, 1)])
+    weights_norm(model, ['gru', 1, (1, 1)], norm_fn=np.abs)
     stats = weights_norm(model, 'gru')
     weights_norm(model, 'gru', _dict=stats)
 
