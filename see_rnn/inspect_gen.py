@@ -587,7 +587,7 @@ def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
             axis = axis if axis != -1 else len(w.shape) - 1
             reduction_axes = tuple([ax for ax in range(len(w.shape))
                                     if ax != axis])
-            if isinstance(norm_fn, tuple):
+            if isinstance(norm_fn, (tuple, list)):
                 outer_fn, inner_fn = norm_fn
                 return outer_fn(np.sum(inner_fn(w), axis=reduction_axes))
             else:
