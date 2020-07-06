@@ -581,10 +581,11 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
                                   'row' -> limits shared along rows.
                                   Overrides 'sharex' in `configs['subplot']`.
               - sharey: bool/str. `sharex`, but for y-axis.
-        pad_xticks: bool/int. int-> kwarg to ax.tick_params(pad=). Pad xticks
-                    (<0 for above x-axis), and include only min/max shifted
-                    10% inward. Useful for `tight`. If False/0, makes no change.
-                    If None and bool(`tight` and not `sharex`), defaults to -20.
+        pad_xticks: bool / None. True: display only min/max xticks, and
+                    shifted above xaxis and 10% inward. False: no change in
+                    shown ticks. None: if bool(`tight` an not `sharex`) ->
+                    sets to True. Padding behavior configurable via
+                    configs['pad_xticks'] (see below).
         annotations: str list/'auto'/None.
             'auto': annotate each subplot with its index.
              list of str: annotate by indexing into the list.
@@ -600,6 +601,9 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             'tight':   passed to fig.subplots_adjust()
             'annot':   passed to ax.annotate()
             'save':    passed to fig.savefig() if `savepath` is not None.
+            'pad_xticks': passed to ax.annotate(). Is nested dict:
+                {'min': kw1, 'max': kw2}, applied separately for
+                ax.annotate(xmin, **kw1) and ax.annotate(xmax, **kw2).
 
     kwargs:
         w: float. Scale width  of resulting plot by a factor.
@@ -643,6 +647,10 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             'tight':   dict(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0),
             'annot':   dict(weight='bold', fontsize=14, xy=(.02, .7),
                             xycoords='axes fraction', color='g'),
+            'pad_xticks': {'min': dict(fontsize=12, xy=(.05, .1),
+                                       xycoords='axes fraction'),
+                           'max': dict(fontsize=12, xy=(.9, .1),
+                                       xycoords='axes fraction')},
             'save': dict(),
             }
         # deepcopy configs, and override defaults dicts or dict values
@@ -656,9 +664,9 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
     def _process_pad_xticks(pad_xticks, kw):
         if pad_xticks is None:
             if tight and not kw['subplot']['sharex']:
-                pad_xticks = -20
+                pad_xticks = True
             else:
-                pad_xticks = 0
+                pad_xticks = False
         return pad_xticks
 
     def _catch_unknown_kwargs(kwargs):
@@ -699,10 +707,8 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             ax.set_xlim(*xlims)
         if pad_xticks:
             xmin, xmax = ax.get_xlim()
-            xmin += .1 * abs(xmin)
-            xmax -= .1 * abs(xmax)
-            ax.set_xticks([xmin, xmax])
-            ax.tick_params(axis='x', pad=pad_xticks)
+            ax.annotate(xmin, **kw['pad_xticks']['min'])
+            ax.annotate(xmax, **kw['pad_xticks']['max'])
 
     _catch_unknown_kwargs(kwargs)
     kw = _process_configs(configs, w, h, tight, share_xy)
@@ -770,10 +776,11 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
                                   'row' -> limits shared along rows.
                                   Overrides 'sharex' in `configs['subplot']`.
               - sharey: bool/str. `sharex`, but for y-axis.
-        pad_xticks: bool/int. int-> kwarg to ax.tick_params(pad=). Pad xticks
-                    (<0 for above x-axis), and include only min/max shifted
-                    10% inward. Useful for `tight`. If False/0, makes no change.
-                    If None and bool(`tight` and not `sharex`), defaults to -20.
+        pad_xticks: bool / None. True: display only min/max xticks, and
+                    shifted above xaxis and 10% inward. False: no change in
+                    shown ticks. None: if bool(`tight` an not `sharex`) ->
+                    sets to True. Padding behavior configurable via
+                    configs['pad_xticks'] (see below).
         side_annot: str. Text to display to the right side of rightmost subplot
               boxes, enumerated by row number ({side_annot}{row})
         configs: dict. kwargs to customize various plot schemes:
@@ -787,6 +794,9 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
             'colnames':   passed to ax.set_title()
             'side_annot': passed to ax.annotate()
             'save':       passed to fig.savefig() if `savepath` is not None.
+            'pad_xticks': passed to ax.annotate(). Is nested dict:
+                {'min': kw1, 'max': kw2}, applied separately for
+                ax.annotate(xmin, **kw1) and ax.annotate(xmax, **kw2).
 
     kwargs:
         w: float. Scale width  of resulting plot by a factor.
@@ -832,6 +842,10 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
             'colnames':   dict(weight='bold', fontsize=14),
             'side_annot': dict(weight='bold', fontsize=14,
                                xy=(1.02, .5), xycoords='axes fraction'),
+            'pad_xticks': {'min': dict(fontsize=12, xy=(.05, .1),
+                                       xycoords='axes fraction'),
+                           'max': dict(fontsize=12, xy=(.9, .1),
+                                       xycoords='axes fraction')},
             'save': dict(),
             }
         # deepcopy configs, and override defaults dicts or dict values
@@ -845,9 +859,9 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
     def _process_pad_xticks(pad_xticks, kw):
         if pad_xticks is None:
             if tight and not kw['subplot']['sharex']:
-                pad_xticks = -20
+                pad_xticks = True
             else:
-                pad_xticks = 0
+                pad_xticks = False
         return pad_xticks
 
     def _catch_unknown_kwargs(kwargs):
@@ -884,10 +898,10 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
             ax.set_xlim(-maxlim, maxlim)
         elif xlims is not None:
             ax.set_xlim(*xlims)
-        if pad_xticks:  # TODO test appearance and make pad_xticks bool?
+        if pad_xticks:
             xmin, xmax = ax.get_xlim()
-            ax.annotate(xmin, fontsize=12, xy=(.05, .1), xycoords='axes fraction')
-            ax.annotate(xmax, fontsize=12, xy=(.95, .1), xycoords='axes fraction')
+            ax.annotate(xmin, **kw['pad_xticks']['min'])
+            ax.annotate(xmax, **kw['pad_xticks']['max'])
 
     _catch_unknown_kwargs(kwargs)
     kw = _process_configs(configs, w, h, share_xy)
