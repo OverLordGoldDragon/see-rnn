@@ -80,7 +80,7 @@ def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs
     _catch_unknown_kwargs(kwargs)
     kw = _process_configs(configs, w, h)
     if data.ndim != 2:
-        raise Exception("`data` must be 2D")
+        raise Exception("`data` must be 2D or 3D (got ndim=%s)" % data.ndim)
 
     if color is None:
         cmap = cm.get_cmap(cmap)
@@ -182,7 +182,7 @@ def features_1D(data, n_rows=None, annotations='auto', share_xy=(1, 1),
 
     w, h          = kwargs.get('w', 1), kwargs.get('h', 1)
     show_borders  = kwargs.get('show_borders', True)
-    show_xy_ticks = kwargs.get('show_xy_ticks', [1, 1])
+    show_xy_ticks = kwargs.get('show_xy_ticks', (1, 1))
     title_mode    = kwargs.get('title_mode', 'outputs')
     show_y_zero   = kwargs.get('show_y_zero', False)
     tight         = kwargs.get('tight', False)
@@ -269,7 +269,7 @@ def features_1D(data, n_rows=None, annotations='auto', share_xy=(1, 1),
 
     def _process_data(data):
         if data.ndim not in (2, 3):
-            raise Exception("`data` must be 2D or 3D")
+            raise Exception("`data` must be 2D or 3D (got ndim=%s)" % data.ndim)
         if data.ndim == 2 and subplot_samples:
             print(NOTE, "`subplot_samples` w/ 2D `data` will only change "
                   "title shown, and assumes `data` dims (timesteps, samples)")
@@ -293,6 +293,8 @@ def features_1D(data, n_rows=None, annotations='auto', share_xy=(1, 1),
 
     kw = _process_configs(configs, w, h, tight, share_xy)
     _catch_unknown_kwargs(kwargs)
+    if isinstance(show_xy_ticks, (int, bool)):
+        show_xy_ticks = (show_xy_ticks, show_xy_ticks)
     data = _process_data(data)
     n_rows, n_cols, color, annotations = _get_style_info(data, n_rows, color,
                                                          annotations)
@@ -327,7 +329,7 @@ def features_1D(data, n_rows=None, annotations='auto', share_xy=(1, 1),
 
 
 def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
-                timesteps_xaxis=True, max_timesteps=None, share_xy=(1, 1),
+                timesteps_xaxis=False, max_timesteps=None, share_xy=(1, 1),
                 configs=None, **kwargs):
     """Plots 2D heatmaps in a standalone graph or subplot grid.
 
@@ -386,6 +388,7 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
               -1 --> (samples,  timesteps, channels)
               0  --> (channels, timesteps, samples)
         borderwidth: float / None. Width of subplot borders.
+        bordercolor: str / None. Color of subplot borders. Default black.
         savepath: str/None. Path to save resulting figure to. Also see `configs`.
                If None, doesn't save.
 
@@ -395,12 +398,13 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
 
     w, h          = kwargs.get('w', 1), kwargs.get('h', 1)
     show_borders  = kwargs.get('show_borders', True)
-    show_xy_ticks = kwargs.get('show_xy_ticks', [1, 1])
+    show_xy_ticks = kwargs.get('show_xy_ticks', (1, 1))
     show_colorbar = kwargs.get('show_colorbar', False)
     title_mode    = kwargs.get('title_mode', 'outputs')
     tight         = kwargs.get('tight', False)
     channel_axis  = kwargs.get('channel_axis', -1)
     borderwidth   = kwargs.get('borderwidth', None)
+    bordercolor   = kwargs.get('bordercolor', None)
     savepath      = kwargs.get('savepath', None)
 
     def _process_configs(configs, w, h, tight, share_xy):
@@ -435,7 +439,8 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks',
                           'show_colorbar', 'title_mode', 'tight',
-                          'channel_axis', 'borderwidth', 'savepath')
+                          'channel_axis', 'borderwidth', 'bordercolor',
+                          'savepath')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
@@ -474,7 +479,7 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
     def _process_data(data, max_timesteps, reflect_half,
                       timesteps_xaxis, channel_axis):
         if data.ndim not in (2, 3):
-            raise Exception("`data` must be 2D or 3D")
+            raise Exception("`data` must be 2D or 3D (got ndim=%s)" % data.ndim)
 
         if max_timesteps is not None:
             data = data[..., :max_timesteps, :]
@@ -484,9 +489,10 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
             half_chs = data.shape[-1] // 2
             data[..., half_chs:] = np.flip(data[..., half_chs:], axis=0)
 
+        if data.ndim != 3:
+            # (1, width, height) -> one image
+            data = np.expand_dims(data, 0)
         if timesteps_xaxis:
-            if data.ndim != 3:
-                data = np.expand_dims(data, 0)
             data = np.transpose(data, (0, 2, 1))
         return data
 
@@ -501,6 +507,8 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
 
     _catch_unknown_kwargs(kwargs)
     kw = _process_configs(configs, w, h, tight, share_xy)
+    if isinstance(show_xy_ticks, (int, bool)):
+        show_xy_ticks = (show_xy_ticks, show_xy_ticks)
     data = _process_data(data, max_timesteps, reflect_half,
                          timesteps_xaxis, channel_axis)
     n_rows, n_cols, vmin, vmax = _get_style_info(data, n_rows, norm)
@@ -521,9 +529,13 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
         fig.colorbar(img, ax=axes.ravel().tolist(), **kw['colorbar'])
     if tight:
         fig.subplots_adjust(**kw['tight'])
-    if borderwidth is not None:
+    if borderwidth is not None or bordercolor is not None:
         for ax in axes.flat:
-            [s.set_linewidth(borderwidth) for s in ax.spines.values()]
+            for s in ax.spines.values():
+                if borderwidth is not None:
+                    s.set_linewidth(borderwidth)
+                if bordercolor is not None:
+                    s.set_color(bordercolor)
 
     plt.show()
     if savepath is not None:
@@ -606,7 +618,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
     """
     w, h          = kwargs.get('w', 1), kwargs.get('h', 1)
     show_borders  = kwargs.get('show_borders', True)
-    show_xy_ticks = kwargs.get('show_xy_ticks', [1, 1])
+    show_xy_ticks = kwargs.get('show_xy_ticks', (1, 1))
     title         = kwargs.get('title', None)
     borderwidth   = kwargs.get('borderwidth', None)
     savepath      = kwargs.get('savepath', None)
@@ -694,6 +706,8 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
 
     _catch_unknown_kwargs(kwargs)
     kw = _process_configs(configs, w, h, tight, share_xy)
+    if isinstance(show_xy_ticks, (int, bool)):
+        show_xy_ticks = (show_xy_ticks, show_xy_ticks)
     pad_xticks = _process_pad_xticks(pad_xticks, kw)
 
     n_rows, n_cols, annotations = _get_style_info(data, n_rows, annotations)
@@ -791,7 +805,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
     """
     w, h          = kwargs.get('w', 1), kwargs.get('h', 1)
     show_borders  = kwargs.get('show_borders', True)
-    show_xy_ticks = kwargs.get('show_xy_ticks', [1, 1])
+    show_xy_ticks = kwargs.get('show_xy_ticks', (1, 1))
     title         = kwargs.get('title', None)
     borderwidth   = kwargs.get('borderwidth', None)
     savepath      = kwargs.get('savepath', None)
@@ -870,15 +884,15 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
             ax.set_xlim(-maxlim, maxlim)
         elif xlims is not None:
             ax.set_xlim(*xlims)
-        if pad_xticks:
+        if pad_xticks:  # TODO test appearance and make pad_xticks bool?
             xmin, xmax = ax.get_xlim()
-            xmin += .1 * abs(xmin)
-            xmax -= .1 * abs(xmax)
-            ax.set_xticks([xmin, xmax])
-            ax.tick_params(axis='x', pad=pad_xticks)
+            ax.annotate(xmin, fontsize=12, xy=(.05, .1), xycoords='axes fraction')
+            ax.annotate(xmax, fontsize=12, xy=(.95, .1), xycoords='axes fraction')
 
     _catch_unknown_kwargs(kwargs)
     kw = _process_configs(configs, w, h, share_xy)
+    if isinstance(show_xy_ticks, (int, bool)):
+        show_xy_ticks = (show_xy_ticks, show_xy_ticks)
     pad_xticks = _process_pad_xticks(pad_xticks, kw)
 
     n_rows, n_cols = _get_data_info(data)
