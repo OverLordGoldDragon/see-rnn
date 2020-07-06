@@ -459,7 +459,8 @@ def test_track_weight_decays():
 
     ## Plot ########
     features_hist_v2(stats_merged, colnames=weight_names, title=suptitle,
-                     xlims=xlims, ylim=ylim, side_annot=side_annot, configs=configs)
+                     xlims=xlims, ylim=ylim, side_annot=side_annot,
+                     pad_xticks=True, configs=configs)
 
 
 def test_envs():  # pseudo-tests for coverage for different env flags
