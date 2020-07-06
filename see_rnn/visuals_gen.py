@@ -489,9 +489,10 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
             half_chs = data.shape[-1] // 2
             data[..., half_chs:] = np.flip(data[..., half_chs:], axis=0)
 
+        if data.ndim != 3:
+            # (1, width, height) -> one image
+            data = np.expand_dims(data, 0)
         if timesteps_xaxis:
-            if data.ndim != 3:
-                data = np.expand_dims(data, 0)
             data = np.transpose(data, (0, 2, 1))
         return data
 
