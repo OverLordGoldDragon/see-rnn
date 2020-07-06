@@ -467,7 +467,7 @@ def get_weights(model, _id, omit_names=None, as_tensors=False, as_dict=False):
     if as_dict:
         return weights
     weights = list(weights.values())
-    return weights[0] if (len(_ids) == 1 and len(_ids) == 1) else weights
+    return weights[0] if len(_ids) == 1 else weights
 
 
 def detect_nans(data, include_inf=True):
@@ -602,7 +602,7 @@ def weights_norm(model, _id, _dict=None, stat_fns=(np.max, np.mean),
             for stat_idx, stat in enumerate(l2_stats):
                 stats_all[l_name][w_idx][stat_idx].append(stat)
 
-        weights = get_weights(model, _id, omit_names)
+        weights = list(get_weights(model, _id, omit_names, as_dict=True).values())
 
         for w_idx, w in enumerate(weights):
             l2 = _compute_norm(w, norm_fn, axis)

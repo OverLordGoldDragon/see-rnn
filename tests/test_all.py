@@ -16,9 +16,10 @@ from termcolor import cprint
 from backend import K, WARN, TF_KERAS, TF_2, USING_GPU
 from backend import make_model, make_data, train_model, _make_nonrnn_model
 from backend import reset_seeds, pass_on_error
-from backend import Input, LSTM, GRU, SimpleRNN, Bidirectional
+from backend import Input, LSTM, GRU, SimpleRNN, Bidirectional, Conv1D
 from backend import Dense, concatenate, Activation, CuDNNLSTM, CuDNNGRU
 from backend import Model
+from backend import l2
 from backend import tempdir
 from see_rnn import get_gradients, get_outputs, get_weights, get_rnn_weights
 from see_rnn import get_weight_penalties, weights_norm, weight_loss
@@ -384,6 +385,83 @@ def test_inspect_gen():
     cprint("\n<< INSPECT_GEN TEST PASSED >>\n", 'green')
 
 
+def test_track_weight_decays():
+    """This example should be able to run without error"""
+    def make_model(batch_shape, layer_kw={}):
+        """Conv1D autoencoder"""
+        dim = batch_shape[-1]
+        bdim = dim // 2
+
+        ipt = Input(batch_shape=batch_shape)
+        x   = Conv1D(dim,  8, activation='relu',   **layer_kw)(ipt)
+        x   = Conv1D(bdim, 1, activation='relu',   **layer_kw)(x)  # bottleneck
+        out = Conv1D(dim,  8, activation='linear', **layer_kw)(x)
+
+        model = Model(ipt, out)
+        model.compile('adam', 'mse')
+        return model
+
+    def make_data(batch_shape, n_batches):
+        X = Y = np.random.randn(n_batches, *batch_shape)
+        return X, Y
+
+    ########### Train setup ###################################################
+    batch_shape = (32, 15, 12)
+    n_epochs = 4
+    n_batches = 10
+    wd = 2e-3
+    layer_kw = dict(padding='same', kernel_regularizer=l2(wd))
+
+    model = make_model(batch_shape, layer_kw)
+    X, Y  = make_data(batch_shape, n_batches)
+
+    ## Train ####################
+    l2_stats = {}
+    for epoch in range(n_epochs):
+        l2_stats[epoch] = {}
+        for i, (x, y) in enumerate(zip(X, Y)):
+            model.train_on_batch(x, y)
+
+            l2_stats[epoch] = weights_norm(model, [1, 3], l2_stats[epoch],
+                                           omit_names='bias', verbose=1)
+        print("Epoch", epoch + 1, "finished")
+        print()
+
+    ########### Preprocess funcs ##################################################
+    def _get_weight_names(model, layer_names, omit_names):
+        weight_names= []
+        for name in layer_names:
+            layer = model.get_layer(name=name)
+            for w in layer.weights:
+                if not any(to_omit in w.name for to_omit in omit_names):
+                    weight_names.append(w.name)
+        return weight_names
+
+    def _merge_layers_and_weights(l2_stats):
+        stats_merged = []
+        for stats in l2_stats.values():
+            x = np.array(list(stats.values()))  # (layers, weights, stats, batches)
+            x = x.reshape(-1, *x.shape[2:])     # (layers-weights, stats, batches)
+            stats_merged.append(x)
+        return stats_merged  # (epochs, layer-weights, stats, batches)
+
+    ########### Plot setup ########################################################
+    ylim = 5
+    xlims = (.4, 1.2)
+    omit_names = 'bias'
+    suptitle = "wd={:.0e}".format(wd).replace('0', '')
+    side_annot = "EP"
+    configs = {'side_annot': dict(xy=(.9, .9))}
+
+    layer_names = list(l2_stats[0].keys())
+    weight_names = _get_weight_names(model, layer_names, omit_names)
+    stats_merged = _merge_layers_and_weights(l2_stats)
+
+    ## Plot ########
+    features_hist_v2(stats_merged, colnames=weight_names, title=suptitle,
+                     xlims=xlims, ylim=ylim, side_annot=side_annot, configs=configs)
+
+
 def test_envs():  # pseudo-tests for coverage for different env flags
     reset_seeds(reset_graph_with_backend=K)
     units = 6
@@ -437,7 +515,6 @@ def test_envs():  # pseudo-tests for coverage for different env flags
         pass_on_error(_vrt, _model.layers[1])
         del model, _model
 
-    assert True
     cprint("\n<< ENV TESTS PASSED >>\n", 'green')
 
 
