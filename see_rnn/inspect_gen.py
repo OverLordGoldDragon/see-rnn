@@ -193,6 +193,11 @@ def _make_grads_fn(model, layers=None, params=None, mode='outputs'):
 
     `params` can be layer weights or outputs; cannot supply along `layers`.
     `layers` and `mode` ignored if `params` is not None.
+
+    NOTE: if `sample_weight_mode` in model.compile() is unspecified, or
+    `train_on_batch` or `test_on_batch` was never called with a `sample_weight`
+    input, then `model._feed_sample_weights == []`, and the resulting function
+    will only have three inputs: `(x, y, learning_phase)`.
     """
     if TF_KERAS and tf.executing_eagerly():
         raise Exception("`_make_grads_fn` is unavailable in tf.keras "

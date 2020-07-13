@@ -209,6 +209,20 @@ def _layer_of_output(output):
     return h.layer
 
 
+def clipnums(nums):
+    if not isinstance(nums, (list, tuple)):
+        nums = [nums]
+    clipped = []
+    for num in nums:
+        if isinstance(num, int) or (isinstance(num, float) and num.is_integer()):
+            clipped.append(str(int(num)))
+        elif abs(num) > 1e-3 and abs(num) < 1e3:
+            clipped.append("%.3f" % num)
+        else:
+            clipped.append(("%.2e" % num).replace("+0", "+").replace("-0", "-"))
+    return clipped if len(clipped) > 1 else clipped[0]
+
+
 def _get_params(model, layers=None, params=None, mode='outputs', verbose=1):
     def _validate_args(layers, params, mode):
         got_both = (layers is not None and params is not None)

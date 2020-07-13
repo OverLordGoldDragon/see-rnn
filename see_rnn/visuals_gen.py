@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
-from .utils import _kw_from_configs
+from .utils import _kw_from_configs, clipnums
 from ._backend import NOTE
 
 
@@ -706,7 +706,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
         elif xlims is not None:
             ax.set_xlim(*xlims)
         if pad_xticks:
-            xmin, xmax = ax.get_xlim()
+            xmin, xmax = clipnums(ax.get_xlim())
             ax.annotate(xmin, **kw['pad_xticks']['min'])
             ax.annotate(xmax, **kw['pad_xticks']['max'])
 
@@ -899,7 +899,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
         elif xlims is not None:
             ax.set_xlim(*xlims)
         if pad_xticks:
-            xmin, xmax = ax.get_xlim()
+            xmin, xmax = clipnums(ax.get_xlim())
             ax.annotate(xmin, **kw['pad_xticks']['min'])
             ax.annotate(xmax, **kw['pad_xticks']['max'])
 
