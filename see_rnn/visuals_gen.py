@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
-from .utils import _kw_from_configs
+from .utils import _kw_from_configs, clipnums
 from ._backend import NOTE
 
 
@@ -647,9 +647,9 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
             'tight':   dict(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0),
             'annot':   dict(weight='bold', fontsize=14, xy=(.02, .7),
                             xycoords='axes fraction', color='g'),
-            'pad_xticks': {'min': dict(fontsize=12, xy=(.05, .1),
+            'pad_xticks': {'min': dict(fontsize=12, xy=(.03, .1),
                                        xycoords='axes fraction'),
-                           'max': dict(fontsize=12, xy=(.9, .1),
+                           'max': dict(fontsize=12, xy=(.93, .1),
                                        xycoords='axes fraction')},
             'save': dict(),
             }
@@ -706,7 +706,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
         elif xlims is not None:
             ax.set_xlim(*xlims)
         if pad_xticks:
-            xmin, xmax = ax.get_xlim()
+            xmin, xmax = clipnums(ax.get_xlim())
             ax.annotate(xmin, **kw['pad_xticks']['min'])
             ax.annotate(xmax, **kw['pad_xticks']['max'])
 
@@ -842,9 +842,9 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
             'colnames':   dict(weight='bold', fontsize=14),
             'side_annot': dict(weight='bold', fontsize=14,
                                xy=(1.02, .5), xycoords='axes fraction'),
-            'pad_xticks': {'min': dict(fontsize=12, xy=(.05, .1),
+            'pad_xticks': {'min': dict(fontsize=12, xy=(.03, .1),
                                        xycoords='axes fraction'),
-                           'max': dict(fontsize=12, xy=(.9, .1),
+                           'max': dict(fontsize=12, xy=(.93, .1),
                                        xycoords='axes fraction')},
             'save': dict(),
             }
@@ -899,7 +899,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
         elif xlims is not None:
             ax.set_xlim(*xlims)
         if pad_xticks:
-            xmin, xmax = ax.get_xlim()
+            xmin, xmax = clipnums(ax.get_xlim())
             ax.annotate(xmin, **kw['pad_xticks']['min'])
             ax.annotate(xmax, **kw['pad_xticks']['max'])
 

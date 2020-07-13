@@ -138,7 +138,7 @@ def _test_prefetched_data(model):
 
 def test_errors():  # test Exception cases
     units = 6
-    batch_shape = (8, 100, 2*units)
+    batch_shape = (8, 100, 2 * units)
 
     reset_seeds(reset_graph_with_backend=K)
     model = make_model(GRU, batch_shape, activation='relu',
@@ -238,8 +238,8 @@ def test_misc():  # test miscellaneous functionalities
                       savepath=os.path.join(dirpath, 'img.png'))
     rnn_histogram(model, 1, equate_axes=False,
                   configs={'tight': dict(left=0, right=1),
-                            'plot':  dict(color='red'),
-                            'title': dict(fontsize=14),})
+                           'plot':  dict(color='red'),
+                           'title': dict(fontsize=14),})
     rnn_heatmap(model, 1, cmap=None, normalize=True, show_borders=False)
     rnn_heatmap(model, 1, cmap=None, norm='auto', absolute_value=True)
     rnn_heatmap(model, 1, norm=None)
@@ -262,7 +262,7 @@ def test_misc():  # test miscellaneous functionalities
     pass_on_error(get_weights, model, 'gru/goo')
 
     get_weights(model, '*')
-    get_gradients(model, '*', x, y)
+    get_gradients(model, '*', x, y, sample_weight=np.ones(len(x)))
     get_outputs(model, '*', x)
 
     from see_rnn.utils import _filter_duplicates_by_keys
@@ -466,7 +466,7 @@ def test_track_weight_decays():
 def test_envs():  # pseudo-tests for coverage for different env flags
     reset_seeds(reset_graph_with_backend=K)
     units = 6
-    batch_shape = (8, 100, 2*units)
+    batch_shape = (8, 100, 2 * units)
     x, y, sw = make_data(batch_shape, units)
 
     from importlib import reload
