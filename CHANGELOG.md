@@ -1,6 +1,8 @@
 ### 1.14.6 (7-25-2020): `title_mode` -> `title`; allow custom title
 
-Docs state title will set to `title_mode` if not one of `'grads', 'outputs'`, but this was false; fixed now. Also renamed to `title`.
+ - Docs state title will set to `title_mode` if not one of `'grads', 'outputs'`, but this was false; fixed now. 
+ - `title_mode` renamed to `title`.
+ - Created `CHANGELOG.md`
 
 
 ----
