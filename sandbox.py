@@ -83,7 +83,7 @@ def viz_weights(model, idx=1):
 def viz_outs_grads(model, idx=1):
     x, y, _ = make_data(K.int_shape(model.input), model.layers[2].units)
     grads = get_gradients(model, idx, x, y)
-    kws = dict(n_rows=8, title_mode='grads')
+    kws = dict(n_rows=8, title='grads')
 
     features_1D(grads[0], show_borders=False, **kws)
     features_2D(grads,    norm=(-1e-4, 1e-4), **kws)
