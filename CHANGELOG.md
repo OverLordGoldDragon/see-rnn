@@ -4,7 +4,7 @@
 
  - Cleaner axis limits for `features_hist` and `features_hist_v2`: xmin and xmax are now limited in characters to avoid clutter in plots
  - Docs state title will set to `title_mode` if not one of `'grads', 'outputs'`, but this was false; fixed now. 
- - Created `CHANGELOG.md`
+ - Created `CHANGELOG.md` 
  
 #### BREAKING
 
