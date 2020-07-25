@@ -95,7 +95,7 @@ def _test_outputs_gradients(model):
     grads_last = get_gradients(model, 2,    x, y, mode='outputs')
 
     kwargs1 = dict(n_rows=None, show_xy_ticks=[0, 0], show_borders=True,
-                   max_timesteps=50, title_mode='grads')
+                   max_timesteps=50, title='grads')
     kwargs2 = dict(n_rows=2,    show_xy_ticks=[1, 1], show_borders=False,
                    max_timesteps=None)
 
@@ -104,7 +104,7 @@ def _test_outputs_gradients(model):
     features_1D(grads_all,     **kwargs2)
     features_2D(grads_all[0], norm=(-.01, .01), show_colorbar=True, **kwargs1)
     features_2D(grads_all,    norm=None,        reflect_half=True,  **kwargs2)
-    features_0D(grads_last,   marker='o', color=None, title_mode='grads')
+    features_0D(grads_last,   marker='o', color=None, title='grads')
     features_0D(grads_last,   marker='x', color='blue', ylims=(-.1, .1))
     features_hist(grads_all, bins=100, xlims=(-.01, .01), title="Outs hists")
     features_hist(grads_all, bins=100, n_rows=4)

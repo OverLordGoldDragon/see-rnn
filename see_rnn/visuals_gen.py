@@ -30,10 +30,10 @@ def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs
         w: float. Scale width  of resulting plot by a factor.
         h: float. Scale height of resulting plot by a factor.
         show_borders: bool.  If True, shows boxes around plot(s).
-        title_mode:   bool/str. If True, shows generic supertitle.
-              If str in ('grads', 'outputs'), shows supertitle tailored to
-              `data` dim (2D/3D). If other str, shows `title_mode` as supertitle.
-              If False, no title is shown.
+        title: bool/str. If True, shows generic supertitle.
+              If str in {'grads', 'outputs', 'generic'}, shows supertitle
+              tailored to `data` dim (0D/1D). If other str, shows `title`
+              as supertitle. If False, no title is shown.
         show_y_zero: bool. If True, draws y=0.
         ylims: str ('auto'); float list/tuple. Plot y-limits; if 'auto',
                sets both lims to max of abs(`data`) (such that y=0 is centered).
@@ -46,7 +46,7 @@ def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs
 
     w, h         = kwargs.get('w', 1), kwargs.get('h', 1)
     show_borders = kwargs.get('show_borders', False)
-    title_mode   = kwargs.get('title_mode', 'outputs')
+    title        = kwargs.get('title', 'outputs')
     show_y_zero  = kwargs.get('show_y_zero', True)
     ylims        = kwargs.get('ylims', 'auto')
     savepath     = kwargs.get('savepath', None)
@@ -62,18 +62,21 @@ def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs
         return kw
 
     def _catch_unknown_kwargs(kwargs):
-        allowed_kwargs = ('w', 'h', 'show_borders', 'title_mode', 'show_y_zero',
+        allowed_kwargs = ('w', 'h', 'show_borders', 'title', 'show_y_zero',
                           'ylims', 'savepath')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
 
-    def _get_title(data, title_mode):
-        feature = "Context-feature"
-        context = "Context-units"
+    def _get_title(data, title):
+        if title not in {'grads', 'outputs', 'generic'}:
+            return title
 
-        if title_mode in ['grads', 'outputs']:
-            feature = "Gradients" if title_mode=='grads' else "Outputs"
+        if title == 'generic':
+            feature = "Context-feature"
+            context = "Context-units"
+        else:
+            feature = "Gradients" if title =='grads' else "Outputs"
             context = "Timesteps"
         return "(%s vs. %s) vs. Channels" % (feature, context)
 
@@ -103,8 +106,8 @@ def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs
         ymin, ymax = ylims
     plt.gca().set_ylim(ymin, ymax)
 
-    if title_mode:
-        title = _get_title(data, title_mode)
+    if title:
+        title = _get_title(data, title)
         plt.title(title, **kw['title'])
     if not show_borders:
         plt.box(None)
@@ -162,10 +165,10 @@ def features_1D(data, n_rows=None, annotations='auto', share_xy=(1, 1),
               Ex: [1, 1] -> show both x- and y-ticks (and their labels).
                   [0, 0] -> hide both.
         show_xy_ticks: int/bool iter. Slot 0 -> x, Slot 1 -> y.
-        title_mode: bool/str. If True, shows generic supertitle.
-              If str in ('grads', 'outputs'), shows supertitle tailored to
-              `data` dim (2D/3D). If other str, shows `title_mode` as supertitle.
-              If False, no title is shown.
+        title: bool/str. If True, shows generic supertitle.
+              If str in {'grads', 'outputs', 'generic'}, shows supertitle
+              tailored to `data` dim (1D/2D). If other str, shows `title`
+              as supertitle. If False, no title is shown.
         show_y_zero: bool. If True, draw y=0 for each plot.
         tight: bool. If True, plots compactly by removing subplot padding.
         borderwidth: float / None. Width of subplot borders.
@@ -183,7 +186,7 @@ def features_1D(data, n_rows=None, annotations='auto', share_xy=(1, 1),
     w, h          = kwargs.get('w', 1), kwargs.get('h', 1)
     show_borders  = kwargs.get('show_borders', True)
     show_xy_ticks = kwargs.get('show_xy_ticks', (1, 1))
-    title_mode    = kwargs.get('title_mode', 'outputs')
+    title         = kwargs.get('title', 'outputs')
     show_y_zero   = kwargs.get('show_y_zero', False)
     tight         = kwargs.get('tight', False)
     borderwidth   = kwargs.get('borderwidth', None)
@@ -222,17 +225,21 @@ def features_1D(data, n_rows=None, annotations='auto', share_xy=(1, 1),
 
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks',
-                          'title_mode', 'show_y_zero', 'tight',
-                          'borderwidth', 'color', 'savepath')
+                          'title', 'show_y_zero', 'tight', 'borderwidth',
+                          'color', 'savepath')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
 
-    def _get_title(data, title_mode, subplot_samples):
-        feature = "Context-feature"
-        context = "Context-units"
-        if title_mode in ['grads', 'outputs']:
-            feature = "Gradients" if title_mode == 'grads' else "Outputs"
+    def _get_title(data, title, subplot_samples):
+        if title not in {'grads', 'outputs', 'generic'}:
+            return title
+
+        if title == 'generic':
+            feature = "Context-feature"
+            context = "Context-units"
+        else:
+            feature = "Gradients" if title == 'grads' else "Outputs"
             context = "Timesteps"
 
         subplot_mode_3d = "vs. Samples) vs. Channels"
@@ -301,8 +308,8 @@ def features_1D(data, n_rows=None, annotations='auto', share_xy=(1, 1),
     fig, axes = plt.subplots(n_rows, n_cols, **kw['subplot'])
     axes = np.asarray(axes)
 
-    if title_mode:
-        title = _get_title(data, title_mode, subplot_samples)
+    if title:
+        title = _get_title(data, title, subplot_samples)
         fig.suptitle(title, **kw['title'])
 
     for ax_idx, ax in enumerate(axes.flat):
@@ -379,10 +386,10 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
               Ex: [1, 1] -> show both x- and y-ticks (and their labels).
                   [0, 0] -> hide both.
         show_colorbar: bool. If True, shows one colorbar next to plot(s).
-        title_mode:    bool/str. If True, shows generic supertitle.
-              If str in ('grads', 'outputs'), shows supertitle tailored to
-              `data` dim (2D/3D). If other str, shows `title_mode` as supertitle.
-              If False, no title is shown.
+        title: bool/str. If True, shows generic supertitle.
+              If str in {'grads', 'outputs', 'generic'}, shows supertitle
+              tailored to `data` dim (2D/3D). If other str, shows `title`
+              as supertitle. If False, no title is shown.
         tight: bool. If True, plots compactly by removing subplot padding.
         channel_axis: int, 0 or -1. `data` axis holding channels/features.
               -1 --> (samples,  timesteps, channels)
@@ -400,7 +407,7 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
     show_borders  = kwargs.get('show_borders', True)
     show_xy_ticks = kwargs.get('show_xy_ticks', (1, 1))
     show_colorbar = kwargs.get('show_colorbar', False)
-    title_mode    = kwargs.get('title_mode', 'outputs')
+    title         = kwargs.get('title', 'outputs')
     tight         = kwargs.get('tight', False)
     channel_axis  = kwargs.get('channel_axis', -1)
     borderwidth   = kwargs.get('borderwidth', None)
@@ -438,21 +445,23 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
 
     def _catch_unknown_kwargs(kwargs):
         allowed_kwargs = ('w', 'h', 'show_borders', 'show_xy_ticks',
-                          'show_colorbar', 'title_mode', 'tight',
-                          'channel_axis', 'borderwidth', 'bordercolor',
-                          'savepath')
+                          'show_colorbar', 'title', 'tight', 'channel_axis',
+                          'borderwidth', 'bordercolor', 'savepath')
         for kwarg in kwargs:
             if kwarg not in allowed_kwargs:
                 raise Exception("unknown kwarg `%s`" % kwarg)
 
-    def _get_title(data, title_mode, timesteps_xaxis, vmin, vmax):
+    def _get_title(data, title, timesteps_xaxis, vmin, vmax):
+        if title not in {'grads', 'outputs', 'generic'}:
+            return title
+
         feature = "Context-feature"
         context = "Context-units"
         context_order = "(%s vs. Channels)" % context
         extra_dim = ""
 
-        if title_mode in ['grads', 'outputs']:
-            feature = "Gradients" if title_mode == 'grads' else "Outputs"
+        if title in {'grads', 'outputs'}:
+            feature = "Gradients" if title == 'grads' else "Outputs"
             context = "Timesteps"
         if timesteps_xaxis:
             context_order = "(Channels vs. %s)" % context
@@ -460,8 +469,8 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
             extra_dim = ") vs. Samples"
             context_order = "(" + context_order
 
-        norm_txt = "(%.4G, %.4G)" % (vmin, vmax) if (
-            vmin is not None) else "auto"
+        norm_txt = "(%.4G, %.4G)" % (vmin, vmax) if (vmin is not None
+                                                     ) else "auto"
         return "{} vs. {}{} -- norm={}".format(context_order, feature,
                                                extra_dim, norm_txt)
 
@@ -516,8 +525,8 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
     fig, axes = plt.subplots(n_rows, n_cols, **kw['subplot'])
     axes = np.asarray(axes)
 
-    if title_mode:
-        title = _get_title(data, title_mode, timesteps_xaxis, vmin, vmax)
+    if title:
+        title = _get_title(data, title, timesteps_xaxis, vmin, vmax)
         fig.suptitle(title, **kw['title'])
 
     for ax_idx, ax in enumerate(axes.flat):
@@ -536,7 +545,6 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
                     s.set_linewidth(borderwidth)
                 if bordercolor is not None:
                     s.set_color(bordercolor)
-
     plt.show()
     if savepath is not None:
         fig.savefig(savepath, **kw['save'])
