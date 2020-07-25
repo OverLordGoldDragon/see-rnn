@@ -1,5 +1,8 @@
-### 1.14.6 (7-25-2020): `title_mode` -> `title`; allow custom title
+### 1.14.6 (7-25-2020): Cleaner axis limits; allow custom title
 
+#### FEATURES 
+
+ - Cleaner axis limits for `features_hist` and `features_hist_v2`: xmin and xmax are now limited in characters to avoid clutter in plots
  - Docs state title will set to `title_mode` if not one of `'grads', 'outputs'`, but this was false; fixed now. 
  - `title_mode` renamed to `title`.
  - Created `CHANGELOG.md`
