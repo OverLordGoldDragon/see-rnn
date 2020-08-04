@@ -2,7 +2,7 @@ import os
 from termcolor import colored
 
 
-TF_KERAS = os.environ.get("TF_KERAS", '0') == '1'
+TF_KERAS = os.environ.get("TF_KERAS", '1') == '1'
 
 WARN = colored("WARNING:", 'red')
 NOTE = colored("NOTE:", 'blue')
