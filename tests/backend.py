@@ -11,7 +11,7 @@ from termcolor import colored
 #### Environment configs ######################################################
 # for testing locally
 os.environ['TF_KERAS'] = os.environ.get("TF_KERAS", '1')
-os.environ['TF_EAGER'] = os.environ.get("TF_EAGER", '0')
+os.environ['TF_EAGER'] = os.environ.get("TF_EAGER", '1')
 
 TF_KERAS = bool(os.environ['TF_KERAS'] == '1')
 TF_EAGER = bool(os.environ['TF_EAGER'] == '1')

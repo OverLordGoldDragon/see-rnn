@@ -3,7 +3,7 @@ import numpy as np
 
 from copy import deepcopy
 from .utils import _validate_args, _get_params, _layer_of_output
-from ._backend import K, TF_KERAS
+from ._backend import K, TF_KERAS, Model
 
 if tf.executing_eagerly():
     from tensorflow.python.distribute import parameter_server_strategy
@@ -60,13 +60,20 @@ def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
         idxs, layers = None, None
         one_requested = len(_id) == 1
 
-    layer_outs = _get_outs_tensors(model, names, idxs, layers)
-    lp = K.symbolic_learning_phase() if TF_KERAS else K.learning_phase()
-    outs_fn = K.function([*model.inputs, lp], layer_outs)
-
     if not isinstance(input_data, (list, tuple)):
         input_data = [input_data]
-    outs = outs_fn([*input_data, bool(learning_phase)])
+    layer_outs = _get_outs_tensors(model, names, idxs, layers)
+
+    if tf.executing_eagerly():
+        partial_model = Model(model.inputs, layer_outs)
+        outs = partial_model(input_data, training=bool(learning_phase))
+        if not isinstance(outs, (list, tuple)):
+            outs = [outs]
+        outs = [o.numpy() for o in outs]
+    else:
+        lp = K.symbolic_learning_phase()
+        outs_fn = K.function([*model.inputs, lp], layer_outs)
+        outs = outs_fn([*input_data, bool(learning_phase)])
 
     if as_dict:
         return {get_full_name(model, i): x for i, x in zip(names or idxs, outs)}
