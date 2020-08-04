@@ -71,7 +71,7 @@ def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
             outs = [outs]
         outs = [o.numpy() for o in outs]
     else:
-        lp = K.symbolic_learning_phase()
+        lp = K.symbolic_learning_phase() if TF_KERAS else K.learning_phase()
         outs_fn = K.function([*model.inputs, lp], layer_outs)
         outs = outs_fn([*input_data, bool(learning_phase)])
 
