@@ -4,6 +4,7 @@ from matplotlib import cm
 
 from .utils import _kw_from_configs, clipnums
 from ._backend import NOTE
+from . import scalefig
 
 
 def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs):
@@ -114,7 +115,9 @@ def features_0D(data, marker='o', cmap='bwr', color=None, configs=None, **kwargs
 
     fig, axes = plt.gcf(), plt.gca()
     fig.set_size_inches(12 * w, 4 * h)
+    scalefig(fig)
     plt.show()
+
     if savepath is not None:
         fig.savefig(savepath, **kw['save'])
     return fig, axes
@@ -329,6 +332,7 @@ def features_1D(data, n_rows=None, annotations='auto', share_xy=(1, 1),
         for ax in axes.flat:
             [s.set_linewidth(borderwidth) for s in ax.spines.values()]
 
+    scalefig(fig)
     plt.show()
     if savepath is not None:
         fig.savefig(savepath, **kw['save'])
@@ -545,6 +549,7 @@ def features_2D(data, n_rows=None, norm=None, cmap='bwr', reflect_half=False,
                     s.set_linewidth(borderwidth)
                 if bordercolor is not None:
                     s.set_color(bordercolor)
+    scalefig(fig)
     plt.show()
     if savepath is not None:
         fig.savefig(savepath, **kw['save'])
@@ -747,6 +752,7 @@ def features_hist(data, n_rows='vertical', bins=100, xlims=None, tight=True,
         for ax in axes.flat:
             [s.set_linewidth(borderwidth) for s in ax.spines.values()]
 
+    scalefig(fig)
     plt.show()
     if savepath is not None:
         fig.savefig(savepath, **kw['save'])
@@ -946,6 +952,7 @@ def features_hist_v2(data, colnames=None, bins=100, xlims=None, ylim=None,
         for ax in axes.flat:
             [s.set_linewidth(borderwidth) for s in ax.spines.values()]
 
+    scalefig(fig)
     plt.show()
     if savepath is not None:
         fig.savefig(savepath, **kw['save'])

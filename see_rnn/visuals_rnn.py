@@ -5,6 +5,7 @@ from termcolor import colored
 
 from .utils import _process_rnn_args, _kw_from_configs, _save_rnn_fig
 from .inspect_gen import detect_nans
+from . import scalefig
 
 
 def rnn_histogram(model, _id, layer=None, input_data=None, labels=None,
@@ -73,7 +74,7 @@ def rnn_histogram(model, _id, layer=None, input_data=None, labels=None,
             'plot':    dict(),
             'subplot': dict(sharex=True, sharey=True, dpi=76, figsize=(9, 9)),
             'tight':   dict(),
-            'title':   dict(weight='bold', fontsize=13, y=1.05),
+            'title':   dict(weight='bold', fontsize=12, y=1.05),
             'annot':     dict(fontsize=12, weight='bold',
                               xy=(.90, .93), xycoords='axes fraction'),
             'annot-nan': dict(fontsize=12, weight='bold', color='red',
@@ -257,6 +258,8 @@ def rnn_histogram(model, _id, layer=None, input_data=None, labels=None,
         x_new, y_new = _get_axes_extrema(subplots_axes)
         _set_axes_limits(subplots_axes, x_new, y_new, d)
 
+    for fig in subplots_figs:
+        scalefig(fig)
     plt.show()
     if savepath is not None:
         _save_rnn_fig(subplots_figs, savepath, kw['save'])
@@ -348,8 +351,8 @@ def rnn_heatmap(model, _id, layer=None, input_data=None, labels=None,
             'plot-bias': dict(interpolation='nearest'),
             'subplot':   dict(dpi=76, figsize=(14, 8)),
             'tight':     dict(),
-            'title':     dict(weight='bold', fontsize=14, y=.98),
-            'subtitle':  dict(weight='bold', fontsize=14),
+            'title':     dict(weight='bold', fontsize=13, y=.98),
+            'subtitle':  dict(weight='bold', fontsize=13),
             'xlabel':    dict(fontsize=12, weight='bold'),
             'ylabel':    dict(fontsize=12, weight='bold'),
             'colorbar':  dict(fraction=.03),
@@ -536,6 +539,8 @@ def rnn_heatmap(model, _id, layer=None, input_data=None, labels=None,
         if kw['tight']:
             fig.subplots_adjust(**kw['tight'])
 
+    for fig in subplots_figs:
+        scalefig(fig)
     plt.show()
     if savepath is not None:
         _save_rnn_fig(subplots_figs, savepath, kw['save'])
