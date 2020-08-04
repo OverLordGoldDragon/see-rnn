@@ -32,7 +32,7 @@ from see_rnn import rnn_heatmap, rnn_histogram
 
 
 IMPORTS = dict(K=K, Input=Input, GRU=GRU,
-               Bidirectional=Bidirectional, Model=Model)
+                Bidirectional=Bidirectional, Model=Model)
 
 if TF_2 and not TF_KERAS:
     print(WARN, "LSTM, CuDNNLSTM, and CuDNNGRU imported `from keras` "
