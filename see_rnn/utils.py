@@ -1,9 +1,12 @@
 import numpy as np
-import tensorflow as tf
 from copy import deepcopy
 from pathlib import Path
-
 from ._backend import WARN, NOTE, TF_KERAS, Layer
+
+try:
+    import tensorflow as tf
+except:
+    pass  # handled in __init__ via _backend.py
 
 
 def _kw_from_configs(configs, defaults):
