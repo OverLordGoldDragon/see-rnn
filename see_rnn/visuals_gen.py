@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
-from .utils import _kw_from_configs, clipnums
 from ._backend import NOTE
+from .utils import _kw_from_configs, clipnums
 from . import scalefig
 
 

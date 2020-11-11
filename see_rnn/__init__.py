@@ -22,13 +22,17 @@ def scalefig(fig):
 ##############################################################################
 
 from . import visuals_gen
-from . import visuals_rnn
-from . import inspect_gen
-from . import inspect_rnn
-
 from .visuals_gen import *
-from .visuals_rnn import *
-from .inspect_gen import *
-from .inspect_rnn import *
+try:
+    from . import visuals_rnn
+    from .visuals_rnn import *
+    from . import inspect_gen
+    from .inspect_gen import *
+    from . import inspect_rnn
+    from .inspect_rnn import *
+except:
+    # handled in _backend.py
+    pass
 
-__version__ = '1.15.0'
+
+__version__ = '1.15.1'

@@ -479,7 +479,7 @@ def get_weights(model, _id, omit_names=None, as_tensors=False, as_dict=False):
     if as_dict:
         return weights
     weights = list(weights.values())
-    return weights[0] if len(_ids) == 1 else weights
+    return weights[0] if (len(_ids) == 1 and len(weights) == 1) else weights
 
 
 def detect_nans(data, include_inf=True):
@@ -664,7 +664,8 @@ def _get_layer_penalties(layer):
 
             if _lambda is not None:
                 weight_name = cell.weights[weight_idx].name
-                l1_l2 = (float(_lambda.l1), float(_lambda.l2))
+                l1_l2 = (float(getattr(_lambda, 'l1', 0)),
+                         float(getattr(_lambda, 'l2', 0)))
                 penalties.append([weight_name, l1_l2])
         return penalties
 
