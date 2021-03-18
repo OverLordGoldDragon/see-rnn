@@ -36,3 +36,11 @@ except:
 
 
 __version__ = '1.15.1'
+
+
+def __getattr__(name):
+    try:
+        import tensorflow
+    except:
+        raise ImportError(f"Failed to import/access '{name}'; some features "
+                          "require TensorFlow installed.")
