@@ -22,29 +22,31 @@ RNN weights, gradients, &amp; activations visualization in Keras &amp; TensorFlo
   - **Gate visuals**: gates in gated architectures (LSTM, GRU) shown explicitly
   - **Channel visuals**: cell units (feature extractors) shown explicitly
   - **General visuals**: methods also applicable to CNNs & others
-  - **Weight norm tracking**: useful for analyzing weight decay 
+  - **Weight norm tracking**: useful for analyzing weight decay
 
 
 ## Why use?
 
 Introspection is a powerful tool for debugging, regularizing, and understanding neural networks; this repo's methods enable:
- 
+
  - Monitoring **weights & activations progression** - how each changes epoch-to-epoch, iteration-to-iteration
  - Evaluating **learning effectiveness** - how well gradient backpropagates layer-to-layer, timestep-to-timestep
  - Assessing **layer health** - what percentage of neurons are "dead" or "exploding"
  - Tracking **weight decay** - how various schemes (e.g. l2 penalty) affect weight norms
- 
+
 It enables answering questions such as:
  - Is my RNN learning **long-term dependencies**? >> Monitor gradients: if a non-zero gradient flows through every timestep, then _every timestep contributes to learning_ - i.e., resultant gradients stem from accounting for every input timestep, so the _entire sequence influences weight updates_. Hence, an RNN _no longer ignores portions of long sequences_, and is forced to _learn from them_
  - Is my RNN learning **independent representations**? >> Monitor activations: if each channel's outputs are distinct and decorrelated, then the RNN extracts richly diverse features.
  - Why do I have **validation loss spikes**? >> Monitor all: val. spikes may stem from sharp changes in layer weights due to large gradients, which will visibly alter activation patterns; seeing the details can help inform a correction
  - Is my **weight decay excessive** or insufficient? >> Monitor weight norms: if values slash to many times less their usual values, decay might be excessive - or, if no effect is seen, increase decay
- 
+
 For further info on potential uses, see [this SO](https://stackoverflow.com/questions/48714407/rnn-regularization-which-component-to-regularize/58868383#58868383).
 
 ## Installation
 
-`pip install see-rnn` or clone repository
+`pip install see-rnn`. Or, for latest version (most likely stable):
+
+`pip install git+https://github.com/OverLordGoldDragon/see-rnn`
 
 ## To-do
 
@@ -55,7 +57,7 @@ Will possibly implement:
  - [ ] Interpretability visuals (e.g. saliency maps, adversarial attacks)
  - [ ] Tools for better probing backprop of `return_sequences=False`
  - [ ] Unify `_id` and `layer`? Need duplicates resolution scheme
- 
+
 ## Examples
 
 ```python
@@ -227,10 +229,10 @@ outs  = get_outputs(model, 1, x)       # return_sequences=True,  layer index 1
 
  - One of stacked `Conv1D` sparse autoencoder layers; network trained with `Dropout(0.5, noise_shape=(batch_size, 1, channels))` (Spatial Dropout), encouraging sparse features which may benefit classification
  - Weights are seen to be 'sparse'; some are uniformly low, others uniformly large, others have bands of large weights among lows
- 
+
  <img src="https://user-images.githubusercontent.com/16495490/74095140-fd9bfe80-4b05-11ea-9b86-20e918b91a4b.png" width="600">
- 
-## Usage 
+
+## Usage
 
 **QUICKSTART**: run [sandbox.py](https://github.com/OverLordGoldDragon/see-rnn/blob/master/sandbox.py), which includes all major examples and allows easy exploration of various plot configs.
 
@@ -252,7 +254,7 @@ def make_model(rnn_layer, batch_shape, units):
     model = Model(ipt, out)
     model.compile(Adam(4e-3), 'mse')
     return model
-    
+
 def make_data(batch_shape):
     return np.random.randn(*batch_shape), \
            np.random.uniform(-1, 1, (batch_shape[0], units))
