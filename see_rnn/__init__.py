@@ -44,3 +44,5 @@ def __getattr__(name):
     except:
         raise ImportError(f"Failed to import/access '{name}'; some features "
                           "require TensorFlow installed.")
+    else:
+        raise AttributeError(f"Failed to import/access '{name}'.")
