@@ -24,25 +24,24 @@ def scalefig(fig):
 from . import visuals_gen
 from .visuals_gen import *
 try:
+    try:
+        import tensorflow, keras
+    except ImportError as e:
+        raise ImportError(
+            "WARNING: failed to import TensorFlow or Keras; functionality "
+            "is restricted to see_rnn.visuals_gen (disable this message by "
+            "commenting the print statement in %s)" % __file__)
+
     from . import visuals_rnn
     from .visuals_rnn import *
     from . import inspect_gen
     from .inspect_gen import *
     from . import inspect_rnn
     from .inspect_rnn import *
-except:
-    # handled in _backend.py
-    pass
+except ImportError as e:
+    if "WARNING" not in str(e):
+        raise ImportError(e)
+    print(e)
 
 
 __version__ = '1.15.2'
-
-
-def __getattr__(name):
-    try:
-        import tensorflow
-    except:
-        raise ImportError(f"Failed to import/access '{name}'; some features "
-                          "require TensorFlow installed.")
-    else:
-        raise AttributeError(f"Failed to import/access '{name}'.")

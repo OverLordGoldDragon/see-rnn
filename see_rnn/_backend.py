@@ -16,6 +16,4 @@ try:
         from keras.layers import Layer
         from keras.models import Model
 except:
-    print("WARNING: failed to import TensorFlow or Keras; functionality "
-          "is restricted to see_rnn.visuals_gen")
     K, Layer, Model = None, None, None
