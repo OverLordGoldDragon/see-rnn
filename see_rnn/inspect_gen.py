@@ -8,8 +8,8 @@ from ._backend import K, TF_KERAS, Model
 if tf.executing_eagerly():
     from tensorflow.python.distribute import parameter_server_strategy
     from tensorflow.python.keras.engine import data_adapter
-    from tensorflow.python.keras.mixed_precision.experimental import (
-        loss_scale_optimizer as lso)
+    from tensorflow.keras.mixed_precision import (
+        LossScaleOptimizer as LossScaleOptimizer)
 
 
 def get_outputs(model, _id, input_data, layer=None, learning_phase=0,
@@ -230,9 +230,12 @@ def _get_grads_eager(model, input_data, labels, sample_weight=None,
     then later reverted IF not interrupted.
     """
     def _process_input_data(x, y, sample_weight):
-        iterator = data_adapter.single_batch_iterator(model.distribute_strategy,
-                                                      x, y, sample_weight,
-                                                      class_weight=None)
+        if isinstance(input_data, tf.data.Dataset):
+            iterator = tf.compat.v1.data.make_one_shot_iterator(x)
+        else:
+            iterator = data_adapter.single_batch_iterator(model.distribute_strategy,
+                                                          x, y, sample_weight,
+                                                          class_weight=None)
         data = next(iterator)
         data = data_adapter.expand_1d(data)
         x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
@@ -261,7 +264,7 @@ def _get_grads_eager(model, input_data, labels, sample_weight=None,
 
     def _clip_and_scale_grads(strategy, tape, optimizer, loss, params):
         with tape:
-            if isinstance(optimizer, lso.LossScaleOptimizer):
+            if isinstance(optimizer, LossScaleOptimizer):
                 loss = optimizer.get_scaled_loss(loss)
 
         _params = [(p if isinstance(p, tf.Variable)
@@ -273,12 +276,13 @@ def _get_grads_eager(model, input_data, labels, sample_weight=None,
                 strategy.extended,
                 parameter_server_strategy.ParameterServerStrategyExtended))
 
+        grads_and_vars = zip(gradients, _params)
         if aggregate_grads_outside_optimizer:
-            gradients = optimizer._aggregate_gradients(zip(gradients, _params))
-        if isinstance(optimizer, lso.LossScaleOptimizer):
-            gradients = optimizer.get_unscaled_gradients(gradients)
+            grads_and_vars = optimizer._transform_unaggregated_gradients(grads_and_vars)
+            grads_and_vars = optimizer._aggregate_gradients(grads_and_vars)
+        grads_and_vars = optimizer._transform_gradients(grads_and_vars)
 
-        gradients = optimizer._clip_gradients(gradients)
+        gradients = [g for g, _ in grads_and_vars]
         return gradients
 
     if not tf.executing_eagerly():
@@ -290,7 +294,7 @@ def _get_grads_eager(model, input_data, labels, sample_weight=None,
     try:
         with tf.GradientTape() as tape:
             for p in params:
-                if isinstance(p, tf.Tensor):
+                if tf.is_tensor(p):
                     _watch_layer_outputs(_layer_of_output(p), tape)
             y_pred = model(x, training=bool(learning_phase))
             loss = model.compiled_loss(y, y_pred, sample_weight,
@@ -301,7 +305,7 @@ def _get_grads_eager(model, input_data, labels, sample_weight=None,
         # ensure layer.call is restored to original
         # not guaranteed; can fail if program is forcibly interrupted
         for p in params:
-            if isinstance(p, tf.Tensor):
+            if tf.is_tensor(p):
                 layer = _layer_of_output(p)
                 if hasattr(layer, 'call_orig'):
                     # may be False if `params` includes duplicates

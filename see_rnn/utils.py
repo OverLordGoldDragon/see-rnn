@@ -246,7 +246,7 @@ def _get_params(model, layers=None, params=None, mode='outputs', verbose=1):
         def _to_omit(p):
             if isinstance(p, tf.Variable):  # param is layer weight
                 return False
-            elif isinstance(p, tf.Tensor):  # param is layer output
+            elif tf.is_tensor(p):  # param is layer output
                 layer = _layer_of_output(p)
                 if (TF_KERAS or tf.__version__[0] == '2'
                     ) and hasattr(layer, 'activation'):
