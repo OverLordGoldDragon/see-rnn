@@ -8,6 +8,8 @@ try:
 except:
     pass  # handled in __init__ via _backend.py
 
+TF24plus = bool(float(tf.__version__[:3]) > 2.3)
+
 
 def _kw_from_configs(configs, defaults):
     def _fill_absent_defaults(kw, defaults):
@@ -246,7 +248,7 @@ def _get_params(model, layers=None, params=None, mode='outputs', verbose=1):
         def _to_omit(p):
             if isinstance(p, tf.Variable):  # param is layer weight
                 return False
-            elif isinstance(p, tf.Tensor):  # param is layer output
+            elif tf.is_tensor(p):  # param is layer output
                 layer = _layer_of_output(p)
                 if (TF_KERAS or tf.__version__[0] == '2'
                     ) and hasattr(layer, 'activation'):
@@ -288,3 +290,8 @@ def _get_params(model, layers=None, params=None, mode='outputs', verbose=1):
             params = [w for l in layers for w in l.trainable_weights]
     params = _filter_params(params, verbose)
     return params
+
+
+def is_tensor(x):
+    return (tf.is_tensor(x) if TF24plus else
+            isinstance(x, tf.Tensor))
