@@ -4,6 +4,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/OverLordGoldDragon/see-rnn/badge.svg?branch=master&service=github&kill_cache=1)](https://coveralls.io/github/OverLordGoldDragon/see-rnn?branch=master)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/e15b1b772c3f4dc9ba7988784a2b9bf6)](https://www.codacy.com/manual/OverLordGoldDragon/see-rnn?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=OverLordGoldDragon/see-rnn&amp;utm_campaign=Badge_Grade)
 [![PyPI version](https://badge.fury.io/py/see-rnn.svg)](https://badge.fury.io/py/see-rnn)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5080359.svg)](https://doi.org/10.5281/zenodo.5080359)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 ![](https://img.shields.io/badge/keras-tensorflow-blue.svg)
@@ -280,6 +281,25 @@ grads_last = get_gradients(model, 2, x, y)  # return_sequences=False, layer inde
 features_1D(grads_all, n_rows=2, xy_ticks=[1,1])
 features_2D(grads_all, n_rows=8, xy_ticks=[1,1], norm=(-.01, .01))
 features_0D(grads_last)
+```
+
+# How to cite
+
+
+Short form:
+
+> OverLordGoldDragon, see-rnn, 2019. GitHub repository, https://github.com/OverLordGoldDragon/ssqueezepy/. DOI: 10.5281/zenodo.5080359
+
+BibTeX:
+
+```bibtex
+@article{OverLordGoldDragon2019see-rnn,
+  title={See RNN},
+  author={OverLordGoldDragon},
+  journal={GitHub. Note: https://github.com/OverLordGoldDragon/see-rnn/},
+  year={2019},
+  doi={10.5281/zenodo.5080359},
+}
 ```
 
 
