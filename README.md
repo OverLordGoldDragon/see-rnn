@@ -288,7 +288,7 @@ features_0D(grads_last)
 
 Short form:
 
-> OverLordGoldDragon, see-rnn, 2019. GitHub repository, https://github.com/OverLordGoldDragon/ssqueezepy/. DOI: 10.5281/zenodo.5080359
+> OverLordGoldDragon, see-rnn, 2019. GitHub repository, https://github.com/OverLordGoldDragon/see-rnn/. DOI: 10.5281/zenodo.5080359
 
 BibTeX:
 
