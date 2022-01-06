@@ -288,14 +288,14 @@ features_0D(grads_last)
 
 Short form:
 
-> OverLordGoldDragon, see-rnn, 2019. GitHub repository, https://github.com/OverLordGoldDragon/see-rnn/. DOI: 10.5281/zenodo.5080359
+> John Muradeli, see-rnn, 2019. GitHub repository, https://github.com/OverLordGoldDragon/see-rnn/. DOI: 10.5281/zenodo.5080359
 
 BibTeX:
 
 ```bibtex
 @article{OverLordGoldDragon2019see-rnn,
   title={See RNN},
-  author={OverLordGoldDragon},
+  author={John Muradeli},
   journal={GitHub. Note: https://github.com/OverLordGoldDragon/see-rnn/},
   year={2019},
   doi={10.5281/zenodo.5080359},
