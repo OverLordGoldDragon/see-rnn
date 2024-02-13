@@ -12,7 +12,7 @@ if tf.executing_eagerly():
     if TF24plus:
         from tensorflow.keras.mixed_precision import LossScaleOptimizer
     else:
-        from tensorflow.python.keras.mixed_precision.experimental import (
+        from tensorflow.python.keras.mixed_precisionimport (
             loss_scale_optimizer as lso)
         LossScaleOptimizer = lso.LossScaleOptimizer
 
